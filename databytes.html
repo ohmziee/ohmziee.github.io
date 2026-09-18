@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXiLED // Databytes</title>
+<meta name="description" content="Recovered fragments. Case files, stills, footage, transmissions.">
+<meta name="theme-color" content="#05060B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%2305060B'/%3E%3Crect x='2' y='7' width='12' height='1' fill='%239F8CFF'/%3E%3Crect x='3' y='6' width='10' height='1' fill='%239F8CFF'/%3E%3Crect x='4' y='5' width='8' height='1' fill='%237CF5FF'/%3E%3Crect x='2' y='8' width='12' height='1' fill='%239F8CFF'/%3E%3Crect x='4' y='9' width='8' height='1' fill='%237CF5FF'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23DCE3FF'/%3E%3Crect x='7' y='7' width='2' height='2' fill='%2305060B'/%3E%3Crect x='9' y='6' width='1' height='1' fill='%23FF4FD8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#05060B;--deep:#0B0D1A;--violet:#2A1D5E;--lavender:#9F8CFF;--ice:#DCE3FF;--rain:#4A5068;
+  --glitch-a:#7CF5FF;--glitch-b:#FF4FD8;--green:#7CFFB2;
+  --font-display:'Rajdhani',"Segoe UI",Arial,sans-serif;--font-mono:'Share Tech Mono',"Courier New",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--ice);font-family:var(--font-mono);min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--glitch-a);outline-offset:4px}
+.scanlines{position:fixed;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.28) 2px 3px);mix-blend-mode:multiply}
+.vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,transparent 40%,rgba(5,6,11,.9) 100%)}
+main{position:relative;z-index:3;max-width:960px;margin:0 auto;padding:clamp(1.2rem,4vh,2.5rem) 5vw clamp(4rem,10vh,7rem)}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:2.2rem;font-size:.72rem;letter-spacing:.16em;color:var(--rain)}
+.top a:hover{color:var(--lavender)}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(1.8rem,5vw,2.8rem);letter-spacing:.1em;line-height:1}
+h1 small{display:block;font-family:var(--font-mono);font-weight:400;font-size:.74rem;letter-spacing:.14em;color:var(--rain);margin-top:.5rem}
+.filters{display:flex;flex-wrap:wrap;gap:.4rem;margin:1.6rem 0 2rem}
+.filters button{background:none;border:1px solid var(--violet);color:var(--rain);font:inherit;font-size:.7rem;letter-spacing:.14em;padding:.35rem .7rem;cursor:pointer}
+.filters button:hover{border-color:var(--lavender);color:var(--ice)}
+.filters button.on{border-color:var(--lavender);color:var(--lavender)}
+.grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.byte{border:1px solid var(--violet);background:linear-gradient(180deg,rgba(42,29,94,.16),transparent 60%);display:flex;flex-direction:column}
+.byte.wide{grid-column:1/-1}
+.byte .meta{display:flex;justify-content:space-between;gap:.8rem;padding:.7rem .9rem 0;font-size:.66rem;letter-spacing:.14em;color:var(--rain)}
+.byte .meta b{font-weight:400;color:var(--lavender)}
+.byte h3{font-family:var(--font-display);font-weight:600;font-size:1.15rem;letter-spacing:.08em;padding:.35rem .9rem .6rem}
+.byte img,.byte video{width:100%;display:block;max-height:70vh;object-fit:cover;background:var(--deep)}
+.byte audio{width:100%;display:block;filter:invert(1) hue-rotate(180deg) saturate(.6);padding:.6rem .9rem}
+.byte p{padding:.8rem .9rem;font-size:.86rem;line-height:1.7;color:var(--ice);flex:1}
+.byte.transmission p{font-size:.95rem;padding:.4rem .9rem 1rem}
+.byte .tags{padding:0 .9rem .8rem;font-size:.64rem;letter-spacing:.12em;color:var(--rain)}
+.byte .tags span::before{content:'#'}
+.byte .tags span{margin-right:.7rem}
+.empty,.err{border:1px dashed var(--violet);padding:2.5rem 1.5rem;text-align:center;color:var(--rain);font-size:.8rem;letter-spacing:.12em;line-height:1.8}
+.err{border-color:rgba(255,79,216,.5);color:var(--glitch-b)}
+footer{position:relative;z-index:3;text-align:center;padding:2rem 5vw 3rem;color:var(--rain);font-size:.7rem;letter-spacing:.18em}
+@media (prefers-reduced-motion:no-preference){
+  .byte{opacity:0;transform:translateY(6px);animation:in .5s ease forwards}
+  @keyframes in{to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<main>
+  <div class="top"><a href="index.html">&larr; back to the signal</a><span id="count"></span></div>
+  <h1>Databytes<small>recovered fragments // case files, stills, footage, transmissions</small></h1>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="grid"></div>
+</main>
+<footer>EXiLED &nbsp;//&nbsp; nothing is deleted. only exiled.</footer>
+<script>
+(function(){
+  var grid = document.getElementById('grid'), filters = document.getElementById('filters'), count = document.getElementById('count');
+  var bytes = [], active = 'all';
+  var labels = { still:'STILL', footage:'FOOTAGE', audio:'AUDIO', transmission:'TRANSMISSION' };
+  function esc(t){ return String(t||'').replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+  function card(b, i){
+    var cls = 'byte ' + b.type + (b.type === 'transmission' || b.type === 'footage' ? ' wide' : '');
+    var media = '';
+    if(b.type === 'still' && b.file) media = '<img src="' + esc(b.file) + '" alt="' + esc(b.title) + '" loading="lazy">';
+    if(b.type === 'footage' && b.file) media = '<video src="' + esc(b.file) + '" controls preload="metadata"' + (b.poster ? ' poster="' + esc(b.poster) + '"' : '') + '></video>';
+    if(b.type === 'audio' && b.file) media = '<audio src="' + esc(b.file) + '" controls preload="none"></audio>';
+    var tags = (b.tags||[]).map(function(t){ return '<span>' + esc(t) + '</span>'; }).join('');
+    return '<article class="' + cls + '" style="animation-delay:' + (i*60) + 'ms">' +
+      '<div class="meta"><b>' + (labels[b.type]||esc(b.type).toUpperCase()) + '</b><span>' + esc(b.date) + ' // #' + esc(b.id) + '</span></div>' +
+      '<h3>' + esc(b.title) + '</h3>' + media +
+      (b.text ? '<p>' + esc(b.text) + '</p>' : '') +
+      (tags ? '<div class="tags">' + tags + '</div>' : '') + '</article>';
+  }
+  function render(){
+    var list = bytes.filter(function(b){ return active === 'all' || b.type === active || (b.tags||[]).indexOf(active) > -1; });
+    count.textContent = list.length + ' / ' + bytes.length + ' recovered';
+    grid.innerHTML = list.length ? list.map(card).join('') : '<div class="empty">nothing recovered on this frequency.</div>';
+  }
+  function buildFilters(){
+    var keys = ['all'];
+    bytes.forEach(function(b){ if(keys.indexOf(b.type) < 0) keys.push(b.type); });
+    bytes.forEach(function(b){ (b.tags||[]).forEach(function(t){ if(keys.indexOf(t) < 0) keys.push(t); }); });
+    filters.innerHTML = keys.map(function(k){ return '<button type="button" data-k="' + esc(k) + '"' + (k === active ? ' class="on"' : '') + '>' + esc(k) + '</button>'; }).join('');
+  }
+  filters.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    active = b.dataset.k; buildFilters(); render();
+  });
+  fetch('databytes.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(data){
+      bytes = data.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+      buildFilters(); render();
+    })
+    .catch(function(){
+      grid.innerHTML = '<div class="err">databytes.json unreadable.<br>check the JSON is valid (commas, no trailing comma) and try again.</div>';
+    });
+})();
+</script>
+</body>
+</html>
