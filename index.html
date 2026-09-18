@@ -224,24 +224,12 @@ main{position:relative;z-index:3}
 .node.mainframe .state{color:#7CFFB2}
 @keyframes corrupt{33%{transform:translateX(-2px);color:var(--glitch-a)}66%{transform:translateX(2px);color:var(--glitch-b)}}
 
+/* ── cursor trail ──────────────────────────────────── */
+#trail{position:fixed;inset:0;z-index:6;pointer-events:none;mix-blend-mode:screen}
+@media (hover:none){#trail{display:none}}
+
 /* ── lightning flash ───────────────────────────────── */
 #flash{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:#DCE3FF;transition:opacity .08s}
-
-/* ── rain dial ─────────────────────────────────────── */
-#weather{
-  position:fixed;top:clamp(.6rem,2vh,1.2rem);right:clamp(.6rem,2vw,1.4rem);z-index:5;
-  display:flex;align-items:center;gap:.6rem;
-  padding:.45rem .7rem;border:1px solid var(--violet);background:rgba(5,6,11,.72);
-  font-size:.66rem;letter-spacing:.14em;color:var(--rain);
-  opacity:0;transition:opacity 1s ease 1.8s;
-}
-#weather.live{opacity:1}
-#weather label{color:var(--lavender)}
-#weather output{min-width:3.2ch;text-align:right;color:var(--ice)}
-#rainDial{-webkit-appearance:none;appearance:none;width:clamp(70px,10vw,120px);height:2px;background:var(--violet);outline:none;cursor:pointer}
-#rainDial::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--lavender);border-radius:50%;box-shadow:0 0 8px var(--lavender)}
-#rainDial::-moz-range-thumb{width:12px;height:12px;background:var(--lavender);border:0;border-radius:50%;box-shadow:0 0 8px var(--lavender)}
-#rainDial:focus-visible{outline:2px solid var(--glitch-a);outline-offset:6px}
 
 /* ── terminal ──────────────────────────────────────── */
 #term{
@@ -262,6 +250,29 @@ main{position:relative;z-index:3}
 #termLine .p{color:var(--lavender);white-space:nowrap}
 #termIn{flex:1;background:none;border:0;outline:0;color:var(--ice);font:inherit;caret-color:var(--lavender)}
 #term.open ~ #ghostie{z-index:41}
+
+/* ── manifesto ─────────────────────────────────────── */
+.wanted{
+  position:relative;z-index:3;
+  max-width:640px;margin:0 auto;
+  padding:0 6vw clamp(4rem,12vh,8rem);
+}
+.wanted h2{
+  font-family:var(--font-display);font-weight:600;
+  font-size:clamp(1.4rem,3.4vw,2rem);letter-spacing:.06em;
+  margin-bottom:1.2rem;
+}
+.wanted p{
+  color:var(--ice);font-size:.9rem;line-height:1.75;letter-spacing:.03em;
+  max-width:56ch;margin-bottom:1.1rem;
+}
+.wanted p.dim{color:var(--rain)}
+.wanted p.mark{color:var(--lavender);border-left:2px solid var(--violet);padding-left:1rem}
+.wanted .creed{
+  margin-top:1.8rem;display:grid;gap:.45rem;
+  font-size:.78rem;letter-spacing:.12em;color:var(--rain);
+}
+.wanted .creed span::before{content:'// ';color:var(--violet)}
 
 /* ── ghostie ───────────────────────────────────────── */
 #ghostie{
@@ -322,14 +333,8 @@ footer{
 <div class="scanlines" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 
+<canvas id="trail" aria-hidden="true"></canvas>
 <canvas id="static" aria-hidden="true"></canvas>
-
-<!-- ═══ RAIN DIAL ═══ -->
-<div id="weather">
-  <label for="rainDial">rain</label>
-  <input id="rainDial" type="range" min="0" max="100" value="55" aria-label="rain intensity">
-  <output id="rainVal" for="rainDial">55</output>
-</div>
 
 <!-- ═══ TERMINAL ═══ -->
 <div id="term" role="dialog" aria-label="terminal">
@@ -391,7 +396,7 @@ footer{
       <li>
         <a class="node live" href="#terminal" id="termOpen">
           <span class="dot" aria-hidden="true"></span>
-          <span class="name">TERMINAL<small>remnant shell // type help</small></span>
+          <span class="name">TERMINAL<small>remnant shell // type help // rain lives here now</small></span>
           <span class="state">OPEN</span>
         </a>
       </li>
@@ -399,11 +404,11 @@ footer{
       <!-- dormant channels. wire up when the pages exist:
            change <div class="node dead"> to <a class="node live" href="databytes.html"> -->
       <li>
-        <div class="node dead" aria-disabled="true">
+        <a class="node live" href="databytes.html">
           <span class="dot" aria-hidden="true"></span>
           <span class="name">DATABYTES<small>case files, stills, footage, transmissions</small></span>
-          <span class="state">NO SIGNAL</span>
-        </div>
+          <span class="state">RECOVERING</span>
+        </a>
       </li>
       <li>
         <div class="node dead" aria-disabled="true">
@@ -423,6 +428,21 @@ footer{
   </section>
 
 </main>
+
+<!-- ═══ WANTED // manifesto ═══ -->
+<section class="wanted" aria-labelledby="wanted-title">
+  <h2 id="wanted-title">Wanted</h2>
+  <p class="dim">Notice recovered from the signal. Origin unknown. Reproduced as found.</p>
+  <p>You know the feeling. The room is full and you are still the only one in it. You learned to be fine with that. You got good at it. Too good.</p>
+  <p class="mark">This place exists because someone wanted it to exist for them, and it didn't. So they built it.</p>
+  <p>EXiLED is not a brand, not a persona, not a product. It is a frequency. Outcasts, ghosts, the ones who read the manual and still didn't fit. Nobody is coming to save us. That was never the point. The point is we found each other in the dark.</p>
+  <p>The stream is the campfire. Bring nothing. Stay anyway.</p>
+  <div class="creed">
+    <span>we're all alone here. together.</span>
+    <span>nothing is deleted. only exiled.</span>
+    <span>if you feel it, you're one of us.</span>
+  </div>
+</section>
 
 <!-- ═══ GHOSTIE (blink + talk frames) ═══ -->
 <div id="ghostie" role="img" aria-label="ghostie" title="ghostie">
@@ -630,19 +650,16 @@ footer{
 
   /* ── rain + lightning ── */
   var c = document.getElementById('rain'), ctx = c.getContext('2d'), drops = [], W, H;
-  var flash = document.getElementById('flash'), dial = document.getElementById('rainDial'), rainVal = document.getElementById('rainVal');
+  var flash = document.getElementById('flash');
   var intensity = 55;
   try{ var sv = localStorage.getItem('exiled.rain'); if(sv !== null) intensity = +sv; }catch(e){}
   if(reduce) intensity = 0;
-  dial.value = intensity; rainVal.textContent = intensity;
-  document.getElementById('weather').classList.add('live');
 
   function setRain(v){
-    intensity = Math.max(0, Math.min(100, +v)); dial.value = intensity; rainVal.textContent = intensity;
+    intensity = Math.max(0, Math.min(100, +v));
     try{ localStorage.setItem('exiled.rain', intensity); }catch(e){}
     build();
   }
-  dial.addEventListener('input', function(){ setRain(dial.value); });
 
   function build(){
     W = c.width = window.innerWidth; H = c.height = window.innerHeight;
@@ -701,6 +718,36 @@ footer{
     requestAnimationFrame(draw);
   })();
 
+  /* ── cursor glitch trail ── */
+  if(!reduce && window.matchMedia('(hover:hover)').matches){
+    var tc = document.getElementById('trail'), tctx = tc.getContext('2d'), bits = [], lastX = -1, lastY = -1;
+    function tsize(){ tc.width = window.innerWidth; tc.height = window.innerHeight; }
+    window.addEventListener('resize', tsize); tsize();
+    var tcols = ['159,140,255','124,245,255','255,79,216','124,255,178'];
+    document.addEventListener('mousemove', function(e){
+      if(lastX < 0){ lastX = e.clientX; lastY = e.clientY; }
+      var dx = e.clientX - lastX, dy = e.clientY - lastY, sp = Math.hypot(dx, dy);
+      lastX = e.clientX; lastY = e.clientY;
+      if(sp < 2) return;
+      var n = Math.min(4, 1 + Math.floor(sp / 12));
+      for(var k = 0; k < n; k++){
+        bits.push({ x: e.clientX + (Math.random()-.5)*14, y: e.clientY + (Math.random()-.5)*14,
+                    w: 2 + Math.random()*10, h: 1 + Math.random()*3, c: tcols[Math.floor(Math.random()*tcols.length)], life: 1 });
+      }
+    });
+    (function tdraw(){
+      tctx.clearRect(0,0,tc.width,tc.height);
+      for(var b = bits.length-1; b >= 0; b--){
+        var p = bits[b];
+        tctx.fillStyle = 'rgba(' + p.c + ',' + (p.life*.85) + ')';
+        tctx.fillRect(p.x, p.y, p.w, p.h);
+        p.x += (Math.random()-.5)*2; p.life -= .06;
+        if(p.life <= 0) bits.splice(b,1);
+      }
+      requestAnimationFrame(tdraw);
+    })();
+  }
+
   /* ── terminal ── */
   var term = document.getElementById('term'), tOut = document.getElementById('termOut'), tIn = document.getElementById('termIn'), tPrompt = document.getElementById('termPrompt');
   var mainframeOpen = false;
@@ -721,7 +768,7 @@ footer{
   function prompt(){ return (mainframeOpen ? 'root@mainframe' : 'guest@exiled') + ':~$'; }
 
   var CMDS = {
-    help: function(){ tprint('commands:\n  help      this\n  ls        list files\n  cat FILE  read a file\n  whoami    identify\n  rain N    set rain 0-100\n  ghostie   summon\n  unlock    ...\n  clear     wipe\n  exit      leave', 'dim'); },
+    help: function(){ tprint('commands:\n  help      this\n  ls        list files\n  cat FILE  read a file\n  whoami    identify\n  rain N    set rain 0-100 (75+ lightning, 100 storm)\n  ghostie   summon\n  unlock    ...\n  clear     wipe\n  exit      leave', 'dim'); },
     ls: function(){ tprint(Object.keys(FILES).filter(function(f){ return f[0] !== '.' || mainframeOpen; }).map(function(f){ return (FILES[f].locked && !mainframeOpen ? '<span class="err">-r--------</span>  ' : '<span class="ok">-rw-r--r--</span>  ') + f; }).join('\n')); },
     cat: function(a){
       if(!a) return tprint('cat: what file?', 'err');
@@ -758,5 +805,8 @@ footer{
   if(location.hash === '#terminal') setTimeout(openTerm, 2400);
 })();
 </script>
+<!-- ═══ ANALYTICS SLOT ═══
+     when you make a GoatCounter account, paste its script tag here and delete this comment.
+     until then: GitHub repo → Insights → Traffic shows visits for the last 14 days. -->
 </body>
 </html>
