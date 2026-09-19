@@ -149,6 +149,36 @@ main{position:relative;z-index:3}
 @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (max-width:560px){.fragments{font-size:.68rem}.fragments .track{animation-duration:32s}}
 
+/* ── chat ──────────────────────────────────────────── */
+.chat{position:relative;z-index:3;max-width:900px;margin:clamp(1.4rem,3.5vh,2.4rem) auto 0;padding:0 6vw}
+.chat-inner{border:1px solid var(--violet);background:rgba(11,13,26,.72)}
+.chat-bar{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.5rem .8rem;border-bottom:1px solid rgba(42,29,94,.7);
+  font-size:.66rem;letter-spacing:.16em;color:var(--rain);
+}
+.live-dot{
+  width:.5rem;height:.5rem;border-radius:50%;background:#FF3B5C;
+  box-shadow:0 0 8px #FF3B5C,0 0 16px rgba(255,59,92,.5);
+  animation:livepulse 2.2s ease-in-out infinite;flex:0 0 auto;
+}
+@keyframes livepulse{0%,100%{opacity:1}50%{opacity:.3}}
+.chat-title{color:#FF3B5C;font-weight:700;letter-spacing:.2em}
+.chat-count{margin-left:auto;white-space:nowrap}
+.chat-count b{color:var(--lavender);font-weight:400}
+.chat-feed{
+  height:11.5rem;overflow:hidden;padding:.65rem .85rem;
+  display:flex;flex-direction:column;justify-content:flex-end;gap:.32rem;
+  font-size:.76rem;line-height:1.45;
+  mask-image:linear-gradient(180deg,transparent,#000 24%);
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 24%);
+}
+.chat-msg{display:flex;gap:.55rem;animation:chatin .28s ease}
+@keyframes chatin{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.chat-msg .u{flex:0 0 auto;font-weight:700}
+.chat-msg .t{color:var(--ice);min-width:0;word-break:break-word}
+@media (prefers-reduced-motion:reduce){.chat-msg{animation:none}.live-dot{animation:none}}
+
 /* ── directory ─────────────────────────────────────── */
 .directory{
   max-width:640px;
@@ -369,6 +399,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .directory,.wanted{padding-left:5vw;padding-right:5vw}
 }
 @media (max-width:560px){
+  .chat{padding-left:5vw;padding-right:5vw;margin-top:1.2rem}
+  .chat-feed{height:9.5rem;font-size:.7rem;padding:.55rem .65rem}
+  .chat-bar{font-size:.6rem;letter-spacing:.12em}
+  .chat-msg{gap:.4rem}
   .hero{padding:.6rem 4vw 0}
   .signal img{mask-image:var(--signal-mask);-webkit-mask-image:var(--signal-mask)}
   .directory{padding-top:2.4rem;padding-bottom:3.2rem}
@@ -433,6 +467,19 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   <!-- ═══ RECOVERED FRAGMENTS ═══
        edit the text inside <span> to change the ticker. it's duplicated once for the loop. -->
   <div class="fragments" aria-hidden="true"><div class="track"><span id="frag"></span><span id="frag2"></span></div></div>
+
+  <!-- ═══ CHAT ═══
+       lines and handles live in the script below. add to CHAT_LINES freely. -->
+  <section class="chat" aria-label="chat">
+    <div class="chat-inner">
+      <div class="chat-bar">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="chat-title">LIVE CHAT</span>
+        <span class="chat-count"><b id="chatCount">247</b> watching</span>
+      </div>
+      <div class="chat-feed" id="chatFeed"></div>
+    </div>
+  </section>
 
   <!-- ═══ DIRECTORY ═══
        To add a section later (posts, media, whatever):
@@ -1070,6 +1117,100 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       }
       requestAnimationFrame(tdraw);
     })();
+  }
+
+
+  /* ── chat ──────────────────────────────────────────
+     CHAT_LINES is the general pool. REGULARS are handles with their own
+     voice that turn up more often than a drive-by chatter. add to either. */
+  var chatFeed = document.getElementById('chatFeed');
+  var chatCountEl = document.getElementById('chatCount');
+  var CHAT_COLS = ['#9F8CFF','#7CF5FF','#FF4FD8','#7CFFB2','#FFE97C','#DCE3FF','#FF8A6B','#8CFFD1','#C9A0FF','#6BE0FF'];
+  var CHAT_USERS = ["ghoulgirl_99", "v0idkid", "nullp0inter", "static_saint", "dead_modem", "lowlifehitek", "ashtraygf", "bl00dborne", "xX_nocturne_Xx", "wirefeed", "sadlatency", "crtburn", "hauntedbuffer", "neonwake", "404_soul", "grimwave", "pixelrot", "chromefang", "velvetstatic", "nightcitygf", "bones_fm", "dialup_ghost", "muted_angel", "kernelpanic_", "offlinehours", "saltwaterboy", "vhs_decay", "terminal_kid", "junkdata", "softcrash"];
+  var CHAT_LINES = ["we're all alone here <3", "found this at 3am and just sat here for a while", "first place in years i didn't feel weird", "i don't post anywhere. i'm posting here.", "this is the first internet thing that felt like mine", "nothing is deleted. only exiled.", "who else is here alone rn", "the campfire line got me", "bring nothing stay anyway. ok i'm crying", "never fit anywhere and i got used to it. this is different", "showed this to nobody. it's mine.", "if you feel it you're one of us. i feel it.", "lurked a week. finally saying hi", "hi. sorry. first time talking anywhere in a while.", "no one is coming. that's the point. brutal. true.", "this is what i needed when i was 15", "wish this existed when i was younger", "my people??? in this economy???", "the outcasts found each other. we actually did", "did not expect to feel something today", "everyone here is so normal about being not normal", "best chat on the internet and nobody is yelling", "no drama no bait just ghosts", "i've been refreshing this for an hour", "logged off my main to be here", "this place doesn't want anything from me. weird. nice.", "choombas <3", "hi choombas", "still can't believe this is free", "no ads no popups i almost don't trust it", "the fact that nobody is selling me anything", "i'll be here. quietly. most nights.", "the rain setting????", "wait there's a TERMINAL", "type help. thank me later", "the terminal is unreasonably deep", "i've been typing random commands for 20 minutes", "the ghost BLINKS", "she looked at me", "clicked the ghost and she talked. i'm unwell", "you can drag her around now?? she lives in my corner", "the cursor trail is so sick", "whoever did the cursor trail, thank you", "the boot sequence gets me every time", "integrity 41% and holding. mood.", "the clock is broken on purpose and i love it", "why does the clock keep glitching. scared. obsessed.", "the lightning at full storm is insane", "turned the rain all the way up and forgot what i was doing", "full storm is a whole light show", "go look at DATABYTES", "wiki says no signal. someone build the wiki", "what is the redacted one", "the redacted channel is going to ruin my week", "i've been staring at [REDACTED] for ten minutes", "there's something in the terminal i'm not ready to talk about", "i swear the ghost reacted to something i typed", "there's a CAT???", "whoever hid the cat in here. genius.", "every line in that ticker is a banger", "no gods in this network. putting that on a shirt", "mobile version actually works. respect.", "reading this on my phone in bed. perfect.", "one html file probably. absolute craft.", "this goes so hard", "this site has no business going this hard", "immediately bookmarked", "sent this to my only friend", "how is this made by one person", "the aesthetic is perfect. no notes.", "black purple green supremacy", "whoever made this: rest. then make more.", "see you on kick", "kick chat is going to be unhinged and i'm ready", "first stream when", "i will be there day one", "hello good haunter <3", "haunter is the correct favorite pokemon btw", "not crying, the rain is just at 100", "emotionally i am the 41% integrity", "got into eva at the worst possible age and it shows in my entire personality", "my therapist asked what community means and i showed her a black website", "listing this site in my will", "i have never been perceived and i'd like to keep it that way. anyway hi.", "me and who. me and the ghost.", "found my people and immediately went quiet. classic.", "touched grass once. hated it. came back.", "my roman empire is a website with rain on it"];
+  var REGULARS = [
+    { name: 'ghostgirl222', col: '#FF6FD8', rate: 9, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back"] }
+  ];
+
+  /* stable colour per handle */
+  var userCol = {};
+  CHAT_USERS.forEach(function(u, i){ userCol[u] = CHAT_COLS[i % CHAT_COLS.length]; });
+
+  /* draw from a shuffled bag so nothing repeats until the pool is spent */
+  var BAG_GUARD = 8;   /* roughly the number of rows visible at once */
+  function bagOf(arr){ return { src: arr, pool: [], recent: [] }; }
+  function draw(b){
+    if(!b.pool.length){
+      b.pool = b.src.slice();
+      for(var i = b.pool.length - 1; i > 0; i--){
+        var j = Math.floor(Math.random()*(i+1)), t = b.pool[i]; b.pool[i] = b.pool[j]; b.pool[j] = t;
+      }
+      /* the tail pops first, so push anything we just showed away from it.
+         without this a line can reappear right across the reshuffle seam. */
+      var guard = Math.min(BAG_GUARD, Math.floor(b.pool.length/2));
+      for(var g = 0; g < guard; g++){
+        var at = b.pool.length - 1 - g;
+        if(b.recent.indexOf(b.pool[at]) >= 0){
+          var to = Math.floor(Math.random()*(b.pool.length - guard));
+          var sw = b.pool[to]; b.pool[to] = b.pool[at]; b.pool[at] = sw;
+        }
+      }
+    }
+    var out = b.pool.pop();
+    b.recent.push(out);
+    if(b.recent.length > BAG_GUARD) b.recent.shift();
+    return out;
+  }
+  var lineBag = bagOf(CHAT_LINES), userBag = bagOf(CHAT_USERS);
+  REGULARS.forEach(function(r){ r.bag = bagOf(r.lines); });
+
+  var sinceRegular = Math.floor(Math.random()*6);
+  function nextMessage(){
+    for(var i = 0; i < REGULARS.length; i++){
+      var r = REGULARS[i];
+      if(sinceRegular >= r.rate + Math.floor(Math.random()*4) - 1){
+        sinceRegular = 0;
+        return { u: r.name, c: r.col, t: draw(r.bag) };
+      }
+    }
+    sinceRegular++;
+    var u = draw(userBag);
+    return { u: u, c: userCol[u], t: draw(lineBag) };
+  }
+
+  function pushMessage(animate){
+    var m = nextMessage();
+    var row = document.createElement('div');
+    row.className = 'chat-msg';
+    if(!animate) row.style.animation = 'none';
+    var u = document.createElement('span');
+    u.className = 'u'; u.style.color = m.c; u.textContent = m.u;
+    var t = document.createElement('span');
+    t.className = 't'; t.textContent = m.t;
+    row.appendChild(u); row.appendChild(t);
+    chatFeed.appendChild(row);
+    while(chatFeed.children.length > 9) chatFeed.removeChild(chatFeed.firstChild);
+  }
+
+  if(chatFeed){
+    for(var cs = 0; cs < 7; cs++) pushMessage(false);
+    (function chatTick(){
+      setTimeout(function(){
+        if(!document.hidden) pushMessage(true);
+        chatTick();
+      }, 2200 + Math.random()*3600);
+    })();
+
+    /* watcher count drifts the way a real one does */
+    var watching = 231 + Math.floor(Math.random()*40);
+    chatCountEl.textContent = watching;
+    setInterval(function(){
+      if(document.hidden) return;
+      watching += Math.floor(Math.random()*7) - 3;
+      if(watching < 168) watching += 9;
+      if(watching > 342) watching -= 11;
+      chatCountEl.textContent = watching;
+    }, 5200);
   }
 
   /* ── terminal ── */
