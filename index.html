@@ -262,7 +262,53 @@ main{position:relative;z-index:3}
 @media (hover:none){#trail{display:none}}
 
 /* ── lightning flash ───────────────────────────────── */
-/* full storm only. below 100 none of this is on. */
+/* ── full storm only. below 100 none of this is on. ─── */
+
+/* bolts sit with the rain normally, in front of everything at 100 */
+#bolt{position:fixed;inset:0;z-index:1;pointer-events:none}
+body.stormmax #bolt{z-index:8}
+
+/* the page itself takes the hit */
+#stage{position:relative;z-index:3}
+@keyframes jolt{
+  0%{transform:translate(0,0)}   14%{transform:translate(-7px,4px)}
+  28%{transform:translate(6px,-5px)} 42%{transform:translate(-5px,-2px)}
+  58%{transform:translate(4px,4px)}  74%{transform:translate(-3px,1px)}
+  88%{transform:translate(2px,-1px)} 100%{transform:translate(0,0)}
+}
+#stage.jolt{animation:jolt .44s cubic-bezier(.36,.07,.19,.97)}
+#stage.split{text-shadow:-1.6px 0 rgba(255,79,216,.8),1.6px 0 rgba(124,245,255,.8)}
+
+/* a strike leaves its colour burning along the panel edges */
+body.litup .node,body.litup .chat-inner,body.litup .join{
+  border-color:var(--lit,var(--lavender));
+  box-shadow:0 0 18px -6px var(--lit,var(--lavender));
+}
+.node,.chat-inner,.join{transition:border-color .18s,box-shadow .18s}
+
+/* the palette itself goes polychrome, not just the weather */
+@property --storm-accent{syntax:'<color>';inherits:true;initial-value:#9F8CFF}
+@keyframes accentcycle{
+  0%{--storm-accent:#9F8CFF}   20%{--storm-accent:#7CF5FF}
+  40%{--storm-accent:#FF4FD8}  60%{--storm-accent:#7CFFB2}
+  80%{--storm-accent:#FFE97C} 100%{--storm-accent:#9F8CFF}
+}
+body.stormmax{animation:accentcycle 8s linear infinite}
+body.stormmax .node{border-color:var(--storm-accent)}
+body.stormmax .chat-inner,body.stormmax .join{border-color:var(--storm-accent)}
+body.stormmax .directory h2,body.stormmax .wanted h2,body.stormmax .chat-title{color:var(--storm-accent)}
+body.stormmax .live-dot,body.stormmax .join-dot{background:var(--storm-accent);box-shadow:0 0 12px var(--storm-accent)}
+body.stormmax #ghostie{filter:drop-shadow(0 0 20px var(--storm-accent))}
+body.stormmax .fragments b{color:var(--storm-accent)}
+/* modest machines skip the continuous repaint */
+body.lowpower.stormmax{animation:none}
+
+@media (prefers-reduced-motion:reduce){
+  #stage.jolt{animation:none}
+  #stage.split{text-shadow:none}
+  body.stormmax{animation:none}
+}
+
 #aura{
   position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;
   transition:opacity 1s ease;mix-blend-mode:screen;
@@ -480,6 +526,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <body>
 
 <canvas id="rain" aria-hidden="true"></canvas>
+<canvas id="bolt" aria-hidden="true"></canvas>
 <div id="flash" aria-hidden="true"></div>
 <div id="glow" aria-hidden="true"></div>
 <div id="aura" aria-hidden="true"></div>
@@ -499,6 +546,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <!-- ═══ BOOT SEQUENCE (runs once per page load) ═══ -->
 <div id="boot" aria-hidden="true"><pre id="bootText"></pre></div>
 
+<div id="stage">
 <main>
 
   <!-- ═══ HERO / SIGNAL ═══ -->
@@ -645,6 +693,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   </a>
 </section>
 
+
+<footer>EXiLED &nbsp;//&nbsp; remnant protocol &nbsp;//&nbsp; <span id="yr"></span> &nbsp;//&nbsp; <span id="clock">--:--:--</span></footer>
+</div>
+
 <!-- ═══ GHOSTIE (blink + talk frames) ═══ -->
 <div id="ghostie" role="img" aria-label="ghostie" title="ghostie">
   <span class="say" id="say"></span>
@@ -655,7 +707,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   </div>
 </div>
 
-<footer>EXiLED &nbsp;//&nbsp; remnant protocol &nbsp;//&nbsp; <span id="yr"></span> &nbsp;//&nbsp; <span id="clock">--:--:--</span></footer>
 
 <script>
 (function(){
@@ -683,7 +734,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     signal.classList.add('live');
     gh.classList.add('live');
     setTimeout(function(){ tear(); }, 900);
-    if(!reduce) setInterval(function(){ if(Math.random() < .35) tear(); }, 5200);
+    if(!reduce) setInterval(function(){ if(Math.random() < (intensity >= 100 ? .85 : .35)) tear(); }, 5200);
   }
   /* ── fragments ── */
   var frags = ["ghosts in the machine", "nostalgia is a curse", "remnant protocol v0.1", "choombas wanted", "we're all alone here. together.", "integrity 41% and holding", "high-tech / low-life", "no gods in this network", "you were not supposed to find this", "signal degrades past this point", "outcasts found each other in the dark", "nothing is deleted. only exiled.", "no one is coming. we came anyway.", "lurking is loyalty", "the stream is the campfire", "bring nothing. stay anyway.", "if you feel it, you're one of us", "not lost. exiled.", "the machine keeps its ghosts", "built by one of us, for the rest of us", "hellogoodhaunter", "the door is not built yet"];
@@ -695,7 +746,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var clock = document.getElementById('clock');
   setInterval(function(){
     var t = new Date().toTimeString().slice(0,8);
-    if(!reduce && Math.random() < .12){
+    if(!reduce && Math.random() < (intensity >= 100 ? .5 : .12)){
       var k = Math.floor(Math.random()*8); if(t[k] === ':') k++;
       var junk = '▓░#%@?';
       t = t.slice(0,k) + '<span class="x">' + junk[Math.floor(Math.random()*junk.length)] + '</span>' + t.slice(k+1);
@@ -783,6 +834,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var flaps = 0, iv = setInterval(function(){ gframe(flaps++ % 2 ? 'idle' : 'talk'); }, 130);
     setTimeout(function(){ clearInterval(iv); gframe('idle'); talking = false; say.classList.remove('on'); }, ms || 2600);
   }
+  var stormMutters = ['i do not like this.', 'it is LOUD out there.', 'hold on to something.',
+                      'the sky is doing the thing again.', 'this is fine. this is fine.',
+                      'you did this. you turned it up.'];
   var mutters = ['boo.', 'you found the door before the door.', 'choomba? choomba.', 'nostalgia is a curse.',
                  'still building. still haunting.', 'the rain never stops here.', 'xo', 'ghosts in the machine.'];
   gh.addEventListener('click', function(){
@@ -881,7 +935,15 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   if(!reduce){
     setTimeout(wander, 16000);
     setTimeout(blink, 3000);
-    setInterval(function(){ if(!talking && Math.random() < .25) speak(mutters[Math.floor(Math.random()*mutters.length)], 2200); }, 14000);
+    setInterval(function(){
+      if(talking) return;
+      if(intensity >= 100 && Math.random() < .5){
+        gh.classList.add('glitch');
+        setTimeout(function(){ gh.classList.remove('glitch'); }, 900);
+        return speak(stormMutters[Math.floor(Math.random()*stormMutters.length)], 2700);
+      }
+      if(Math.random() < .25) speak(mutters[Math.floor(Math.random()*mutters.length)], 2200);
+    }, 14000);
   }
 
   /* ── baby ── */
@@ -961,7 +1023,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     /* coming back from another page in the same visit: no second boot */
     boot.classList.add('done'); boot.style.display = 'none';
     signal.classList.add('live'); gh.classList.add('live');
-    if(!reduce) setInterval(function(){ if(Math.random() < .35) tear(); }, 5200);
+    if(!reduce) setInterval(function(){ if(Math.random() < (intensity >= 100 ? .85 : .35)) tear(); }, 5200);
   } else {
     var i = 0, out = '';
     burst(750, next);
@@ -990,6 +1052,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   /* ── rain + lightning ── */
   var c = document.getElementById('rain'), ctx = c.getContext('2d'), drops = [], W, H;
+  var bc = document.getElementById('bolt'), bctx = bc.getContext('2d'), boltsDrawn = false;
+  var stage = document.getElementById('stage');
   var flash = document.getElementById('flash');
   var intensity = 55;
   try{ var sv = localStorage.getItem('exiled.rain'); if(sv !== null) intensity = +sv; }catch(e){}
@@ -1009,6 +1073,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var RAIN_RGB = ['159,140,255','124,245,255','255,79,216','124,255,178','220,227,255','255,233,124'];
   function build(){
     W = c.width = window.innerWidth; H = c.height = window.innerHeight;
+    bc.width = W; bc.height = H;
     drops = [];
     c.style.display = intensity ? 'block' : 'none';
     var n = Math.floor((W / 7) * (0.15 + intensity/100 * 1.6));
@@ -1041,6 +1106,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var bolts = [];
   /* modest machines get fewer forks and a lower ceiling. nothing here grows over time. */
   var LOWPOWER = (navigator.hardwareConcurrency || 4) <= 4 || window.innerWidth < 560;
+  if(LOWPOWER && document.body) document.body.classList.add('lowpower');
   var BOLT_CAP = LOWPOWER ? 8 : 20;
   var GLOW = LOWPOWER ? 10 : 22;
   var STORM_COLS = ['#DCE3FF','#9F8CFF','#7CF5FF','#FF4FD8','#7CFFB2','#FFE97C'];
@@ -1068,6 +1134,42 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     spawnForks(pts, col, forks, LOWPOWER ? 1 : 2);
   }
   var glowEl = document.getElementById('glow');
+  var litT;
+  function litUp(col){
+    if(!document.body) return;
+    document.documentElement.style.setProperty('--lit', col);
+    document.body.classList.add('litup');
+    clearTimeout(litT);
+    litT = setTimeout(function(){ document.body.classList.remove('litup'); }, 190);
+  }
+  function jolt(){
+    if(reduce || !stage) return;
+    stage.classList.remove('jolt');
+    void stage.offsetWidth;                    /* restart the animation */
+    stage.classList.add('jolt'); stage.classList.add('split');
+    setTimeout(function(){ stage.classList.remove('split'); }, 170);
+    setTimeout(function(){ stage.classList.remove('jolt'); }, 470);
+  }
+  /* a few torn bands rather than a full screen of noise */
+  function staticTear(ms){
+    if(reduce) return;
+    sc.width = 240; sc.height = 135; sc.classList.add('on');
+    var t0 = performance.now();
+    (function f(){
+      if(performance.now() - t0 > ms){ sc.classList.remove('on'); sctx.clearRect(0,0,sc.width,sc.height); return; }
+      sctx.clearRect(0,0,sc.width,sc.height);
+      for(var i = 0; i < 4; i++){
+        var h = Math.ceil(2 + Math.random()*9), y = Math.random()*(sc.height - h);
+        var id = sctx.createImageData(sc.width, h), d = id.data;
+        for(var q = 0; q < d.length; q += 4){
+          var v = Math.random()*255;
+          d[q] = v; d[q+1] = v*.7; d[q+2] = 255; d[q+3] = 190;
+        }
+        sctx.putImageData(id, 0, y);
+      }
+      requestAnimationFrame(f);
+    })();
+  }
   function flashPulse(col, op, ms){
     flash.style.background = col; flash.style.opacity = op;
     setTimeout(function(){ flash.style.opacity = 0; }, ms);
@@ -1104,8 +1206,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         if(intensity < 100 || document.hidden) return;
         var col = STORM_COLS[Math.floor(Math.random()*STORM_COLS.length)];
         var alt = STORM_COLS[Math.floor(Math.random()*STORM_COLS.length)];
-        if(k === 0) chromaFlash(col, alt);
+        if(k === 0){ chromaFlash(col, alt); jolt(); staticTear(160); }
         else flashPulse(col, .16 + Math.random()*.12, 50 + Math.random()*45);
+        litUp(col);
         addBolt(W*.04 + Math.random()*W*.92, col,
                 LOWPOWER ? 1 : 2 + Math.floor(Math.random()*2), k === 0 ? 3 : 2);
         if(!LOWPOWER && Math.random() < .5) sheet(col, .4);
@@ -1138,18 +1241,24 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         if(d.y > H){ d.y = -d.l; d.x = Math.random()*W; }
         if(d.x < 0) d.x = W;
       }
+    }
+    /* bolts live on their own canvas so they can move in front of the
+       page at full storm without dragging the rain with them. only clear it
+       when something was actually on it. */
+    if(bolts.length || boltsDrawn){ bctx.clearRect(0,0,W,H); boltsDrawn = bolts.length > 0; }
+    if(bolts.length){
       for(var b = bolts.length-1; b >= 0; b--){
         var bo = bolts[b];
-        ctx.beginPath(); ctx.moveTo(bo.pts[0][0], bo.pts[0][1]);
-        for(var q = 1; q < bo.pts.length; q++) ctx.lineTo(bo.pts[q][0], bo.pts[q][1]);
+        bctx.beginPath(); bctx.moveTo(bo.pts[0][0], bo.pts[0][1]);
+        for(var q = 1; q < bo.pts.length; q++) bctx.lineTo(bo.pts[q][0], bo.pts[q][1]);
         /* coloured halo, then a white-hot core down the middle */
-        ctx.globalAlpha = bo.life * .9; ctx.strokeStyle = bo.col;
-        ctx.shadowBlur = GLOW; ctx.shadowColor = bo.col; ctx.lineWidth = bo.w + 2;
-        ctx.stroke();
-        ctx.globalAlpha = bo.life; ctx.strokeStyle = '#FFFFFF';
-        ctx.shadowBlur = GLOW * .36; ctx.lineWidth = Math.max(1, bo.w - 1);
-        ctx.stroke();
-        ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.lineWidth = 1;
+        bctx.globalAlpha = bo.life * .9; bctx.strokeStyle = bo.col;
+        bctx.shadowBlur = GLOW; bctx.shadowColor = bo.col; bctx.lineWidth = bo.w + 2;
+        bctx.stroke();
+        bctx.globalAlpha = bo.life; bctx.strokeStyle = '#FFFFFF';
+        bctx.shadowBlur = GLOW * .36; bctx.lineWidth = Math.max(1, bo.w - 1);
+        bctx.stroke();
+        bctx.shadowBlur = 0; bctx.globalAlpha = 1; bctx.lineWidth = 1;
         bo.life -= bo.fade; if(bo.life <= 0) bolts.splice(b,1);
       }
     }
@@ -1195,9 +1304,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var CHAT_COLS = ['#9F8CFF','#7CF5FF','#FF4FD8','#7CFFB2','#FFE97C','#DCE3FF','#FF8A6B','#8CFFD1','#C9A0FF','#6BE0FF'];
   var CHAT_USERS = ["ghoulgirl_99", "v0idkid", "nullp0inter", "static_saint", "dead_modem", "lowlifehitek", "ashtraygf", "bl00dborne", "xX_nocturne_Xx", "wirefeed", "sadlatency", "crtburn", "hauntedbuffer", "neonwake", "404_soul", "grimwave", "pixelrot", "chromefang", "velvetstatic", "nightcitygf", "bones_fm", "dialup_ghost", "muted_angel", "kernelpanic_", "offlinehours", "saltwaterboy", "vhs_decay", "terminal_kid", "junkdata", "softcrash", "quietroom", "threeam_", "lastseen_online", "emptyseat", "nobodysboy", "moth2lamp", "ghostedagain", "sadgirlsummer", "velvetteeth", "hexadecimal_heart", "realtalk_88", "clipfarm", "notyourbro"];
   var CHAT_POOLS = [
-    { w: 80, lines: ["we're all alone here <3", "found this at 3am and just sat here for a while", "first place in years i didn't feel weird", "i don't post anywhere. i'm posting here.", "this is the first internet thing that felt like mine", "nothing is deleted. only exiled.", "who else is here alone rn", "the campfire line got me", "bring nothing stay anyway. ok i'm crying", "never fit anywhere and i got used to it. this is different", "showed this to nobody. it's mine.", "if you feel it you're one of us. i feel it.", "lurked a week. finally saying hi", "hi. sorry. first time talking anywhere in a while.", "no one is coming. that's the point. brutal. true.", "this is what i needed when i was 15", "wish this existed when i was younger", "my people??? in this economy???", "the outcasts found each other. we actually did", "did not expect to feel something today", "everyone here is so normal about being not normal", "best chat on the internet and nobody is yelling", "no drama no bait just ghosts", "i've been refreshing this for an hour", "logged off my main to be here", "this place doesn't want anything from me. weird. nice.", "choombas <3", "hi choombas", "still can't believe this is free", "no ads no popups i almost don't trust it", "the fact that nobody is selling me anything", "i'll be here. quietly. most nights.", "the rain setting????", "wait there's a TERMINAL", "type help. thank me later", "the terminal is unreasonably deep", "i've been typing random commands for 20 minutes", "the ghost BLINKS", "she looked at me", "clicked the ghost and she talked. i'm unwell", "you can drag her around now?? she lives in my corner", "the cursor trail is so sick", "whoever did the cursor trail, thank you", "the boot sequence gets me every time", "integrity 41% and holding. mood.", "the clock is broken on purpose and i love it", "why does the clock keep glitching. scared. obsessed.", "the lightning at full storm is insane", "turned the rain all the way up and forgot what i was doing", "full storm is a whole light show", "go look at DATABYTES", "wiki says no signal. someone build the wiki", "what is the redacted one", "the redacted channel is going to ruin my week", "i've been staring at [REDACTED] for ten minutes", "there's something in the terminal i'm not ready to talk about", "i swear the ghost reacted to something i typed", "there's a CAT???", "whoever hid the cat in here. genius.", "every line in that ticker is a banger", "no gods in this network. putting that on a shirt", "mobile version actually works. respect.", "reading this on my phone in bed. perfect.", "one html file probably. absolute craft.", "this goes so hard", "this site has no business going this hard", "immediately bookmarked", "sent this to my only friend", "how is this made by one person", "the aesthetic is perfect. no notes.", "black purple green supremacy", "whoever made this: rest. then make more.", "see you on kick", "kick chat is going to be unhinged and i'm ready", "first stream when", "i will be there day one", "hello good haunter <3", "haunter is the correct favorite pokemon btw", "not crying, the rain is just at 100", "emotionally i am the 41% integrity", "got into eva at the worst possible age and it shows in my entire personality", "my therapist asked what community means and i showed her a black website", "listing this site in my will", "i have never been perceived and i'd like to keep it that way. anyway hi.", "me and who. me and the ghost.", "found my people and immediately went quiet. classic.", "touched grass once. hated it. came back.", "my roman empire is a website with rain on it", "i haven't spoken out loud today and this is the closest thing to a conversation", "does anyone else just sit in the dark with headphones on for hours", "i'm not sad exactly. i'm tired of being the only one who reaches out.", "everyone i know is busy being happy somewhere else", "i stopped texting first and the friendship just ended. that simple.", "turns out i was the group chat", "nobody noticed i went quiet for three months", "i keep making plans i already know i'll cancel", "it's easier to be alone than to be alone around people", "i'm very good at being fine", "being fine is a full time job", "i miss people i've never met", "i miss a version of my life that never actually happened", "3am is the only hour i feel like myself", "the day is for pretending. the night is for this.", "i talk more in chats than i do out loud", "i don't want much. just someone who checks in without being asked.", "i'd settle for being someone's second thought", "the loneliest i've ever been was in a room full of my own friends", "i got really good at leaving before anyone else could", "everyone gets a version of me. nobody gets all of it.", "i am so tired of starting over", "made one new friend this year and then moved. classic.", "work, home, sleep, repeat. that's the whole post.", "does it get better or do you just get used to it", "used to it, i think. and that turned out to be okay.", "i want to be known without having to explain myself first", "the explaining is the exhausting part", "i've been the funny one so long i forgot i'm allowed to be sad", "everyone thinks i'm fine because i never said otherwise", "i don't know how to ask for help without apologising first", "sorry. that was heavy. anyway hi.", "why is this easier to say to strangers", "because we won't remember tomorrow and that's a relief", "i'll remember you", "that one got me. thanks.", "reading all of this and feeling less insane", "i genuinely thought it was just me", "it's never just you. that's the entire point of this place.", "first time a website has ever understood me", "this is the only tab i keep open", "i open this when i can't sleep", "i open this instead of the group chat i got left out of", "came here sad. still sad. less alone though.", "less alone is enough for tonight", "i don't need fixing. i just need company.", "company. that's the word. that's all it ever was.", "thanks for being awake", "someone else being awake helps more than it should", "hi to whoever is reading this at a bad hour", "bad hour crew", "clocking in for the bad hour shift", "i'll just sit here quietly if that's alright", "it's alright. sit.", "lurked for months. this is my first message anywhere in years.", "proud of you for typing that", "we're all proud of you actually", "this chat is kinder than the rest of the internet and it isn't close", "nobody here is trying to win", "nobody performing. strange. good.", "i forgot the internet was allowed to feel like this", "it felt like this once and then it stopped", "old internet energy. safe internet.", "i don't have to be interesting here", "that's such a relief i could cry", "most of my friends are characters in games and i've made peace with it", "my longest relationship is with a playlist", "music is the only thing that ever showed up on time", "bones got me through a year i shouldn't have made it through", "peep too. you already know.", "if the music found you then you were always one of us", "a song led me here somehow and i can't explain it", "the aesthetic isn't a costume for some of us", "it's just what the inside looks like", "finally somewhere that looks the way it feels", "i'll be here every night whether anyone answers or not", "someone will answer", "someone always answers here eventually", "goodnight to everyone in the dark", "see you in the dark"] },
-    { w: 15, lines: ["ok but the voice though", "THE VOICE. that's it. that's the message.", "i'm normal about this i'm normal about this i'm normal", "you could read me the terms of service honestly", "i'm not okay and it is entirely your fault", "found the site, found a problem, the problem is me", "hi. i'm obsessed. anyway what's up.", "down horrendous in a black and purple website", "marry me (respectfully) (not respectfully)", "giggling. kicking my feet. the usual.", "you could ruin my whole evening and i'd say thank you", "the sad boy thing is working on me and i'm embarrassed", "everyone here has the same crush and we're all pretending we don't", "we know. we all know.", "simping in a haunted house. living my best life.", "hi hello yes hi", "i'd like to formally lose my mind", "the way i sprinted here", "clocked in just to stare", "you have no idea what you do to people", "i am unwell and it is a lifestyle now", "showing up every night just in case", "oh this is dangerous for me", "i will be insufferable about this forever", "not me refreshing to see if you're on"] },
-    { w: 5,  lines: ["this is so cringe lmao", "0 viewers and a whole website. priorities.", "touch grass", "imagine building a site for twelve people", "nobody cares about your aesthetic bro", "ok and? who asked", "another edgy black website. groundbreaking.", "made a landing page and called it a movement", "cringe but ok", "y'all are so dramatic", "found this in a discord. leaving now.", "is this ai generated lmao", "mid", "the rain thing is lagging my phone", "imagine caring this much about a vibe"] }
+    { w: 80, lines: ["we're all alone here <3", "found this at 3am and just sat here for a while", "first place in years i didn't feel weird", "i don't post anywhere. i'm posting here.", "this is the first internet thing that felt like mine", "nothing is deleted. only exiled.", "who else is here alone rn", "the campfire line got me", "bring nothing stay anyway. ok i'm crying", "never fit anywhere and i got used to it. this is different", "showed this to nobody. it's mine.", "if you feel it you're one of us. i feel it.", "lurked a week. finally saying hi", "hi. sorry. first time talking anywhere in a while.", "no one is coming. that's the point. brutal. true.", "this is what i needed when i was 15", "wish this existed when i was younger", "my people??? in this economy???", "the outcasts found each other. we actually did", "did not expect to feel something today", "everyone here is so normal about being not normal", "best chat on the internet and nobody is yelling", "no drama no bait just ghosts", "i've been refreshing this for an hour", "logged off my main to be here", "this place doesn't want anything from me. weird. nice.", "choombas <3", "hi choombas", "still can't believe this is free", "no ads no popups i almost don't trust it", "the fact that nobody is selling me anything", "i'll be here. quietly. most nights.", "the rain setting????", "wait there's a TERMINAL", "type help. thank me later", "the terminal is unreasonably deep", "i've been typing random commands for 20 minutes", "the ghost BLINKS", "she looked at me", "clicked the ghost and she talked. i'm unwell", "you can drag her around now?? she lives in my corner", "the cursor trail is so sick", "whoever did the cursor trail, thank you", "the boot sequence gets me every time", "integrity 41% and holding. mood.", "the clock is broken on purpose and i love it", "why does the clock keep glitching. scared. obsessed.", "the lightning at full storm is insane", "turned the rain all the way up and forgot what i was doing", "full storm is a whole light show", "go look at DATABYTES", "wiki says no signal. someone build the wiki", "what is the redacted one", "the redacted channel is going to ruin my week", "i've been staring at [REDACTED] for ten minutes", "there's something in the terminal i'm not ready to talk about", "i swear the ghost reacted to something i typed", "there's a CAT???", "whoever hid the cat in here. genius.", "every line in that ticker is a banger", "no gods in this network. putting that on a shirt", "mobile version actually works. respect.", "reading this on my phone in bed. perfect.", "one html file probably. absolute craft.", "this goes so hard", "this site has no business going this hard", "immediately bookmarked", "sent this to my only friend", "how is this made by one person", "the aesthetic is perfect. no notes.", "black purple green supremacy", "whoever made this: rest. then make more.", "see you on kick", "kick chat is going to be unhinged and i'm ready", "first stream when", "i will be there day one", "hello good haunter <3", "haunter is the correct favorite pokemon btw", "not crying, the rain is just at 100", "emotionally i am the 41% integrity", "got into eva at the worst possible age and it shows in my entire personality", "my therapist asked what community means and i showed her a black website", "listing this site in my will", "i have never been perceived and i'd like to keep it that way. anyway hi.", "me and who. me and the ghost.", "found my people and immediately went quiet. classic.", "touched grass once. hated it. came back.", "my roman empire is a website with rain on it", "i haven't spoken out loud today and this is the closest thing to a conversation", "does anyone else just sit in the dark with headphones on for hours", "i'm not sad exactly. i'm tired of being the only one who reaches out.", "everyone i know is busy being happy somewhere else", "i stopped texting first and the friendship just ended. that simple.", "turns out i was the group chat", "nobody noticed i went quiet for three months", "i keep making plans i already know i'll cancel", "it's easier to be alone than to be alone around people", "i'm very good at being fine", "being fine is a full time job", "i miss people i've never met", "i miss a version of my life that never actually happened", "3am is the only hour i feel like myself", "the day is for pretending. the night is for this.", "i talk more in chats than i do out loud", "i don't want much. just someone who checks in without being asked.", "i'd settle for being someone's second thought", "the loneliest i've ever been was in a room full of my own friends", "i got really good at leaving before anyone else could", "everyone gets a version of me. nobody gets all of it.", "i am so tired of starting over", "made one new friend this year and then moved. classic.", "work, home, sleep, repeat. that's the whole post.", "does it get better or do you just get used to it", "used to it, i think. and that turned out to be okay.", "i want to be known without having to explain myself first", "the explaining is the exhausting part", "i've been the funny one so long i forgot i'm allowed to be sad", "everyone thinks i'm fine because i never said otherwise", "i don't know how to ask for help without apologising first", "sorry. that was heavy. anyway hi.", "why is this easier to say to strangers", "because we won't remember tomorrow and that's a relief", "i'll remember you", "that one got me. thanks.", "reading all of this and feeling less insane", "i genuinely thought it was just me", "it's never just you. that's the entire point of this place.", "first time a website has ever understood me", "this is the only tab i keep open", "i open this when i can't sleep", "i open this instead of the group chat i got left out of", "came here sad. still sad. less alone though.", "less alone is enough for tonight", "i don't need fixing. i just need company.", "company. that's the word. that's all it ever was.", "thanks for being awake", "someone else being awake helps more than it should", "hi to whoever is reading this at a bad hour", "bad hour crew", "clocking in for the bad hour shift", "i'll just sit here quietly if that's alright", "it's alright. sit.", "lurked for months. this is my first message anywhere in years.", "proud of you for typing that", "we're all proud of you actually", "this chat is kinder than the rest of the internet and it isn't close", "nobody here is trying to win", "nobody performing. strange. good.", "i forgot the internet was allowed to feel like this", "it felt like this once and then it stopped", "old internet energy. safe internet.", "i don't have to be interesting here", "that's such a relief i could cry", "most of my friends are characters in games and i've made peace with it", "my longest relationship is with a playlist", "music is the only thing that ever showed up on time", "bones got me through a year i shouldn't have made it through", "peep too. you already know.", "if the music found you then you were always one of us", "a song led me here somehow and i can't explain it", "the aesthetic isn't a costume for some of us", "it's just what the inside looks like", "finally somewhere that looks the way it feels", "i'll be here every night whether anyone answers or not", "someone will answer", "someone always answers here eventually", "goodnight to everyone in the dark", "see you in the dark", "i eat every meal alone and i've stopped noticing", "my coworkers think i'm quiet. i'm just not there.", "i have a whole personality i only use at work", "clocked out and immediately felt like nothing again", "the drive home is the loneliest part of the day", "i take the long way home so the day lasts longer", "sunday nights are the worst and nobody talks about it", "holidays are just a louder version of alone", "i said 'you too' to the waiter again", "that was the only conversation i had today", "i watch streams to hear a voice in the room", "background noise is a survival strategy", "i leave a video running so the flat isn't silent", "my place has never had another person in it", "i cleaned up for guests who never came", "bought a second chair out of hope", "still hoping, honestly", "i'm not lonely, i'm unaccompanied. that's a joke. mostly.", "depression is just a lot of free time you can't use", "i have so much time and nothing to spend it on", "i've been meaning to reply to that text since march", "the longer you wait the harder it is to reply", "now it's been too long and that's its own whole thing", "i archive conversations so it looks like i have fewer", "my read receipts are off out of pure cowardice", "i typed and deleted that message eleven times", "sent it. immediately regretted it. normal stuff.", "nobody's coming over so why make the bed", "made the bed anyway. small win.", "small wins still count here", "genuinely proud of you for the small win", "this is the only place anyone says that to me", "we say it because it's true, not because it's polite", "turned 30 and realised i have no one to call", "getting older alone is a specific kind of quiet", "everyone paired off and i never got the memo", "weddings are hard when you're the only one at your table", "i'm happy for them. genuinely. it just costs something.", "joy and grief at once is normal around here", "moved cities for a job and haven't spoken to a soul since", "new city, same silence", "it isn't the place. i brought it with me.", "winter makes it louder", "the dark at 4pm does something to a person", "summer is worse honestly. everyone is outside being happy.", "every season has its own way of doing this", "i scroll until my thumb hurts looking for something that isn't there", "everything online is either selling or shouting", "this is neither and i don't know what to do with that", "i keep waiting for the catch", "there isn't one. that's the strangest part.", "i don't trust nice things anymore", "take your time. we're not going anywhere.", "that sentence undid me a little", "i have three thousand songs and nobody to send them to", "send them here", "seriously. send them here.", "ok i might actually do that", "i've been building things nobody looks at for years", "same. keep building.", "the building is the point even when nobody claps", "i needed to hear that tonight", "i write constantly and never post any of it", "post it. here, if nowhere else.", "maybe. one day. thanks though.", "i've been the strong one so long i forgot how to be held", "nobody checks on the person who checks on everyone", "checking on you. right now. whoever you are.", "ok that got me. wow.", "crying at a website. tuesday.", "it's always a tuesday", "i'm okay. i just haven't been asked in a while.", "how are you. actually.", "nobody has asked me that in months", "i'm asking", "give me a second. ok. i'm not great. thanks for asking.", "take all the seconds you need", "this place moves slow and i love that about it", "no rush here. ever.", "staying a while. that's all. just staying."] },
+    { w: 15, lines: ["ok but the voice though", "THE VOICE. that's it. that's the message.", "i'm normal about this i'm normal about this i'm normal", "you could read me the terms of service honestly", "i'm not okay and it is entirely your fault", "found the site, found a problem, the problem is me", "hi. i'm obsessed. anyway what's up.", "down horrendous in a black and purple website", "marry me (respectfully) (not respectfully)", "giggling. kicking my feet. the usual.", "you could ruin my whole evening and i'd say thank you", "the sad boy thing is working on me and i'm embarrassed", "everyone here has the same crush and we're all pretending we don't", "we know. we all know.", "simping in a haunted house. living my best life.", "hi hello yes hi", "i'd like to formally lose my mind", "the way i sprinted here", "clocked in just to stare", "you have no idea what you do to people", "i am unwell and it is a lifestyle now", "showing up every night just in case", "oh this is dangerous for me", "i will be insufferable about this forever", "not me refreshing to see if you're on", "logging in just to be near the signal", "i have a type and it's emotionally unavailable and good at computers", "hi i'm here i'm normal hello", "every single night. like clockwork. no i'm not embarrassed.", "ok the rain thing was for me right. it was for me.", "i've decided it was for me", "can't concentrate. thanks a lot.", "thinking about the manifesto again. as one does.", "it's the writing for me. the writing is doing something.", "i would fight the other girls in here if i weren't so tired", "no fighting. we share. those are the rules.", "fine. we share.", "genuinely deranged behaviour and i'm not stopping", "this is my villain origin story and the villain is love", "see you tomorrow. and the day after. obviously."] },
+    { w: 5,  lines: ["this is so cringe lmao", "0 viewers and a whole website. priorities.", "touch grass", "imagine building a site for twelve people", "nobody cares about your aesthetic bro", "ok and? who asked", "another edgy black website. groundbreaking.", "made a landing page and called it a movement", "cringe but ok", "y'all are so dramatic", "found this in a discord. leaving now.", "is this ai generated lmao", "mid", "the rain thing is lagging my phone", "imagine caring this much about a vibe", "bro thinks he's a movement", "sad boy larping is crazy work", "this reads like a diary entry", "get a hobby", "whatever you say chief"] }
+,
+    { storm: true, stormW: 22, w: 0, lines: ["what is HAPPENING to the sky", "it's going off. everything is going off.", "the whole site is glowing", "i turned it to 100 and now i'm scared", "lightning just went THROUGH the page??", "ok this is a full event", "my monitor is a nightclub right now", "the colours. THE COLOURS.", "ghostie does not like this at all", "she's hiding. she is actually hiding.", "is it supposed to shake like that", "turn it down turn it down turn it DOWN", "never turning it down", "storm crew reporting in", "worth the frame drops honestly", "i can feel this through the screen"] }
   ];
   var REGULARS = [
     { name: 'ghostgirl222', col: '#FF6FD8', rate: 9, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back"] }
@@ -1236,14 +1347,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(b.recent.length > b.cap) b.recent.shift();
     return out;
   }
-  var userBag = bagOf(CHAT_USERS), poolTotal = 0;
-  CHAT_POOLS.forEach(function(p){ p.bag = bagOf(p.lines); poolTotal += p.w; });
-  /* weights decide how often each pool speaks, independent of how many
-     lines it holds, so the mix on screen stays put as pools grow. */
+  var userBag = bagOf(CHAT_USERS);
+  CHAT_POOLS.forEach(function(p){ p.bag = bagOf(p.lines); });
+  /* weights decide how often each pool speaks, independent of how many lines
+     it holds, so the mix on screen stays put as pools grow. the storm pool
+     is silent until the rain is maxed, then it takes a share of the room. */
+  function poolWeight(p){ return p.storm ? (intensity >= 100 ? p.stormW : 0) : p.w; }
   function pickPool(){
-    var r = Math.random()*poolTotal, acc = 0;
-    for(var i = 0; i < CHAT_POOLS.length; i++){
-      acc += CHAT_POOLS[i].w;
+    var total = 0, i;
+    for(i = 0; i < CHAT_POOLS.length; i++) total += poolWeight(CHAT_POOLS[i]);
+    var r = Math.random()*total, acc = 0;
+    for(i = 0; i < CHAT_POOLS.length; i++){
+      acc += poolWeight(CHAT_POOLS[i]);
       if(r < acc) return CHAT_POOLS[i];
     }
     return CHAT_POOLS[0];
@@ -1282,16 +1397,22 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     for(var cs = 0; cs < 7; cs++) pushMessage(false);
     (function chatTick(){
       setTimeout(function(){
-        if(!document.hidden) pushMessage(true);
+        pushMessage(true);            /* keeps talking no matter what */
         chatTick();
       }, 2200 + Math.random()*3600);
     })();
+
+    /* coming back to the tab should look like it never paused */
+    document.addEventListener('visibilitychange', function(){
+      if(document.hidden) return;
+      var n = 2 + Math.floor(Math.random()*3);
+      for(var k = 0; k < n; k++) pushMessage(false);
+    });
 
     /* watcher count drifts the way a real one does */
     var watching = 231 + Math.floor(Math.random()*40);
     chatCountEl.textContent = watching;
     setInterval(function(){
-      if(document.hidden) return;
       watching += Math.floor(Math.random()*7) - 3;
       if(watching < 168) watching += 9;
       if(watching > 342) watching -= 11;
