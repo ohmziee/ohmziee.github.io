@@ -31,6 +31,9 @@
   --glitch-b:#FF4FD8;
   --font-display:'Rajdhani',"Segoe UI",Arial,sans-serif;
   --font-mono:'Share Tech Mono',"Courier New",monospace;
+  /* the hero fades out well inside its own box, so a bright flash
+     never lights up a rectangular edge. one place to tune it. */
+  --signal-mask:radial-gradient(ellipse at center,#000 42%,rgba(0,0,0,.72) 66%,rgba(0,0,0,.28) 82%,transparent 94%);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -95,8 +98,8 @@ main{position:relative;z-index:3}
 .signal.live{opacity:1;transform:none}
 .signal img{
   width:100%;height:auto;display:block;
-  mask-image:radial-gradient(ellipse at center,#000 55%,transparent 98%);
-  -webkit-mask-image:radial-gradient(ellipse at center,#000 55%,transparent 98%);
+  mask-image:var(--signal-mask);
+  -webkit-mask-image:var(--signal-mask);
   filter:saturate(1.05) contrast(1.05);
 }
 /* glitch: two clipped copies of the image, briefly offset */
@@ -104,8 +107,8 @@ main{position:relative;z-index:3}
   position:absolute;inset:0;
   background-size:100% auto;background-repeat:no-repeat;background-position:center;
   opacity:0;pointer-events:none;
-  mask-image:radial-gradient(ellipse at center,#000 55%,transparent 98%);
-  -webkit-mask-image:radial-gradient(ellipse at center,#000 55%,transparent 98%);
+  mask-image:var(--signal-mask);
+  -webkit-mask-image:var(--signal-mask);
 }
 .signal.tear .ghost.a{opacity:.7;transform:translateX(-7px);clip-path:polygon(0 18%,100% 18%,100% 34%,0 34%);filter:hue-rotate(160deg)}
 .signal.tear .ghost.b{opacity:.7;transform:translateX(9px);clip-path:polygon(0 61%,100% 61%,100% 71%,0 71%);filter:hue-rotate(-60deg)}
@@ -229,7 +232,16 @@ main{position:relative;z-index:3}
 @media (hover:none){#trail{display:none}}
 
 /* ── lightning flash ───────────────────────────────── */
-#flash{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:#DCE3FF;transition:opacity .08s}
+#flash{
+  position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;
+  background:#DCE3FF;mix-blend-mode:screen;transition:opacity .07s linear;
+}
+/* second, wider sheet for the big strikes */
+#glow{
+  position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;
+  mix-blend-mode:screen;transition:opacity .12s ease;
+  background:radial-gradient(ellipse 70% 55% at 50% 12%,rgba(220,227,255,.85),transparent 70%);
+}
 
 /* ── terminal ──────────────────────────────────────── */
 #term{
@@ -358,7 +370,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 }
 @media (max-width:560px){
   .hero{padding:.6rem 4vw 0}
-  .signal img{mask-image:radial-gradient(ellipse at center,#000 62%,transparent 99%);-webkit-mask-image:radial-gradient(ellipse at center,#000 62%,transparent 99%)}
+  .signal img{mask-image:var(--signal-mask);-webkit-mask-image:var(--signal-mask)}
   .directory{padding-top:2.4rem;padding-bottom:3.2rem}
   .directory h2,.wanted h2{font-size:1.35rem}
   .directory > p{font-size:.78rem;margin-bottom:1.6rem}
@@ -389,6 +401,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
 <canvas id="rain" aria-hidden="true"></canvas>
 <div id="flash" aria-hidden="true"></div>
+<div id="glow" aria-hidden="true"></div>
 <div class="scanlines" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 
@@ -427,30 +440,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
        and delete the matching "dead" placeholder. That's it. -->
   <section class="directory" aria-labelledby="dir-title">
     <h2 id="dir-title">Open channels</h2>
-    <p>The rest of this place is still being carved out of the static. These are the doors that work.</p>
+    <p>The rest of this place is still being carved out of the static. These are the doors that work. The outside channels are at the bottom.</p>
 
     <ul class="nodes">
-      <li>
-        <a class="node live" href="https://kick.com/ohmziee" target="_blank" rel="noopener">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="name">KICK<small>kick.com/ohmziee</small></span>
-          <span class="state">LIVE FEED</span>
-        </a>
-      </li>
-      <li>
-        <a class="node live" href="https://twitch.tv/ohmziee" target="_blank" rel="noopener">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="name">TWITCH<small>twitch.tv/ohmziee</small></span>
-          <span class="state">MIRROR</span>
-        </a>
-      </li>
-      <li>
-        <a class="node live" href="https://instagram.com/ohmzieee" target="_blank" rel="noopener">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="name">INSTAGRAM<small>@ohmzieee</small></span>
-          <span class="state">STILLS</span>
-        </a>
-      </li>
 
       <li>
         <a class="node live" href="#terminal" id="termOpen">
@@ -459,9 +451,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           <span class="state">OPEN</span>
         </a>
       </li>
-
-      <!-- dormant channels. wire up when the pages exist:
-           change <div class="node dead"> to <a class="node live" href="databytes.html"> -->
       <li>
         <a class="node live" href="databytes.html">
           <span class="dot" aria-hidden="true"></span>
@@ -482,6 +471,27 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           <span class="name" id="redName">[REDACTED]<small id="redSub">404 // this file does not exist</small></span>
           <span class="state" id="redState">NOT FOUND</span>
         </div>
+      </li>
+      <li>
+        <a class="node live" href="https://kick.com/ohmziee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">KICK<small>kick.com/ohmziee</small></span>
+          <span class="state">LIVE FEED</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://twitch.tv/ohmziee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">TWITCH<small>twitch.tv/ohmziee</small></span>
+          <span class="state">MIRROR</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://instagram.com/ohmzieee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">INSTAGRAM<small>@ohmzieee</small></span>
+          <span class="state">STILLS</span>
+        </a>
       </li>
     </ul>
   </section>
@@ -886,6 +896,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
   }
 
+  var RAIN_RGB = ['159,140,255','124,245,255','255,79,216','124,255,178','220,227,255','255,233,124'];
   function build(){
     W = c.width = window.innerWidth; H = c.height = window.innerHeight;
     drops = [];
@@ -893,7 +904,12 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var n = Math.floor((W / 7) * (0.15 + intensity/100 * 1.6));
     var sp = 0.7 + intensity/100 * 1.1;
     for(var k = 0; k < n; k++){
-      drops.push({ x: Math.random()*W, y: Math.random()*H, l: (8 + Math.random()*18) * sp, s: (6 + Math.random()*9) * sp, o: .07 + Math.random()*.22 });
+      var o = .07 + Math.random()*.22;
+      /* at full storm every drop picks its own colour. precomputed, so the
+         draw loop never builds a string per drop per frame. */
+      var rgb = intensity >= 100 ? RAIN_RGB[Math.floor(Math.random()*RAIN_RGB.length)] : '159,140,255';
+      drops.push({ x: Math.random()*W, y: Math.random()*H, l: (8 + Math.random()*18) * sp,
+                   s: (6 + Math.random()*9) * sp, o: o, c: 'rgba(' + rgb + ',' + o + ')' });
     }
   }
   var rainRzT;
@@ -911,7 +927,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var bolts = [];
   /* modest machines get fewer forks and a lower ceiling. nothing here grows over time. */
   var LOWPOWER = (navigator.hardwareConcurrency || 4) <= 4 || window.innerWidth < 560;
-  var BOLT_CAP = LOWPOWER ? 7 : 16;
+  var BOLT_CAP = LOWPOWER ? 8 : 20;
   var GLOW = LOWPOWER ? 10 : 22;
   var STORM_COLS = ['#DCE3FF','#9F8CFF','#7CF5FF','#FF4FD8','#7CFFB2','#FFE97C'];
 
@@ -920,22 +936,38 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     while(y < stopY){ y += step + Math.random()*step*2; x += (Math.random()-.5)*spread; pts.push([x, y]); }
     return pts;
   }
+  function spawnForks(pts, col, n, depth){
+    if(depth <= 0) return;
+    for(var f = 0; f < n; f++){
+      if(bolts.length >= BOLT_CAP || pts.length < 4) break;
+      var p = pts[1 + Math.floor(Math.random()*(pts.length - 3))];
+      var fp = boltPath(p[0], p[1], p[1] + H*(.12 + Math.random()*.26), 95, 13);
+      bolts.push({ pts: fp, col: col, life: .85, w: 1, fade: .13 });
+      /* one more generation of branches, desktop only */
+      if(depth > 1 && !LOWPOWER && Math.random() < .55) spawnForks(fp, col, 1, depth - 1);
+    }
+  }
   function addBolt(x, col, forks, width){
     if(bolts.length >= BOLT_CAP) return;
     var pts = boltPath(x, 0, H*(.5 + Math.random()*.5), 70, 18);
     bolts.push({ pts: pts, col: col, life: 1, w: width || 2, fade: .09 });
-    for(var f = 0; f < forks; f++){
-      if(bolts.length >= BOLT_CAP || pts.length < 4) break;
-      var p = pts[1 + Math.floor(Math.random()*(pts.length - 3))];
-      bolts.push({
-        pts: boltPath(p[0], p[1], p[1] + H*(.12 + Math.random()*.26), 95, 13),
-        col: col, life: .85, w: 1, fade: .13
-      });
-    }
+    spawnForks(pts, col, forks, LOWPOWER ? 1 : 2);
   }
+  var glowEl = document.getElementById('glow');
   function flashPulse(col, op, ms){
     flash.style.background = col; flash.style.opacity = op;
     setTimeout(function(){ flash.style.opacity = 0; }, ms);
+  }
+  /* two colours back to back reads as a split-second chromatic tear */
+  function chromaFlash(a, b){
+    flashPulse(a, .3, 55);
+    setTimeout(function(){ flashPulse(b, .2, 45); }, 62);
+  }
+  function sheet(col, op){
+    glowEl.style.background =
+      'radial-gradient(ellipse 70% 55% at ' + (18 + Math.random()*64) + '% 10%,' + col + ',transparent 70%)';
+    glowEl.style.opacity = op;
+    setTimeout(function(){ glowEl.style.opacity = 0; }, 150);
   }
   function pickCol(heavy){
     var c = heavy ? STORM_COLS : ['#DCE3FF','#9F8CFF'];
@@ -951,19 +983,26 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   /* at 100 the sky puts on a whole event: staggered multi-colour strikes */
   function stormEvent(){
     if(document.hidden || intensity < 100) return;
-    var n = LOWPOWER ? 2 : 3 + Math.floor(Math.random()*2);
+    var n = LOWPOWER ? 3 : 4 + Math.floor(Math.random()*3);
+    sheet('rgba(159,140,255,.7)', .55);
     for(var k = 0; k < n; k++)(function(k){
       setTimeout(function(){
         if(intensity < 100 || document.hidden) return;
         var col = STORM_COLS[Math.floor(Math.random()*STORM_COLS.length)];
-        flashPulse(col, k === 0 ? .34 : .17 + Math.random()*.1, 55 + Math.random()*45);
-        addBolt(W*.06 + Math.random()*W*.88, col,
+        var alt = STORM_COLS[Math.floor(Math.random()*STORM_COLS.length)];
+        if(k === 0) chromaFlash(col, alt);
+        else flashPulse(col, .16 + Math.random()*.12, 50 + Math.random()*45);
+        addBolt(W*.04 + Math.random()*W*.92, col,
                 LOWPOWER ? 1 : 2 + Math.floor(Math.random()*2), k === 0 ? 3 : 2);
-      }, k * (110 + Math.random()*190));
+        if(!LOWPOWER && Math.random() < .5) sheet(col, .4);
+      }, k * (95 + Math.random()*170));
     })(k);
+    /* the roll-off afterglow */
     setTimeout(function(){
-      if(intensity >= 100 && !document.hidden) flashPulse('#DCE3FF', .12, 90);
-    }, 520 + Math.random()*240);
+      if(intensity < 100 || document.hidden) return;
+      sheet('rgba(124,245,255,.55)', .35);
+      flashPulse('#DCE3FF', .1, 110);
+    }, 560 + Math.random()*260);
   }
   setInterval(function(){
     if(intensity < 75 || intensity >= 100) return;
@@ -979,7 +1018,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       var wind = 0.25 + intensity/100 * 1.2;
       for(var k = 0; k < drops.length; k++){
         var d = drops[k];
-        ctx.strokeStyle = 'rgba(159,140,255,' + d.o + ')';
+        ctx.strokeStyle = d.c;
         ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - wind*1.5, d.y + d.l); ctx.stroke();
         d.y += d.s; d.x -= wind;
         if(d.y > H){ d.y = -d.l; d.x = Math.random()*W; }
