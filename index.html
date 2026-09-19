@@ -179,6 +179,47 @@ main{position:relative;z-index:3}
 .chat-msg .t{color:var(--ice);min-width:0;word-break:break-word}
 @media (prefers-reduced-motion:reduce){.chat-msg{animation:none}.live-dot{animation:none}}
 
+/* composer — only shown when the live bridge is configured */
+.chat-say{
+  display:flex;gap:.4rem;align-items:center;
+  padding:.5rem .85rem .7rem;
+}
+.chat-say input{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(220,227,255,.13);
+  border-radius:.35rem;
+  color:var(--ice);
+  font:inherit;font-size:.74rem;
+  padding:.42rem .55rem;
+  min-width:0;
+  transition:border-color .18s ease,background .18s ease;
+}
+.chat-say input::placeholder{color:rgba(220,227,255,.32)}
+.chat-say input:focus{
+  outline:none;
+  border-color:rgba(159,140,255,.55);
+  background:rgba(159,140,255,.07);
+}
+.chat-say .h{flex:0 0 7.5rem}
+.chat-say .m{flex:1 1 auto}
+.chat-say button{
+  flex:0 0 auto;
+  background:rgba(159,140,255,.14);
+  border:1px solid rgba(159,140,255,.32);
+  border-radius:.35rem;
+  color:var(--lavender);
+  font:inherit;font-size:.7rem;letter-spacing:.1em;
+  padding:.44rem .7rem;cursor:pointer;
+  transition:background .18s ease,border-color .18s ease;
+}
+.chat-say button:hover{background:rgba(159,140,255,.24);border-color:rgba(159,140,255,.5)}
+.chat-say button:disabled{opacity:.4;cursor:default}
+@media (max-width:640px){
+  .chat-say{flex-wrap:wrap}
+  .chat-say .h{flex:1 1 40%}
+  .chat-say .m{flex:1 1 100%;order:3}
+}
+
 /* ── directory ─────────────────────────────────────── */
 .directory{
   max-width:640px;
@@ -570,9 +611,15 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <div class="chat-bar">
         <span class="live-dot" aria-hidden="true"></span>
         <span class="chat-title">LIVE CHAT</span>
-        <span class="chat-count"><b id="chatCount">247</b> watching</span>
+        <span class="chat-count"><b id="chatCount">41</b> watching</span>
       </div>
       <div class="chat-feed" id="chatFeed"></div>
+      <!-- hidden until LIVE.url + LIVE.anon are filled in below -->
+      <form class="chat-say" id="chatSay" hidden autocomplete="off">
+        <input class="h" id="chatHandle" maxlength="25" placeholder="name" aria-label="your name">
+        <input class="m" id="chatInput" maxlength="400" placeholder="say something" aria-label="message">
+        <button type="submit">SEND</button>
+      </form>
     </div>
   </section>
 
@@ -1379,8 +1426,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     return { u: u, c: userCol[u], t: draw(pickPool().bag) };
   }
 
-  function pushMessage(animate){
-    var m = nextMessage();
+  /* one renderer for every line on screen. phantom and real messages go
+     through here identically — that is the whole point, and it is also
+     why textContent is used throughout and never innerHTML. */
+  function renderMessage(m, animate){
     var row = document.createElement('div');
     row.className = 'chat-msg';
     if(!animate) row.style.animation = 'none';
@@ -1392,6 +1441,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     chatFeed.appendChild(row);
     while(chatFeed.children.length > 9) chatFeed.removeChild(chatFeed.firstChild);
   }
+
+  function pushMessage(animate){ renderMessage(nextMessage(), animate); }
 
   if(chatFeed){
     for(var cs = 0; cs < 7; cs++) pushMessage(false);
@@ -1410,15 +1461,228 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     });
 
     /* watcher count drifts the way a real one does */
-    var watching = 231 + Math.floor(Math.random()*40);
+    var watching = 31 + Math.floor(Math.random()*22);
     chatCountEl.textContent = watching;
     setInterval(function(){
-      watching += Math.floor(Math.random()*7) - 3;
-      if(watching < 168) watching += 9;
-      if(watching > 342) watching -= 11;
+      watching += Math.floor(Math.random()*5) - 2;
+      if(watching < 24) watching += 4;
+      if(watching > 68) watching -= 5;
       chatCountEl.textContent = watching;
     }, 5200);
   }
+
+  /* ── live chat bridge ─────────────────────────────────────────
+     exiled.live.chat
+
+     Fill both fields in and the composer appears. Leave either blank and
+     the page behaves exactly as it did before — pure phantom feed, no
+     composer, no network calls. The anon key is meant to be public; it
+     can only read approved rows (see livechat/schema.sql). Every write
+     goes through the chat-post edge function, which runs the wards.
+
+     A rejected message is SHADOW-DROPPED: the sender sees their own line
+     and the swarm answers it, exactly as if it went through. Nobody else
+     ever receives it. Do not "helpfully" surface the rejection — the
+     moment a troll can tell, they start bisecting the blocklist. */
+  var LIVE = {
+    url:  '',            /* https://xxxxxxxx.supabase.co */
+    anon: '',            /* public anon key */
+    fn:   'chat-post',
+    pollMs: 4000
+  };
+
+  /* handles that turn up to meet a new voice. {h} is the newcomer. */
+  var GREET = [
+    "yo {h}", "{h} !!", "welcome {h}", "hi {h} :)", "{h} <3", "hey {h}",
+    "new person", "oh hi {h}", "{h} made it", "someone new. good.",
+    "{h} welcome to the rain", "hi {h}, sit wherever", "new voice. hi.",
+    "{h} o/", "another one of us", "{h} you found it", "hi {h}. you're early.",
+    "{h} pull up a chair", "welcome to the bad hour shift {h}"
+  ];
+  var REACT = [
+    "true", "^", "this", "real", "fr", "yeah", "^^^", "felt that",
+    "said what they said", "exactly this", "+1", "🕯️", "yep", "this is it"
+  ];
+  /* she notices newcomers before anyone else does. that is her whole thing. */
+  var GG_NEW = [
+    "oh. someone else is here.", "hi {h} :)", "i saw you come in", "{h} :)",
+    "you're new. i've been here a while.", "welcome. i'll remember you.",
+    "another one. good.", "hi {h}. i'm usually around."
+  ];
+
+  /* When someone says something heavy, the room does not greet them —
+     it answers them. The server let the message through on purpose
+     (see DISTRESS_RES in livechat/functions/_shared/wards.js); this is
+     the half that makes letting it through the right call. */
+  var SUPPORT = [
+    "i'm here", "checking on you. right now.", "stay",
+    "you're not alone in here", "proud of you for typing that",
+    "we're all proud of you actually", "take all the seconds you need",
+    "that's a hard thing to say. thank you for saying it.",
+    "we're not going anywhere", "you don't have to explain",
+    "i'm glad you're here", "someone else being awake helps more than it should",
+    "i'll sit with you", "no rush. we're not going anywhere.",
+    "you said it out loud. that counts.", "heard you"
+  ];
+  var GG_SUPPORT = [
+    "i'm here. i'm always here.", "i'll stay up with you",
+    "you don't have to say anything else", "i'm not going anywhere <3"
+  ];
+  /* Mirror of DISTRESS_RES, client side. Not a security control — the
+     server already decided to publish — it only picks which reply comes
+     back, so a miss costs nothing. */
+  var DISTRESS_HINT = /\b(kill|hurt|cut|hang|shoot|end)(ing)?\s+(myself|my\s*self)\b|\bsuicid(e|al)\b|\bself[\s-]?harm\b|\bend\s+(it\s+all|my\s+life)\b|\b(want|going|gonna|about)\s+to\s+die\b|\bdon'?t\s+want\s+to\s+(be\s+here|exist|wake\s+up)\b/i;
+
+  function liveChat(){
+    var say    = document.getElementById('chatSay');
+    var hEl    = document.getElementById('chatHandle');
+    var inEl   = document.getElementById('chatInput');
+    if(!say) return;
+    if(!LIVE.url || !LIVE.anon){ say.remove(); return; }
+    say.hidden = false;
+
+    try{ var saved = localStorage.getItem('exiled.handle'); if(saved) hEl.value = saved; }catch(e){}
+
+    var lastId = 0, seen = {}, greeted = {}, echoes = [];
+
+    /* stable colour for a handle we have never seen before */
+    function handleCol(h){
+      if(userCol[h]) return userCol[h];
+      var n = 0;
+      for(var i = 0; i < h.length; i++) n = (n*31 + h.charCodeAt(i)) >>> 0;
+      return CHAT_COLS[n % CHAT_COLS.length];
+    }
+
+    function api(path){
+      return fetch(LIVE.url + '/rest/v1/' + path, {
+        headers: { apikey: LIVE.anon, Authorization: 'Bearer ' + LIVE.anon }
+      }).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+    }
+
+    /* the room turns to look at whoever just spoke for the first time.
+       heavy is true when the line needs answering rather than welcoming. */
+    function swarm(handle, heavy){
+      var src  = heavy ? SUPPORT : GREET;
+      var ggSrc = heavy ? GG_SUPPORT : GG_NEW;
+      var bag = src.slice(), picked = [];
+      var n = 2 + Math.floor(Math.random()*3);
+      for(var i = 0; i < n && bag.length; i++){
+        picked.push({ gg: false, line: bag.splice(Math.floor(Math.random()*bag.length), 1)[0] });
+      }
+      /* she always turns up for this one */
+      if(heavy || Math.random() < 0.45){
+        picked.splice(1 + Math.floor(Math.random()*2), 0,
+          { gg: true, line: ggSrc[Math.floor(Math.random()*ggSrc.length)] });
+      }
+      var delay = 1200 + Math.random()*1500;
+      picked.forEach(function(p){
+        var text = p.line.split('{h}').join(handle);
+        var at = delay;
+        setTimeout(function(){
+          if(p.gg){
+            renderMessage({ u: 'ghostgirl222', c: '#FF6FD8', t: text }, true);
+          } else {
+            var u = draw(userBag);
+            renderMessage({ u: u, c: userCol[u], t: text }, true);
+          }
+        }, at);
+        delay += 900 + Math.random()*2500;
+      });
+    }
+
+    /* a lighter touch for someone who is already known here */
+    function react(){
+      setTimeout(function(){
+        var u = draw(userBag);
+        renderMessage({ u: u, c: userCol[u], t: REACT[Math.floor(Math.random()*REACT.length)] }, true);
+      }, 1400 + Math.random()*2600);
+    }
+
+    function receive(handle, body){
+      renderMessage({ u: handle, c: handleCol(handle), t: body }, true);
+      var key = handle.toLowerCase();
+      var heavy = DISTRESS_HINT.test(body);
+      /* a heavy line always gets answered, first message or not */
+      if(heavy || !greeted[key]){ greeted[key] = 1; swarm(handle, heavy); }
+      else if(Math.random() < 0.35) react();
+    }
+
+    function poll(){
+      api('messages?select=id,handle,body&status=eq.approved&id=gt.' + lastId +
+          '&order=id.asc&limit=20').then(function(rows){
+        if(!rows || !rows.length) return;
+        rows.forEach(function(r){
+          if(r.id > lastId) lastId = r.id;
+          if(seen[r.id]) return;
+          seen[r.id] = 1;
+          /* skip our own line coming back around — we rendered it on send */
+          var now = Date.now(), mine = false;
+          echoes = echoes.filter(function(e){ return now - e.at < 90000; });
+          for(var i = 0; i < echoes.length; i++){
+            if(echoes[i].b === r.body && echoes[i].h === String(r.handle).toLowerCase()){
+              echoes.splice(i, 1); mine = true; break;
+            }
+          }
+          if(!mine) receive(r.handle, r.body);
+        });
+      });
+    }
+
+    function send(ev){
+      ev.preventDefault();
+      var h = hEl.value.trim(), b = inEl.value.trim();
+      if(!h || !b) return;
+      try{ localStorage.setItem('exiled.handle', h); }catch(e){}
+      inEl.value = '';
+
+      /* local echo first, always. a shadow-dropped message has to look
+         identical to an accepted one from where the sender is sitting. */
+      renderMessage({ u: h, c: handleCol(h), t: b }, true);
+      echoes.push({ h: h.toLowerCase(), b: b, at: Date.now() });
+      var key = h.toLowerCase();
+      var heavy = DISTRESS_HINT.test(b);
+      if(heavy || !greeted[key]){ greeted[key] = 1; swarm(h, heavy); }
+      else if(Math.random() < 0.3) react();
+
+      fetch(LIVE.url + '/functions/v1/' + LIVE.fn, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: LIVE.anon,
+          Authorization: 'Bearer ' + LIVE.anon
+        },
+        body: JSON.stringify({ handle: h, body: b })
+      }).catch(function(){ /* offline: the sender still saw their line */ });
+    }
+    say.addEventListener('submit', send);
+
+    /* start from the current high-water mark so the panel does not replay
+       the archive on load — the phantom seed already filled it */
+    api('messages?select=id&status=eq.approved&order=id.desc&limit=1').then(function(rows){
+      if(rows && rows.length) lastId = rows[0].id;
+      setInterval(poll, LIVE.pollMs);
+    });
+
+    /* harvest: real messages older than a day become ambient filler,
+       spoken by phantom handles. the pool grows itself over time. */
+    var cutoff = new Date(Date.now() - 86400000).toISOString();
+    api('messages?select=body&status=eq.approved&created_at=lt.' + cutoff +
+        '&order=id.desc&limit=60').then(function(rows){
+      if(!rows) return;
+      var lines = rows.map(function(r){ return r.body; }).filter(function(b){
+        return b && b.length > 2 && b.length < 120;
+      });
+      if(lines.length >= 6){
+        var pool = { w: 8, lines: lines };
+        pool.bag = bagOf(lines);
+        CHAT_POOLS.push(pool);
+      }
+    });
+  }
+
+  /* called down here, not up in the feed block: LIVE is a var, so it is
+     hoisted but still undefined while that block runs. */
+  if(chatFeed) liveChat();
 
   /* ── terminal ── */
   var term = document.getElementById('term'), tOut = document.getElementById('termOut'), tIn = document.getElementById('termIn'), tPrompt = document.getElementById('termPrompt');
