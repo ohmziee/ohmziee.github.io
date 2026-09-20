@@ -1358,7 +1358,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     { storm: true, stormW: 22, w: 0, lines: ["what is HAPPENING to the sky", "it's going off. everything is going off.", "the whole site is glowing", "i turned it to 100 and now i'm scared", "lightning just went THROUGH the page??", "ok this is a full event", "my monitor is a nightclub right now", "the colours. THE COLOURS.", "ghostie does not like this at all", "she's hiding. she is actually hiding.", "is it supposed to shake like that", "turn it down turn it down turn it DOWN", "never turning it down", "storm crew reporting in", "worth the frame drops honestly", "i can feel this through the screen"] }
   ];
   var REGULARS = [
-    { name: 'ghostgirl222', col: '#FF6FD8', rate: 9, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back"] }
+    { name: 'ghostgirl222', col: '#FF6FD8', rate: 9, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back", "i noticed you changed something. it's small. i like it.", "i was here before the chat was", "i don't really talk anywhere else", "it's quieter at this hour. i prefer it.", "i remember when there were three of us", "i keep a list of the things that changed", "you don't have to answer. i just like saying things here.", "the rain sounds different tonight", "i'll wait", "i'm always a bit early", "i was thinking about this place at work today", "sorry. i talk a lot when it's quiet.", "i like knowing it's still here when i close the tab", "did anyone else see that", "i counted. it's been 41 days.", "i don't need anything. i just like being here.", "you were gone a while", "welcome back :)", "i noticed", "still awake. obviously.", "i'll be here tomorrow too", "goodnight <3", "i don't mind the quiet. i mind the leaving.", "i read everything, even when i don't say anything", "it's nice here when it's just a few of us", "i had a bad day but this helped", "i'm not going anywhere either", "you can tell when someone's been here a while"] }
   ];
 
   /* stable colour per handle */
@@ -1412,19 +1412,165 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   REGULARS.forEach(function(r){ r.bag = bagOf(r.lines); });
 
-  var sinceRegular = Math.floor(Math.random()*6);
-  function nextMessage(){
-    for(var i = 0; i < REGULARS.length; i++){
-      var r = REGULARS[i];
-      if(sinceRegular >= r.rate + Math.floor(Math.random()*4) - 1){
-        sinceRegular = 0;
-        return { u: r.name, c: r.col, t: draw(r.bag) };
+  /* ── synchronised phantom stream ────────────────────────────
+     exiled.phantom.sync
+
+     The feed is cut into fixed slots. The message in slot k is a pure
+     function of k, so every device computes the same line at the same
+     moment with no server and no traffic. Open the site on a phone and a
+     laptop together and the chat matches.
+
+     Nothing here is stateful, which is also what makes a device that
+     joins late show the same recent history as one that has been open
+     for an hour — it just computes the previous few slots. */
+  var SLOT_MS  = 4000;   /* one phantom line per slot */
+  var GG_BLOCK = 18;     /* ghostgirl222 speaks once per this many slots */
+  var DECK     = 100;    /* pool weights sum to 100 and form one deck */
+
+  /* mulberry32 — tiny, fast, and bit-identical across browsers, which is
+     the whole requirement. Math.random() cannot be used anywhere in here. */
+  function rngFrom(seed){
+    var a = seed >>> 0;
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function hash2(a, b){
+    var h = 2166136261 >>> 0, i, v;
+    for(i = 0; i < 4; i++){ v = (a >>> (i*8)) & 255; h = Math.imul(h ^ v, 16777619); }
+    for(i = 0; i < 4; i++){ v = (b >>> (i*8)) & 255; h = Math.imul(h ^ v, 16777619); }
+    return h >>> 0;
+  }
+  /* a shuffled 0..n-1 for one (pool, cycle) — the deterministic twin of
+     the bag draw, so a line still never repeats until the pool is spent */
+  function permRaw(n, poolId, cycle){
+    var r = rngFrom(hash2(poolId, cycle)), a = new Array(n), i, j, t;
+    for(i = 0; i < n; i++) a[i] = i;
+    for(j = n - 1; j > 0; j--){ i = Math.floor(r()*(j+1)); t = a[j]; a[j] = a[i]; a[i] = t; }
+    return a;
+  }
+  /* Inside a cycle a permutation already guarantees no repeats. The seam
+     between two cycles is the weak point, so the opening window of this
+     cycle is cleared of anything in the closing window of the last one.
+     Two things this had to learn the hard way:
+       - the fix belongs HERE, not in drawAt. Applied per-draw it exists
+         only on the call asking for position 0; the next draw re-derives
+         the permutation without it and hands out the displaced line
+         again — the same line twice in a row.
+       - swapping the offender one place along is not enough either. It
+         just moves the repeat from a gap of 1 to a gap of 2. It has to be
+         thrown past the whole guarded window.
+     permRaw is used for the lookback so this cannot recurse, and the
+     window only ever touches the front, so the tail it compares against
+     is the same either way. */
+  var permCache = {}, permOrder = [];
+  function permOf(n, poolId, cycle){
+    var key = poolId + ':' + cycle;
+    if(permCache[key]) return permCache[key];
+    var p = permRaw(n, poolId, cycle), i, j, t;
+    var G = Math.min(32, Math.floor(n/3));
+    if(cycle > 0 && G > 0){
+      var prev = permRaw(n, poolId, cycle - 1), tail = {};
+      for(i = n - G; i < n; i++) tail[prev[i]] = 1;
+      var r = rngFrom(hash2(poolId + 0x5EA, cycle));
+      for(j = 0; j < G; j++){
+        var tries = 0;
+        /* swap targets stop at n-G so the TAIL is never touched. That is
+           load-bearing: the lookback above reads the raw permutation, and
+           it is only allowed to do that because the guard provably leaves
+           the last G entries alone. Letting swaps reach the tail makes the
+           raw and guarded tails disagree, and the seam guard then compares
+           against a line that was never shown — which is how "still awake.
+           obviously." came back 7 slots later.
+           The cache cannot be used for the lookback instead: a device that
+           just opened has a cold cache and would compute a different
+           permutation from one that has been running, and the two would
+           drift apart. */
+        while(tail[p[j]] && tries++ < 40){
+          i = G + Math.floor(r()*(n - G - G));
+          t = p[j]; p[j] = p[i]; p[i] = t;
+        }
       }
     }
-    sinceRegular++;
-    var u = draw(userBag);
-    return { u: u, c: userCol[u], t: draw(pickPool().bag) };
+    permCache[key] = p; permOrder.push(key);
+    while(permOrder.length > 8) delete permCache[permOrder.shift()];
+    return p;
   }
+  function drawAt(n, poolId, i){
+    if(n <= 1) return 0;
+    var cycle = Math.floor(i/n);
+    return permOf(n, poolId, cycle)[i - cycle*n];
+  }
+
+  /* ghostgirl222 speaks exactly once per block, at a position that moves */
+  function ggAt(k){
+    var block = Math.floor(k/GG_BLOCK);
+    return (k - block*GG_BLOCK) === (hash2(9001, block) % GG_BLOCK);
+  }
+  /* how many times she has spoken strictly before slot k — exact, O(1),
+     which is what lets her line counter never drift or collide */
+  function ggBefore(k){
+    var block = Math.floor(k/GG_BLOCK);
+    return block + ((k - block*GG_BLOCK) > (hash2(9001, block) % GG_BLOCK) ? 1 : 0);
+  }
+
+  /* The pool weights sum to 100, so one "deck" of 100 slots contains each
+     pool exactly w times. Shuffling a fixed multiset instead of rolling a
+     weighted die per slot is what makes the draw counter exactly
+     computable: pool p has come up d*w times in the d full decks before
+     this one, plus however many times it appears earlier in this deck.
+     An approximate counter drifts, and a drift of one lands on the index
+     it just used — which shows up as the same line twice in a row. */
+  var deckCache = {}, deckOrder = [];
+  function deckOf(d){
+    if(deckCache[d]) return deckCache[d];
+    var base = [], i, j, t;
+    for(i = 0; i < CHAT_POOLS.length; i++){
+      if(CHAT_POOLS[i].storm) continue;
+      for(j = 0; j < CHAT_POOLS[i].w; j++) base.push(i);
+    }
+    var r = rngFrom(hash2(0xDEC, d));
+    for(j = base.length - 1; j > 0; j--){
+      i = Math.floor(r()*(j+1)); t = base[j]; base[j] = base[i]; base[i] = t;
+    }
+    deckCache[d] = base; deckOrder.push(d);
+    while(deckOrder.length > 4) delete deckCache[deckOrder.shift()];
+    return base;
+  }
+
+  function messageForSlot(k){
+    if(ggAt(k)){
+      var g = REGULARS[0];
+      return { u: g.name, c: g.col,
+               t: g.lines[drawAt(g.lines.length, 4242, ggBefore(k))] };
+    }
+    /* position among the slots she did not take */
+    var j  = k - ggBefore(k);
+    var d  = Math.floor(j/DECK), pos = j - d*DECK;
+    var deck = deckOf(d), pi = deck[pos];
+    var idx = d * CHAT_POOLS[pi].w, q;
+    for(q = 0; q < pos; q++) if(deck[q] === pi) idx++;
+    var u = CHAT_USERS[drawAt(CHAT_USERS.length, 777, k)];
+    return { u: u, c: userCol[u],
+             t: CHAT_POOLS[pi].lines[drawAt(CHAT_POOLS[pi].lines.length, pi + 1, idx)] };
+  }
+
+  /* The storm pool stays LOCAL on purpose. It reacts to the rain slider,
+     which is this viewer's own setting — someone sitting at 55% should not
+     be told the sky is going off. Everything else stays in sync. */
+  function localise(m, k){
+    var storm = null, i;
+    for(i = 0; i < CHAT_POOLS.length; i++) if(CHAT_POOLS[i].storm) storm = CHAT_POOLS[i];
+    if(!storm || intensity < 100) return m;
+    if(Math.random() > 0.22) return m;
+    return { u: m.u, c: m.c, t: storm.lines[Math.floor(Math.random()*storm.lines.length)] };
+  }
+
+  /* kept so anything still calling nextMessage() keeps working */
+  function nextMessage(){ return messageForSlot(Math.floor(Date.now()/SLOT_MS)); }
 
   /* one renderer for every line on screen. phantom and real messages go
      through here identically — that is the whole point, and it is also
@@ -1445,20 +1591,30 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function pushMessage(animate){ renderMessage(nextMessage(), animate); }
 
   if(chatFeed){
-    for(var cs = 0; cs < 7; cs++) pushMessage(false);
-    (function chatTick(){
-      setTimeout(function(){
-        pushMessage(true);            /* keeps talking no matter what */
-        chatTick();
-      }, 2200 + Math.random()*3600);
-    })();
+    /* Backfill the panel from the slots that already happened, so a device
+       opening now shows the same recent history as one left open. */
+    var slotAt  = function(){ return Math.floor(Date.now()/SLOT_MS); };
+    var lastSlot = slotAt();
+    for(var cs = 6; cs >= 0; cs--) renderMessage(messageForSlot(lastSlot - cs), false);
 
-    /* coming back to the tab should look like it never paused */
-    document.addEventListener('visibilitychange', function(){
-      if(document.hidden) return;
-      var n = 2 + Math.floor(Math.random()*3);
-      for(var k = 0; k < n; k++) pushMessage(false);
-    });
+    /* A fixed 4s metronome reads like a machine, so each slot is nudged by
+       up to 2.8s — derived from the slot number, so every device nudges it
+       by the same amount and they stay in step. */
+    function slotDelay(k){ return rngFrom(hash2(0x11A, k))() * 2800; }
+
+    setInterval(function(){
+      var k = slotAt();
+      /* a tab asleep for an hour must not dump an hour of backlog */
+      if(k - lastSlot > 9) lastSlot = k - 9;
+      while(lastSlot < k){
+        lastSlot++;
+        if(Date.now() >= lastSlot*SLOT_MS + slotDelay(lastSlot)){
+          renderMessage(localise(messageForSlot(lastSlot), lastSlot), true);
+        } else {
+          lastSlot--; break;
+        }
+      }
+    }, 400);
 
     /* watcher count drifts the way a real one does */
     var watching = 31 + Math.floor(Math.random()*22);
@@ -1561,20 +1717,26 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
     /* the room turns to look at whoever just spoke for the first time.
        heavy is true when the line needs answering rather than welcoming. */
-    function swarm(handle, heavy){
+    function swarm(handle, heavy, seed){
+      /* Seeded by the message's row id, so every device shows the SAME
+         people greeting the same newcomer. The sender's own echo has no id
+         yet and falls back to a random seed — they see a slightly different
+         welcome than everyone else, which nobody can cross-reference, and
+         it keeps the shadow-drop intact for a blocked sender. */
+      var rnd = seed ? rngFrom(hash2(0x5A1, seed)) : Math.random;
       var src  = heavy ? SUPPORT : GREET;
       var ggSrc = heavy ? GG_SUPPORT : GG_NEW;
       var bag = src.slice(), picked = [];
-      var n = 2 + Math.floor(Math.random()*3);
+      var n = 2 + Math.floor(rnd()*3);
       for(var i = 0; i < n && bag.length; i++){
-        picked.push({ gg: false, line: bag.splice(Math.floor(Math.random()*bag.length), 1)[0] });
+        picked.push({ gg: false, line: bag.splice(Math.floor(rnd()*bag.length), 1)[0] });
       }
       /* she always turns up for this one */
-      if(heavy || Math.random() < 0.45){
-        picked.splice(1 + Math.floor(Math.random()*2), 0,
-          { gg: true, line: ggSrc[Math.floor(Math.random()*ggSrc.length)] });
+      if(heavy || rnd() < 0.45){
+        picked.splice(1 + Math.floor(rnd()*2), 0,
+          { gg: true, line: ggSrc[Math.floor(rnd()*ggSrc.length)] });
       }
-      var delay = 1200 + Math.random()*1500;
+      var delay = 1200 + rnd()*1500;
       picked.forEach(function(p){
         var text = p.line.split('{h}').join(handle);
         var at = delay;
@@ -1598,12 +1760,12 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       }, 1400 + Math.random()*2600);
     }
 
-    function receive(handle, body){
+    function receive(handle, body, id){
       renderMessage({ u: handle, c: handleCol(handle), t: body }, true);
       var key = handle.toLowerCase();
       var heavy = DISTRESS_HINT.test(body);
       /* a heavy line always gets answered, first message or not */
-      if(heavy || !greeted[key]){ greeted[key] = 1; swarm(handle, heavy); }
+      if(heavy || !greeted[key]){ greeted[key] = 1; swarm(handle, heavy, id); }
       else if(Math.random() < 0.35) react();
     }
 
@@ -1623,7 +1785,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
               echoes.splice(i, 1); mine = true; break;
             }
           }
-          if(!mine) receive(r.handle, r.body);
+          if(!mine) receive(r.handle, r.body, r.id);
         });
       });
     }
