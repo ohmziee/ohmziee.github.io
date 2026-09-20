@@ -130,3 +130,50 @@ a.entry:hover{border-color:rgba(159,140,255,.4);background:rgba(159,140,255,.05)
 .wfoot p{margin:0;color:var(--rain);font-size:.7rem;letter-spacing:.08em}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── entry layout: article + infobox ─────────────────────── */
+.cols{display:grid;grid-template-columns:1fr 17rem;gap:2.4rem;align-items:start}
+.entry-page article{min-width:0}
+@media (max-width:820px){
+  .cols{grid-template-columns:1fr;gap:1.6rem}
+  .infobox{order:-1}
+}
+
+.infobox{
+  border:1px solid rgba(159,140,255,.22);
+  background:linear-gradient(180deg,rgba(42,29,94,.22),rgba(11,13,26,.4));
+  border-radius:.35rem;
+  overflow:hidden;
+  position:sticky;top:1.5rem;
+}
+@media (max-width:820px){.infobox{position:static}}
+
+.portrait{margin:0;border-bottom:1px solid rgba(159,140,255,.18)}
+.portrait img{display:block;width:100%;height:auto}
+
+.infobox dl{margin:0;padding:.5rem .85rem .9rem}
+.infobox .r{
+  display:grid;grid-template-columns:5.6rem 1fr;gap:.6rem;
+  padding:.42rem 0;border-bottom:1px solid rgba(220,227,255,.06);
+}
+.infobox .r:last-child{border-bottom:0}
+.infobox dt{color:var(--rain);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding-top:.1rem}
+.infobox dd{margin:0;color:var(--ice);font-size:.76rem;line-height:1.45}
+
+/* ── article typography ──────────────────────────────────── */
+article h2{
+  font-family:var(--font-display);font-weight:600;
+  font-size:1.05rem;letter-spacing:.1em;text-transform:lowercase;
+  color:var(--lavender);
+  margin:2.2rem 0 .8rem;padding-bottom:.4rem;
+  border-bottom:1px solid rgba(159,140,255,.18);
+}
+article h2:first-child{margin-top:0}
+article h3{font-family:var(--font-display);font-size:.95rem;letter-spacing:.06em;margin:1.6rem 0 .5rem}
+article p{margin:0 0 1rem}
+article p b{color:#fff;font-weight:700}
+ul.bul{margin:0 0 1rem;padding-left:1.1rem}
+ul.bul li{margin:.2rem 0;font-size:.85rem;line-height:1.6}
+
+/* the index groups entries under section headings */
+.entries + h2{margin-top:2.4rem}

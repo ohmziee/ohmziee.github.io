@@ -292,6 +292,22 @@ main{position:relative;z-index:3}
 .node.dead.pulse .state{color:#7CFFB2}
 .node.dead.pulse .name{color:var(--ice)}
 .node.redacted .name{color:var(--rain)}
+/* enabled but stuck — the panel has power, the door has not moved */
+.node.jammed{
+  border-color:rgba(255,233,124,.45);
+  background:linear-gradient(90deg,rgba(255,233,124,.07),transparent 70%);
+  cursor:pointer;
+}
+.node.jammed .dot{
+  background:#FFE97C;border:0;
+  box-shadow:0 0 10px #FFE97C,0 0 20px rgba(255,233,124,.45);
+  animation:jamflick 2.6s steps(1,end) infinite;
+}
+.node.jammed .state{color:#FFE97C}
+.node.jammed:hover,.node.jammed:focus-visible{border-color:rgba(255,233,124,.75)}
+.node.jammed .name{color:var(--ice)}
+@keyframes jamflick{0%,72%,78%,100%{opacity:1}75%,82%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.node.jammed .dot{animation:none}}
 .node.mainframe{border-color:#7CFFB2;background:linear-gradient(90deg,rgba(124,255,178,.08),transparent 70%)}
 .node.mainframe .name{color:var(--ice);text-decoration:none}
 .node.mainframe .dot{background:#7CFFB2;border-color:#7CFFB2;box-shadow:0 0 10px #7CFFB2,0 0 22px rgba(124,255,178,.5)}
@@ -648,10 +664,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         </a>
       </li>
       <li>
-        <a class="node live" href="wiki/index.html">
+        <a class="node dead" id="wikiNode" role="button" tabindex="0" aria-disabled="true">
           <span class="dot" aria-hidden="true"></span>
           <span class="name">WIKI<small>the lore vault // characters, places, the world</small></span>
-          <span class="state">RECOVERING</span>
+          <span class="state" id="wikiTag">NO SIGNAL</span>
         </a>
       </li>
       <li>
@@ -1856,6 +1872,91 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      hoisted but still undefined while that block runs. */
   if(chatFeed) liveChat();
 
+  /* ── wiki channel gate ─────────────────────────────────────
+     exiled.wiki.gate
+
+     Deliberately NOT tied to the mainframe: that lock is going to grow
+     into something longer, and the lore vault should not become harder
+     to reach every time it does.
+
+     0 sealed -> 1 jammed (terminal: unlock wiki) -> 2 open (three taps) */
+  var WIKI_URL      = 'wiki/index.html';
+  var WIKI_TAPS     = 3;
+  var WIKI_TAP_GAP  = 2500;    /* consecutive means consecutive */
+  var WIKI_HINT_MS  = 1000;    /* beat before she says anything */
+  var WIKI_HINT_COOL= 60000;
+
+  var wikiState = 0;
+  try{ wikiState = +(localStorage.getItem('exiled.wiki') || 0) || 0; }catch(e){}
+
+  var wikiNode  = document.getElementById('wikiNode');
+  var wikiLabel = document.getElementById('wikiTag');
+  var wikiTaps = 0, wikiLastTap = 0, wikiHintAt = 0, wikiHintTimer = null;
+
+  function saveWiki(){ try{ localStorage.setItem('exiled.wiki', String(wikiState)); }catch(e){} }
+
+  function paintWiki(){
+    if(!wikiNode) return;
+    wikiNode.classList.remove('dead','jammed','live');
+    if(wikiState >= 2){
+      wikiNode.classList.add('live');
+      wikiNode.setAttribute('href', WIKI_URL);
+      wikiNode.removeAttribute('aria-disabled');
+      wikiNode.removeAttribute('role');
+      if(wikiLabel) wikiLabel.textContent = 'RECOVERING';
+    } else if(wikiState === 1){
+      wikiNode.classList.add('jammed');
+      wikiNode.removeAttribute('href');
+      wikiNode.setAttribute('aria-disabled','true');
+      if(wikiLabel) wikiLabel.textContent = 'JAMMED';
+    } else {
+      wikiNode.classList.add('dead');
+      wikiNode.removeAttribute('href');
+      wikiNode.setAttribute('aria-disabled','true');
+      if(wikiLabel) wikiLabel.textContent = 'NO SIGNAL';
+    }
+  }
+
+  function openWiki(){
+    wikiState = 2; saveWiki(); paintWiki();
+    if(wikiHintTimer){ clearTimeout(wikiHintTimer); wikiHintTimer = null; }
+    speak('...huh. it gave.', 2400);
+    setTimeout(function(){ location.href = WIKI_URL; }, 900);
+  }
+
+  function wikiTap(){
+    if(wikiState >= 2){ location.href = WIKI_URL; return; }
+    if(wikiState < 1) return;                  /* sealed: nothing happens */
+
+    var now = Date.now();
+    wikiTaps = (now - wikiLastTap > WIKI_TAP_GAP) ? 1 : wikiTaps + 1;
+    wikiLastTap = now;
+
+    if(wikiTaps >= WIKI_TAPS){ wikiTaps = 0; openWiki(); return; }
+
+    /* she mentions it sticks — once a minute, not once a click */
+    if(now >= wikiHintAt && !wikiHintTimer){
+      wikiHintAt = now + WIKI_HINT_COOL;
+      wikiHintTimer = setTimeout(function(){
+        wikiHintTimer = null;
+        if(wikiState >= 2) return;
+        speak("that button's jammed. try hitting it three times.", 3400);
+      }, WIKI_HINT_MS);
+    }
+  }
+
+  if(wikiNode){
+    paintWiki();
+    wikiNode.addEventListener('click', function(e){
+      if(wikiState < 2) e.preventDefault();
+      wikiTap();
+    });
+    wikiNode.addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); wikiTap();
+    });
+  }
+
   /* ── terminal ── */
   var term = document.getElementById('term'), tOut = document.getElementById('termOut'), tIn = document.getElementById('termIn'), tPrompt = document.getElementById('termPrompt');
   var mainframeOpen = false;
@@ -1876,7 +1977,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function prompt(){ return (mainframeOpen ? 'root@mainframe' : 'guest@exiled') + ':~$'; }
 
   var CMDS = {
-    help: function(){ tprint('commands:\n  help      this\n  ls        list files\n  cat FILE  read a file\n  whoami    identify\n  rain N    set rain 0-100 (75+ lightning, 100 storm)\n  ghostie   summon  //  ghostie reset  send her home\n  summon X  ...\n  unlock    ...\n  clear     wipe\n  exit      leave', 'dim'); },
+    help: function(){ tprint('commands:\n  help      this\n  ls        list files\n  cat FILE  read a file\n  unlock X  force a sealed channel\n  whoami    identify\n  rain N    set rain 0-100 (75+ lightning, 100 storm)\n  ghostie   summon  //  ghostie reset  send her home\n  summon X  ...\n  unlock    ...\n  clear     wipe\n  exit      leave', 'dim'); },
     ls: function(){ tprint(Object.keys(FILES).filter(function(f){ return f[0] !== '.' || mainframeOpen; }).map(function(f){ return (FILES[f].locked && !mainframeOpen ? '<span class="err">-r--------</span>  ' : '<span class="ok">-rw-r--r--</span>  ') + f; }).join('\n')); },
     cat: function(a){
       if(!a) return tprint('cat: what file?', 'err');
@@ -1900,8 +2001,17 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       tprint('...something is looking at you.\n(drag her anywhere. ghostie reset sends her home.)', 'dim');
     },
     unlock: function(a){
+      var k = (a||'').toLowerCase();
+      /* checked before the mainframe branch so "unlock wiki" still works
+         for someone who already opened the mainframe */
+      if(k === 'wiki'){
+        if(wikiState >= 2) return tprint('wiki: already open. it stays open.', 'ok');
+        if(wikiState >= 1) return tprint('wiki: channel is already enabled.\nthe panel has power. the door is the problem.', 'ok');
+        wikiState = 1; saveWiki(); paintWiki();
+        return tprint('WIKI CHANNEL ENABLED.\n...the panel lights. the door does not move.', 'ok');
+      }
       if(mainframeOpen) return tprint('already open. it remembers you.', 'ok');
-      if((a||'').toLowerCase() !== 'exiled') return tprint('unlock: wrong word. say the name.', 'err');
+      if(k !== 'exiled') return tprint('unlock: wrong word. say the name.', 'err');
       if(intensity < 100) return tprint('unlock: the name is right.\nthe signal is buried under too little weather.\nit only listens at full storm.  // try: rain 100', 'err');
       mainframeOpen = true; unredact(); tPrompt.textContent = prompt();
       tprint('STORM PEAK. MAINFRAME UNSEALED. access logged.', 'ok');
