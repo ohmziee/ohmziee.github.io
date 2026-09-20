@@ -1358,7 +1358,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     { storm: true, stormW: 22, w: 0, lines: ["what is HAPPENING to the sky", "it's going off. everything is going off.", "the whole site is glowing", "i turned it to 100 and now i'm scared", "lightning just went THROUGH the page??", "ok this is a full event", "my monitor is a nightclub right now", "the colours. THE COLOURS.", "ghostie does not like this at all", "she's hiding. she is actually hiding.", "is it supposed to shake like that", "turn it down turn it down turn it DOWN", "never turning it down", "storm crew reporting in", "worth the frame drops honestly", "i can feel this through the screen"] }
   ];
   var REGULARS = [
-    { name: 'ghostgirl222', col: '#FF6FD8', rate: 9, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back", "i noticed you changed something. it's small. i like it.", "i was here before the chat was", "i don't really talk anywhere else", "it's quieter at this hour. i prefer it.", "i remember when there were three of us", "i keep a list of the things that changed", "you don't have to answer. i just like saying things here.", "the rain sounds different tonight", "i'll wait", "i'm always a bit early", "i was thinking about this place at work today", "sorry. i talk a lot when it's quiet.", "i like knowing it's still here when i close the tab", "did anyone else see that", "i counted. it's been 41 days.", "i don't need anything. i just like being here.", "you were gone a while", "welcome back :)", "i noticed", "still awake. obviously.", "i'll be here tomorrow too", "goodnight <3", "i don't mind the quiet. i mind the leaving.", "i read everything, even when i don't say anything", "it's nice here when it's just a few of us", "i had a bad day but this helped", "i'm not going anywhere either", "you can tell when someone's been here a while"] }
+    { name: 'ghostgirl222', col: '#FF6FD8', block: 18, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back", "i noticed you changed something. it's small. i like it.", "i was here before the chat was", "i don't really talk anywhere else", "it's quieter at this hour. i prefer it.", "i remember when there were three of us", "i keep a list of the things that changed", "you don't have to answer. i just like saying things here.", "the rain sounds different tonight", "i'll wait", "i'm always a bit early", "i was thinking about this place at work today", "sorry. i talk a lot when it's quiet.", "i like knowing it's still here when i close the tab", "did anyone else see that", "i counted. it's been 41 days.", "i don't need anything. i just like being here.", "you were gone a while", "welcome back :)", "i noticed", "still awake. obviously.", "i'll be here tomorrow too", "goodnight <3", "i don't mind the quiet. i mind the leaving.", "i read everything, even when i don't say anything", "it's nice here when it's just a few of us", "i had a bad day but this helped", "i'm not going anywhere either", "you can tell when someone's been here a while"] }
   ];
 
   /* stable colour per handle */
@@ -1424,7 +1424,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      joins late show the same recent history as one that has been open
      for an hour — it just computes the previous few slots. */
   var SLOT_MS  = 4000;   /* one phantom line per slot */
-  var GG_BLOCK = 18;     /* ghostgirl222 speaks once per this many slots */
+  var DEFAULT_BLOCK = 18; /* slots between turns for a regular with no block set */
   var DECK     = 100;    /* pool weights sum to 100 and form one deck */
 
   /* mulberry32 — tiny, fast, and bit-identical across browsers, which is
@@ -1483,8 +1483,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
            it is only allowed to do that because the guard provably leaves
            the last G entries alone. Letting swaps reach the tail makes the
            raw and guarded tails disagree, and the seam guard then compares
-           against a line that was never shown — which is how "still awake.
-           obviously." came back 7 slots later.
+           against a line that was never shown — which is how a line came back
+           seven slots after it was last shown.
            The cache cannot be used for the lookback instead: a device that
            just opened has a cold cache and would compute a different
            permutation from one that has been running, and the two would
@@ -1505,16 +1505,25 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     return permOf(n, poolId, cycle)[i - cycle*n];
   }
 
-  /* ghostgirl222 speaks exactly once per block, at a position that moves */
-  function ggAt(k){
-    var block = Math.floor(k/GG_BLOCK);
-    return (k - block*GG_BLOCK) === (hash2(9001, block) % GG_BLOCK);
+  /* A regular takes one slot per block, at a position that moves between
+     blocks. Reads the cadence off the entry, so adding another regular is
+     a data change and nothing here needs touching. Returns its index, or
+     -1 when the slot belongs to the general pool. */
+  function regularAt(k){
+    for(var i = 0; i < REGULARS.length; i++){
+      var b = REGULARS[i].block || DEFAULT_BLOCK, blk = Math.floor(k/b);
+      if((k - blk*b) === (hash2(9001 + i*7919, blk) % b)) return i;
+    }
+    return -1;
   }
-  /* how many times she has spoken strictly before slot k — exact, O(1),
-     which is what lets her line counter never drift or collide */
-  function ggBefore(k){
-    var block = Math.floor(k/GG_BLOCK);
-    return block + ((k - block*GG_BLOCK) > (hash2(9001, block) % GG_BLOCK) ? 1 : 0);
+  /* how many times entry i has spoken strictly before slot k — exact and
+     O(1), which is what keeps its line counter from drifting or colliding.
+     Exact for one regular; with several, two could claim the same slot and
+     the loser's count would run ahead, so revisit this when a second one
+     is added. */
+  function regularBefore(k, i){
+    var b = REGULARS[i].block || DEFAULT_BLOCK, blk = Math.floor(k/b);
+    return blk + ((k - blk*b) > (hash2(9001 + i*7919, blk) % b) ? 1 : 0);
   }
 
   /* The pool weights sum to 100, so one "deck" of 100 slots contains each
@@ -1542,13 +1551,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
 
   function messageForSlot(k){
-    if(ggAt(k)){
-      var g = REGULARS[0];
+    var ri = regularAt(k);
+    if(ri >= 0){
+      var g = REGULARS[ri];
       return { u: g.name, c: g.col,
-               t: g.lines[drawAt(g.lines.length, 4242, ggBefore(k))] };
+               t: g.lines[drawAt(g.lines.length, 4242 + ri, regularBefore(k, ri))] };
     }
-    /* position among the slots she did not take */
-    var j  = k - ggBefore(k);
+    /* position among the slots no regular took */
+    var j  = k - regularBefore(k, 0);
     var d  = Math.floor(j/DECK), pos = j - d*DECK;
     var deck = deckOf(d), pi = deck[pos];
     var idx = d * CHAT_POOLS[pi].w, q;
@@ -1642,7 +1652,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      moment a troll can tell, they start bisecting the blocklist. */
   var LIVE = {
     url:  'https://jmksgecmpzrsivujutma.supabase.co',            /* https://xxxxxxxx.supabase.co */
-    anon: 'sb_publishable_eu7ES97Ahy_VbVID5BPoTg_LKXSlhHM',            /* publishable key — public by design */
+    anon: 'sb_publishable_eu7ES97Ahy_VbVID5BPoTg_LKXSlhHM',            /* publishable key (sb_publishable_...) or legacy anon JWT */
     fn:   'chat-post',
     pollMs: 4000
   };
@@ -1659,8 +1669,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     "true", "^", "this", "real", "fr", "yeah", "^^^", "felt that",
     "said what they said", "exactly this", "+1", "🕯️", "yep", "this is it"
   ];
-  /* she notices newcomers before anyone else does. that is her whole thing. */
-  var GG_NEW = [
+  /* what a regular says to a handle it has not seen before */
+  var REG_GREET = [
     "oh. someone else is here.", "hi {h} :)", "i saw you come in", "{h} :)",
     "you're new. i've been here a while.", "welcome. i'll remember you.",
     "another one. good.", "hi {h}. i'm usually around."
@@ -1680,7 +1690,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     "i'll sit with you", "no rush. we're not going anywhere.",
     "you said it out loud. that counts.", "heard you"
   ];
-  var GG_SUPPORT = [
+  var REG_SUPPORT = [
     "i'm here. i'm always here.", "i'll stay up with you",
     "you don't have to say anything else", "i'm not going anywhere <3"
   ];
@@ -1725,24 +1735,24 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
          it keeps the shadow-drop intact for a blocked sender. */
       var rnd = seed ? rngFrom(hash2(0x5A1, seed)) : Math.random;
       var src  = heavy ? SUPPORT : GREET;
-      var ggSrc = heavy ? GG_SUPPORT : GG_NEW;
+      var regSrc = heavy ? REG_SUPPORT : REG_GREET;
       var bag = src.slice(), picked = [];
       var n = 2 + Math.floor(rnd()*3);
       for(var i = 0; i < n && bag.length; i++){
-        picked.push({ gg: false, line: bag.splice(Math.floor(rnd()*bag.length), 1)[0] });
+        picked.push({ reg: false, line: bag.splice(Math.floor(rnd()*bag.length), 1)[0] });
       }
-      /* she always turns up for this one */
+      /* a regular is more likely to weigh in on a heavy line */
       if(heavy || rnd() < 0.45){
         picked.splice(1 + Math.floor(rnd()*2), 0,
-          { gg: true, line: ggSrc[Math.floor(rnd()*ggSrc.length)] });
+          { reg: true, line: regSrc[Math.floor(rnd()*regSrc.length)] });
       }
       var delay = 1200 + rnd()*1500;
       picked.forEach(function(p){
         var text = p.line.split('{h}').join(handle);
         var at = delay;
         setTimeout(function(){
-          if(p.gg){
-            renderMessage({ u: 'ghostgirl222', c: '#FF6FD8', t: text }, true);
+          if(p.reg){
+            renderMessage({ u: REGULARS[0].name, c: REGULARS[0].col, t: text }, true);
           } else {
             var u = draw(userBag);
             renderMessage({ u: u, c: userCol[u], t: text }, true);
