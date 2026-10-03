@@ -459,6 +459,14 @@ body.stormmax .vignette{background:radial-gradient(ellipse at center,transparent
   font-size:.7rem;letter-spacing:.06em;color:var(--rain);margin-top:.2rem;
 }
 .join-arw{font-size:1.5rem;color:#7CFFB2;line-height:1}
+.outside{margin-top:clamp(2.6rem,7vh,4rem);scroll-margin-top:2rem}
+.outside h3{
+  font-family:var(--font-display);font-weight:600;
+  font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:.06em;
+  color:var(--ice);margin-bottom:.4rem;
+}
+.wanted .outside p.dim{font-size:.82rem;margin-bottom:1.2rem}
+body.stormmax .outside h3{color:var(--storm-accent)}
 @media (max-width:560px){
   .join{padding:.9rem 1rem;gap:.75rem}
   .join-txt{font-size:.92rem;letter-spacing:.1em}
@@ -677,27 +685,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           <span class="state" id="redState">NOT FOUND</span>
         </div>
       </li>
-      <li>
-        <a class="node live" href="https://kick.com/ohmziee" target="_blank" rel="noopener">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="name">KICK<small>kick.com/ohmziee</small></span>
-          <span class="state">LIVE FEED</span>
-        </a>
-      </li>
-      <li>
-        <a class="node live" href="https://twitch.tv/ohmziee" target="_blank" rel="noopener">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="name">TWITCH<small>twitch.tv/ohmziee</small></span>
-          <span class="state">MIRROR</span>
-        </a>
-      </li>
-      <li>
-        <a class="node live" href="https://instagram.com/ohmzieee" target="_blank" rel="noopener">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="name">INSTAGRAM<small>@ohmzieee</small></span>
-          <span class="state">STILLS</span>
-        </a>
-      </li>
     </ul>
   </section>
 
@@ -754,6 +741,63 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     <span class="join-txt">PULL UP TO THE CAMPFIRE<small>kick.com/ohmziee &nbsp;//&nbsp; no one gets turned away</small></span>
     <span class="join-arw" aria-hidden="true">&rsaquo;</span>
   </a>
+
+  <!-- outside channels. order is deliberate: twitch, kick, bluesky, instagram, tiktok, youtube, x -->
+  <div class="outside" id="outside">
+    <h3>Outside channels</h3>
+    <p class="dim">Where the signal leaks out. Same frequency, other rooms.</p>
+    <ul class="nodes">
+      <li>
+        <a class="node live" href="https://twitch.tv/ohmziee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">TWITCH<small>twitch.tv/ohmziee</small></span>
+          <span class="state">LIVE FEED</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://kick.com/ohmziee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">KICK<small>kick.com/ohmziee</small></span>
+          <span class="state">LIVE FEED</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://bsky.app/profile/ohmziee.bsky.social" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">BLUESKY<small>@ohmziee.bsky.social</small></span>
+          <span class="state">SIGNAL</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://instagram.com/ohmzieee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">INSTAGRAM<small>@ohmzieee</small></span>
+          <span class="state">STILLS</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://tiktok.com/@ohmzieee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">TIKTOK<small>@ohmzieee</small></span>
+          <span class="state">CLIPS</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://youtube.com/@ohmziee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">YOUTUBE<small>youtube.com/@ohmziee</small></span>
+          <span class="state">ARCHIVE</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="https://x.com/ohmziee" target="_blank" rel="noopener">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">X<small>@ohmziee</small></span>
+          <span class="state">SIGNAL</span>
+        </a>
+      </li>
+    </ul>
+  </div>
 </section>
 
 
