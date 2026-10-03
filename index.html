@@ -37,6 +37,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{
   background:var(--void);
   color:var(--ice);
@@ -459,14 +460,17 @@ body.stormmax .vignette{background:radial-gradient(ellipse at center,transparent
   font-size:.7rem;letter-spacing:.06em;color:var(--rain);margin-top:.2rem;
 }
 .join-arw{font-size:1.5rem;color:#7CFFB2;line-height:1}
-.outside{margin-top:clamp(2.6rem,7vh,4rem);scroll-margin-top:2rem}
-.outside h3{
+.socials{margin-top:clamp(2.6rem,7vh,4rem);scroll-margin-top:2rem}
+.socials h3{
   font-family:var(--font-display);font-weight:600;
   font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:.06em;
   color:var(--ice);margin-bottom:.4rem;
 }
-.wanted .outside p.dim{font-size:.82rem;margin-bottom:1.2rem}
-body.stormmax .outside h3{color:var(--storm-accent)}
+.wanted .socials p.dim{font-size:.82rem;margin-bottom:1.2rem}
+body.stormmax .socials h3{color:var(--storm-accent)}
+@keyframes outflash{0%,100%{border-color:var(--violet);box-shadow:none}35%{border-color:var(--lavender);box-shadow:0 0 18px -6px var(--lavender)}}
+.socials:target .node{animation:outflash 1.4s ease-out .5s 1}
+@media (prefers-reduced-motion:reduce){.socials:target .node{animation:none}}
 @media (max-width:560px){
   .join{padding:.9rem 1rem;gap:.75rem}
   .join-txt{font-size:.92rem;letter-spacing:.1em}
@@ -653,7 +657,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
        and delete the matching "dead" placeholder. That's it. -->
   <section class="directory" aria-labelledby="dir-title">
     <h2 id="dir-title">Open channels</h2>
-    <p>The rest of this place is still being carved out of the static. These are the doors that work. The outside channels are at the bottom.</p>
+    <p>The rest of this place is still being carved out of the static. These are the doors that work. Socials are at the bottom.</p>
 
     <ul class="nodes">
 
@@ -684,6 +688,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           <span class="name" id="redName">[REDACTED]<small id="redSub">404 // this file does not exist</small></span>
           <span class="state" id="redState">NOT FOUND</span>
         </div>
+      </li>
+      <li>
+        <a class="node live" href="#socials">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">SOCIALS<small>twitch, kick, bluesky, instagram, tiktok, youtube, x</small></span>
+          <span class="state">SIGNAL &darr;</span>
+        </a>
       </li>
     </ul>
   </section>
@@ -742,9 +753,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     <span class="join-arw" aria-hidden="true">&rsaquo;</span>
   </a>
 
-  <!-- outside channels. order is deliberate: twitch, kick, bluesky, instagram, tiktok, youtube, x -->
-  <div class="outside" id="outside">
-    <h3>Outside channels</h3>
+  <!-- socials. order is deliberate: twitch, kick, bluesky, instagram, tiktok, youtube, x -->
+  <div class="socials" id="socials">
+    <h3>Socials</h3>
     <p class="dim">Where the signal leaks out. Same frequency, other rooms.</p>
     <ul class="nodes">
       <li>
