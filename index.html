@@ -537,6 +537,11 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 }
 @keyframes beckon{to{scale:1.14}}
 @media (prefers-reduced-motion:reduce){#ghostie.beckon{animation:none}}
+/* the vault's last lock: a maze you mostly cannot see */
+#term .bo{font-family:var(--font-mono);line-height:1.05;letter-spacing:.12em;margin:.4rem 0;white-space:pre;color:var(--lavender)}
+#term .bo.flash{color:var(--ice);text-shadow:0 0 8px var(--lavender)}
+#term .bo-pad{display:flex;gap:.4rem;margin:.3rem 0 .6rem}
+#term .bo-pad button{font:inherit;font-size:.9rem;min-width:2.6rem;padding:.35rem .5rem;background:rgba(159,140,255,.12);border:1px solid rgba(159,140,255,.35);color:var(--lavender);border-radius:.3rem;cursor:pointer}
 #gsmudge{
   position:fixed;z-index:3;pointer-events:none;border-radius:50%;opacity:0;
   background:radial-gradient(circle,rgba(159,140,255,.34),rgba(255,79,216,.12) 45%,transparent 70%);
@@ -2290,6 +2295,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function vaultReset(msg){
     vault.step = 0; vault.key = null; termTrap = null; breachId++;
     quickId++; if(quickOpen) quickClose();
+    gameId++; gameKey = null;
     tPrompt.textContent = prompt();
     if(msg) tprint(msg, 'err');
   }
@@ -2409,8 +2415,116 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     tprint('...ghostie pulls you through.', 'ok');
     vaultGame();
   }
-  /* step 4 onward is wired in by the next lock */
-  function vaultGame(){}
+  /* 4. BLACKOUT. A maze is shown for a few seconds, then the lights go
+     out: only you and the exit stay visible. Lightning lights the whole
+     thing for a blink every few seconds. Every wall you walk into costs
+     time. Reach the exit before the clock does.
+     Arrow keys or WASD; on a phone, the pad under the maze. */
+  var BO_W = 10, BO_H = 5, BO_SHOW = 3000, BO_LIMIT = 45000, BO_FLASH_EVERY = 7000, BO_FLASH_MS = 220, BO_BUMP = 3000;
+  var gameId = 0, gameKey = null;
+  function boMaze(){
+    var gw = BO_W * 2 + 1, gh_ = BO_H * 2 + 1, g = [], x, y;
+    for(y = 0; y < gh_; y++){ g.push([]); for(x = 0; x < gw; x++) g[y].push(1); }
+    var stack = [[0, BO_H - 1]], seen = {};
+    seen[0 + ',' + (BO_H - 1)] = 1; g[(BO_H - 1) * 2 + 1][1] = 0;
+    while(stack.length){
+      var c = stack[stack.length - 1], opts = [];
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
+        var nx = c[0] + d[0], ny = c[1] + d[1];
+        if(nx >= 0 && ny >= 0 && nx < BO_W && ny < BO_H && !seen[nx + ',' + ny]) opts.push([nx, ny, d]);
+      });
+      if(!opts.length){ stack.pop(); continue; }
+      var o = opts[Math.floor(Math.random() * opts.length)];
+      seen[o[0] + ',' + o[1]] = 1;
+      g[c[1] * 2 + 1 + o[2][1]][c[0] * 2 + 1 + o[2][0]] = 0;
+      g[o[1] * 2 + 1][o[0] * 2 + 1] = 0;
+      stack.push([o[0], o[1]]);
+    }
+    return g;
+  }
+  function vaultGame(){
+    var id = ++gameId, g = boMaze();
+    var me = { x: 1, y: BO_H * 2 - 1 }, exit = { x: BO_W * 2 - 1, y: 1 };
+    var lit = true, deadline = 0;
+    tprint('BLACKOUT.\nthe door is at the far end of the dark. find it before the clock does.\nlearn the way while you can.', 'dim');
+    var board = tprint('', 'bo'), clock = tprint('', 'dim');
+    tprint('<div class="bo-pad"><button type="button" data-dir="left">\u2190</button><button type="button" data-dir="up">\u2191</button><button type="button" data-dir="down">\u2193</button><button type="button" data-dir="right">\u2192</button></div>');
+    tPrompt.textContent = 'MOVE>';
+    function draw(){
+      var rows = [];
+      for(var y = 0; y < g.length; y++){
+        var row = '';
+        for(var x = 0; x < g[y].length; x++){
+          if(x === me.x && y === me.y) row += '@';
+          else if(x === exit.x && y === exit.y) row += '\u25c7';
+          else row += lit ? (g[y][x] ? '\u2593' : ' ') : ' ';
+        }
+        rows.push(row);
+      }
+      board.textContent = rows.join('\n');
+      board.className = 'bo' + (lit ? ' flash' : '');
+      if(deadline) clock.textContent = 'signal: ' + Math.max(0, (deadline - Date.now()) / 1000).toFixed(1) + 's';
+    }
+    function move(dx, dy){
+      if(id !== gameId) return;
+      var nx = me.x + dx, ny = me.y + dy;
+      if(!g[ny] || g[ny][nx] !== 0){
+        if(deadline){ deadline -= BO_BUMP; tprint('the static bites. \u2212' + (BO_BUMP / 1000) + 's', 'err'); }
+        draw();
+        if(deadline && Date.now() >= deadline) lose();
+        return;
+      }
+      me.x = nx; me.y = ny; draw();
+      if(nx === exit.x && ny === exit.y) win();
+    }
+    var DIRS = { ArrowLeft: [-1,0], ArrowRight: [1,0], ArrowUp: [0,-1], ArrowDown: [0,1],
+                 a: [-1,0], d: [1,0], w: [0,-1], s: [0,1], left: [-1,0], right: [1,0], up: [0,-1], down: [0,1] };
+    gameKey = function(k){
+      var d = DIRS[k] || DIRS[String(k).toLowerCase()];
+      if(!d) return false;
+      move(d[0], d[1]); return true;
+    };
+    function lose(){
+      if(id !== gameId) return;
+      vaultReset('the dark kept you.\nyou are back where you started.');
+    }
+    function win(){
+      if(id !== gameId) return;
+      gameId++; gameKey = null;
+      vaultOpen();
+    }
+    draw();
+    setTimeout(function(){
+      if(id !== gameId) return;
+      lit = false; deadline = Date.now() + BO_LIMIT; draw();
+      (function tick(){
+        if(id !== gameId) return;
+        if(Date.now() >= deadline) return lose();
+        draw();
+        setTimeout(tick, 250);
+      })();
+      (function storm(){
+        setTimeout(function(){
+          if(id !== gameId) return;
+          lit = true; draw();
+          setTimeout(function(){ if(id !== gameId) return; lit = false; draw(); storm(); }, BO_FLASH_MS);
+        }, BO_FLASH_EVERY - 1500 + Math.floor(Math.random() * 3000));
+      })();
+    }, BO_SHOW);
+  }
+  /* the last lock opens quietly. the key goes where the wiki can find it,
+     and nothing on this page says so. */
+  function vaultOpen(){
+    var key = vault.key;
+    vault.step = 0; vault.key = null; termTrap = null; tPrompt.textContent = prompt();
+    tprint('...', 'dim');
+    if(!key || !window.crypto || !window.crypto.subtle) return;
+    window.crypto.subtle.exportKey('raw', key).then(function(raw){
+      var b = '', u = new Uint8Array(raw);
+      for(var i = 0; i < u.length; i++) b += String.fromCharCode(u[i]);
+      try{ localStorage.setItem('exiled.vault', btoa(b)); }catch(e){}
+    });
+  }
 
   function run(line){
     if(termTrap){
@@ -2434,7 +2548,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   document.getElementById('termOpen').addEventListener('click', function(e){ e.preventDefault(); openTerm(); });
   document.getElementById('termClose').addEventListener('click', closeTerm);
-  tIn.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ run(tIn.value); tIn.value = ''; } if(e.key === 'Escape') closeTerm(); });
+  tIn.addEventListener('keydown', function(e){
+    if(gameKey && e.key !== 'Escape' && gameKey(e.key)){ if(e.preventDefault) e.preventDefault(); tIn.value = ''; return; }
+    if(e.key === 'Enter'){ run(tIn.value); tIn.value = ''; } if(e.key === 'Escape') closeTerm();
+  });
+  tOut.addEventListener('click', function(e){
+    var d = e && e.target && e.target.getAttribute && e.target.getAttribute('data-dir');
+    if(d && gameKey){ gameKey(d); tIn.focus(); }
+  });
   term.addEventListener('click', function(e){ if(e.target === term || e.target === tOut) tIn.focus(); });
   if(location.hash === '#terminal') setTimeout(openTerm, 2400);
 })();
