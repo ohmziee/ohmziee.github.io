@@ -9,8 +9,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
 <link rel="stylesheet" href="wiki.css">
+<style>.unsealing main{visibility:hidden}</style>
+<script>try{if(localStorage.getItem('exiled.vault'))document.documentElement.classList.add('unsealing')}catch(e){}</script>
+<script src="seal.js" defer></script>
+<script src="unseal.js" defer></script>
 </head>
-<body>
+<body data-sealed="oms">
   <div class="grain" aria-hidden="true"></div>
   <header class="wbar">
     <a class="back" href="../index.html">&lt;&lt; EXiLED</a>
