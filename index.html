@@ -36,6 +36,13 @@
   --signal-mask:radial-gradient(ellipse at center,#000 42%,rgba(0,0,0,.72) 66%,rgba(0,0,0,.28) 82%,transparent 94%);
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* fluid widths — text columns, chat and banner track the window (width
+   and height); buttons hold the size they always had */
+:root{
+  --text-w:clamp(30rem,46vw,62rem);
+  --btn-w:calc(640px - 12vw);
+  --chat-w:max(900px,60vw);
+}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{
@@ -90,7 +97,7 @@ main{position:relative;z-index:3}
   position:relative;
 }
 .signal{
-  width:min(92vw,1100px);
+  width:min(92vw,max(1100px,66vw),168vh);   /* 168vh keeps the whole banner on short screens */
   position:relative;
   opacity:0;
   transform:scale(.985);
@@ -131,12 +138,12 @@ main{position:relative;z-index:3}
 .fragments{
   position:relative;z-index:3;
   margin:clamp(2rem,6vh,4rem) auto 0;
-  max-width:900px;
+  max-width:var(--chat-w);
   border-top:1px solid rgba(42,29,94,.7);
   border-bottom:1px solid rgba(42,29,94,.7);
   overflow:hidden;
   white-space:nowrap;
-  font-size:.74rem;
+  font-size:clamp(.74rem,.5rem + .3vw,.9rem);
   letter-spacing:.16em;
   color:var(--rain);
   padding:.55rem 0;
@@ -151,7 +158,7 @@ main{position:relative;z-index:3}
 @media (max-width:560px){.fragments{font-size:.68rem}.fragments .track{animation-duration:32s}}
 
 /* ── chat ──────────────────────────────────────────── */
-.chat{position:relative;z-index:3;max-width:900px;margin:clamp(1.4rem,3.5vh,2.4rem) auto 0;padding:0 6vw}
+.chat{position:relative;z-index:3;max-width:var(--chat-w);margin:clamp(1.4rem,3.5vh,2.4rem) auto 0;padding:0 6vw}
 .chat-inner{border:1px solid var(--violet);background:rgba(11,13,26,.72)}
 .chat-bar{
   display:flex;align-items:center;gap:.5rem;
@@ -168,9 +175,9 @@ main{position:relative;z-index:3}
 .chat-count{margin-left:auto;white-space:nowrap}
 .chat-count b{color:var(--lavender);font-weight:400}
 .chat-feed{
-  height:11.5rem;overflow:hidden;padding:.65rem .85rem;
+  height:clamp(11.5rem,24vh,20rem);overflow:hidden;padding:.65rem .85rem;
   display:flex;flex-direction:column;justify-content:flex-end;gap:.32rem;
-  font-size:.76rem;line-height:1.45;
+  font-size:clamp(.76rem,.55rem + .27vw,.92rem);line-height:1.45;
   mask-image:linear-gradient(180deg,transparent,#000 24%);
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 24%);
 }
@@ -223,7 +230,7 @@ main{position:relative;z-index:3}
 
 /* ── directory ─────────────────────────────────────── */
 .directory{
-  max-width:640px;
+  max-width:calc(var(--text-w) + 12vw);
   margin:0 auto;
   padding:clamp(3rem,8vh,6rem) 6vw clamp(4rem,12vh,8rem);
 }
@@ -237,12 +244,12 @@ main{position:relative;z-index:3}
 }
 .directory > p{
   color:var(--rain);
-  font-size:.85rem;
+  font-size:clamp(.85rem,.65rem + .25vw,1rem);
   letter-spacing:.06em;
   margin-bottom:2.4rem;
-  max-width:52ch;
+  max-width:72ch;
 }
-.nodes{list-style:none;display:grid;gap:.6rem}
+.nodes{list-style:none;display:grid;gap:.6rem;max-width:var(--btn-w)}
 .node{
   display:grid;
   grid-template-columns:1.6rem 1fr auto;
@@ -415,7 +422,7 @@ body.stormmax .vignette{background:radial-gradient(ellipse at center,transparent
 /* ── manifesto ─────────────────────────────────────── */
 .wanted{
   position:relative;z-index:3;
-  max-width:640px;margin:0 auto;
+  max-width:calc(var(--text-w) + 12vw);margin:0 auto;
   padding:0 6vw clamp(4rem,12vh,8rem);
 }
 .wanted h2{
@@ -424,19 +431,19 @@ body.stormmax .vignette{background:radial-gradient(ellipse at center,transparent
   margin-bottom:1.2rem;
 }
 .wanted p{
-  color:var(--ice);font-size:.9rem;line-height:1.75;letter-spacing:.03em;
-  max-width:56ch;margin-bottom:1.1rem;
+  color:var(--ice);font-size:clamp(.9rem,.7rem + .3vw,1.08rem);line-height:1.75;letter-spacing:.03em;
+  max-width:80ch;margin-bottom:1.1rem;
 }
 .wanted p.dim{color:var(--rain)}
 .wanted p.mark{color:var(--lavender);border-left:2px solid var(--violet);padding-left:1rem}
 .wanted .creed{
   margin-top:1.8rem;display:grid;gap:.45rem;
-  font-size:.78rem;letter-spacing:.12em;color:var(--rain);
+  font-size:clamp(.78rem,.6rem + .22vw,.92rem);letter-spacing:.12em;color:var(--rain);
 }
 .wanted .creed span::before{content:'// ';color:var(--violet)}
 .join{
   display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1rem;
-  margin-top:2.2rem;padding:1.05rem 1.2rem;
+  margin-top:2.2rem;padding:1.05rem 1.2rem;max-width:var(--btn-w);
   border:1px solid #7CFFB2;
   background:linear-gradient(90deg,rgba(124,255,178,.1),transparent 70%);
   transition:border-color .2s,background .2s,transform .2s;
@@ -478,7 +485,7 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 }
 
 /* ── baby ──────────────────────────────────────────── */
-#babyPerch{position:relative;z-index:3;max-width:640px;margin:-2rem auto 0;padding:0 6vw clamp(2rem,6vh,4rem);display:none;justify-content:flex-end}
+#babyPerch{position:relative;z-index:3;max-width:calc(var(--text-w) + 12vw);margin:-2rem auto 0;padding:0 6vw clamp(2rem,6vh,4rem);display:none;justify-content:flex-end}
 #babyPerch.here{display:flex}
 #baby{position:relative;width:clamp(150px,26vw,210px);margin:0;opacity:0;transition:opacity 1.8s ease;cursor:pointer;user-select:none;-webkit-user-select:none}
 #baby.in{opacity:1}
