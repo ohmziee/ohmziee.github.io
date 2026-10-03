@@ -529,6 +529,14 @@ body.stormmax .socials h3{color:var(--storm-accent)}
   opacity:0;scale:.2;filter:blur(8px);pointer-events:none;
   transition:opacity .45s ease,scale .45s cubic-bezier(.5,0,.75,0),filter .45s ease;
 }
+/* the vault's window: ghostie calls you over */
+#ghostie.beckon{
+  filter:drop-shadow(0 0 16px #7CFFB2) drop-shadow(0 0 34px rgba(124,255,178,.6));
+  animation:bob 4.2s ease-in-out infinite,beckon .45s ease-in-out infinite alternate;
+  transition:opacity .2s ease,left .55s cubic-bezier(.2,.8,.2,1),top .55s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes beckon{to{scale:1.14}}
+@media (prefers-reduced-motion:reduce){#ghostie.beckon{animation:none}}
 #gsmudge{
   position:fixed;z-index:3;pointer-events:none;border-radius:50%;opacity:0;
   background:radial-gradient(circle,rgba(159,140,255,.34),rgba(255,79,216,.12) 45%,transparent 70%);
@@ -997,6 +1005,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
   gh.addEventListener('click', function(){
     if(gMoved){ gMoved = false; return; }          /* that was a drag, not a tap */
+    if(quickOpen){                                  /* the vault's window: this tap is the answer */
+      lastTap = Date.now(); burstHit = true;        /* and a double-tap here is not a strike */
+      return quickTaken();
+    }
     if(poofed) return;
     var t = Date.now(), quick = t - lastTap < TAP_QUICK;
     lastTap = t;
@@ -1043,6 +1055,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       gh.classList.add('poof');
     }, 1000);
     setTimeout(unpoof, POOF_MS);
+  }
+  /* the vault needs them now: back at once, no comeback line */
+  function ghostieRecall(){
+    if(!poofed) return;
+    poofed = false; poofUntil = 0;
+    try{ localStorage.removeItem('exiled.ghostiePoof'); }catch(e){}
+    if(smudge) smudge.classList.remove('on');
+    gh.classList.remove('poof');
   }
   function unpoof(){
     if(!poofed || Date.now() < poofUntil - 50) return;   /* a stale timer, or not yet */
@@ -2193,7 +2213,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     '.mainframe':      { locked: true, body: 'the door is not built yet.\nit is listening, though.' }
   };
 
-  function tprint(html, cls){ var d = document.createElement('div'); if(cls) d.className = cls; d.innerHTML = html; tOut.appendChild(d); tOut.scrollTop = tOut.scrollHeight; }
+  function tprint(html, cls){ var d = document.createElement('div'); if(cls) d.className = cls; d.innerHTML = html; tOut.appendChild(d); tOut.scrollTop = tOut.scrollHeight; return d; }
   function esc(t){ return t.replace(/[&<>]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]; }); }
   function prompt(){ return (mainframeOpen ? 'root@mainframe' : 'guest@exiled') + ':~$'; }
 
@@ -2268,7 +2288,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      termTrap: while set, the next line typed goes to it instead of the shell. */
   var vault = { step: 0, key: null }, termTrap = null;
   function vaultReset(msg){
-    vault.step = 0; vault.key = null; termTrap = null;
+    vault.step = 0; vault.key = null; termTrap = null; breachId++;
+    quickId++; if(quickOpen) quickClose();
     tPrompt.textContent = prompt();
     if(msg) tprint(msg, 'err');
   }
@@ -2305,8 +2326,91 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       });
     };
   }
-  /* step 2 onward is wired in by the next lock */
-  function vaultNext(){}
+  /* 2. the breach: six layers of ICE, one sum each, against a clock.
+     A wrong answer, a non-number or the clock running out all fail.
+     breachId retires every timer and trap from a layer once it is over. */
+  function rint(a, b){ return a + Math.floor(Math.random()*(b - a + 1)); }
+  var BREACH = [
+    { t: 8000,  make: function(){ var a = rint(12, 89), b = rint(12, 89); return [a + ' + ' + b, a + b]; } },
+    { t: 8000,  make: function(){ var a = rint(40, 99), b = rint(11, a - 1); return [a + ' \u2212 ' + b, a - b]; } },
+    { t: 9000,  make: function(){ var a = rint(12, 29), b = rint(3, 9); return [a + ' \u00d7 ' + b, a * b]; } },
+    { t: 10000, make: function(){ var a = rint(11, 19), b = rint(3, 8), c = rint(11, 40); return [a + ' \u00d7 ' + b + ' \u2212 ' + c, a * b - c]; } },
+    { t: 10000, make: function(){ var a = rint(11, 39), b = rint(3, 9), c = rint(4, 9); return [a + ' + ' + b + ' \u00d7 ' + c, a + b * c]; } },
+    { t: 14000, make: function(){ var a = rint(16, 99), b = rint(16, 99), h = function(n){ return '0x' + n.toString(16).toUpperCase(); };
+                                  return [h(a) + ' + ' + h(b) + '  <span class="dim">(decimal)</span>', a + b]; } }
+  ];
+  var breachId = 0;
+  function vaultNext(){
+    vault.step = 2;
+    tprint('ICE DETECTED. ' + BREACH.length + ' layers between you and the door.\nanswer each before it closes. numbers only.', 'dim');
+    var id = breachId;
+    setTimeout(function(){ if(id === breachId) breachLayer(0); }, 1400);
+  }
+  function breachBar(f, ms){
+    var n = Math.round(f * 20);
+    return '[' + new Array(n + 1).join('\u2588') + new Array(21 - n).join('\u2591') + '] ' + (f * ms / 1000).toFixed(1) + 's';
+  }
+  function breachLayer(i){
+    if(vault.step !== 2) return;
+    if(i >= BREACH.length) return breachDone();
+    var L = BREACH[i], q = L.make(), id = ++breachId, start = Date.now();
+    tprint('<span class="p">LAYER ' + (i + 1) + '/' + BREACH.length + '</span>   ' + q[0] + ' = ?', 'ok');
+    var bar = tprint(breachBar(1, L.t), 'dim');
+    tPrompt.textContent = 'ICE>';
+    var iv = setInterval(function(){
+      if(id !== breachId) return clearInterval(iv);
+      bar.textContent = breachBar(Math.max(0, 1 - (Date.now() - start) / L.t), L.t);
+    }, 100);
+    termTrap = function(line){
+      if(id !== breachId) return;
+      breachId++; clearInterval(iv);
+      if(!/^\s*-?\d+\s*$/.test(line) || parseInt(line, 10) !== q[1]){
+        return vaultReset('ICE held. the trace found you.\nyou are back where you started.');
+      }
+      tprint('layer ' + (i + 1) + ' cracked.  trace ' + Math.min(99, (i + 1) * 15 + rint(0, 6)) + '%', 'ok');
+      var next = breachId;
+      setTimeout(function(){ if(next === breachId) breachLayer(i + 1); }, 700);
+    };
+    setTimeout(function(){
+      if(id !== breachId) return;
+      clearInterval(iv);
+      vaultReset('too slow. the ICE closed over you.\nyou are back where you started.');
+    }, L.t);
+  }
+  function breachDone(){
+    vault.step = 3; termTrap = null; tPrompt.textContent = prompt();
+    tprint('ICE DOWN.\nthe door is right there. something on the page just moved.', 'ok');
+    vaultAfterBreach();
+  }
+  /* 3. ghostie's window. Shortly after the ICE drops, ghostie lights up
+     and asks to be clicked. QUICK_MS to do it, or it is the start again. */
+  var QUICK_MS = 5000, quickId = 0, quickOpen = false;
+  function vaultAfterBreach(){
+    var id = ++quickId;
+    setTimeout(function(){
+      if(id !== quickId || vault.step !== 3) return;
+      gh.classList.add('beckon');                   /* before the recall, so a poofed ghostie snaps back */
+      ghostieRecall();
+      quickOpen = true;
+      speak('QUICK click me!', QUICK_MS);
+      setTimeout(function(){
+        if(id !== quickId || !quickOpen) return;
+        quickClose();
+        speak('...too slow.', 2200);
+        vaultReset('ghostie waited. you did not come.\nthe door closed. you are back where you started.');
+      }, QUICK_MS);
+    }, 900);
+  }
+  function quickClose(){ quickOpen = false; gh.classList.remove('beckon'); }
+  function quickTaken(){
+    quickId++; quickClose();
+    vault.step = 4;
+    speak('follow me.', 1800);
+    tprint('...ghostie pulls you through.', 'ok');
+    vaultGame();
+  }
+  /* step 4 onward is wired in by the next lock */
+  function vaultGame(){}
 
   function run(line){
     if(termTrap){
