@@ -980,7 +980,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
                       'the sky is doing the thing again.', 'this is fine. this is fine.',
                       'you did this. you turned it up.'];
   var mutters = ['boo.', 'you found the door before the door.', 'choomba? choomba.', 'nostalgia is a curse.',
-                 'still building. still haunting.', 'the rain never stops here.', 'xo', 'ghosts in the machine.'];
+                 'still building. still haunting.', 'the rain never stops here.', 'xo', 'ghosts in the machine.',
+                 "there's a file in the vault even i can't read."];
   /* two or more taps inside TAP_QUICK is one strike (a whole burst counts
      once). three strikes, each inside STRIKE_RUN of the last, and ghostie
      poofs for POOF_MS. the return time is saved so a reload doesn't cheat. */
@@ -2139,6 +2140,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var FILES = {
     'readme.txt':      { body: 'you found the shell.\nmost of this place is still static.\ntype help. touch nothing you do not understand.' },
     'signal.log':      { body: '[00:00:41] origin unresolved\n[00:02:13] integrity 41%\n[00:03:07] handshake accepted\n[00:03:08] observer connected  <- that is you' },
+    'sealed.log':      { body: '[--:--:--] vault entry recovered: OMS\n[--:--:--] integrity 100%. contents withheld.\n[--:--:--] guard sequence: not yet spoken\n[--:--:--] the file is waiting for something.\n           it will know it when it hears it.' },
     'choombas.txt':    { body: 'for the ones who never fit.\nwe are all alone here. together.\nthe stream is the campfire. bring nothing. stay anyway.' },
     'hex.txt':         { locked: true, body: '[HEX] designation: companion / anomaly\nstatus: awake\nnotes: she remembers things that have not happened yet.\n(full file withheld)' },
     'remnant_protocol.md': { locked: true, body: '# remnant protocol\n1. nothing is deleted. only exiled.\n2. the machine keeps its ghosts.\n3. do not name what you cannot unname.' },
