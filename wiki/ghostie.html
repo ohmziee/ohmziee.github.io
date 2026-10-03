@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ghostie // EXiLED wiki</title>
 <meta name="description" content="
-ghostie is the resident ghost of the EXiLED channel — a small, pale, persistent presence that drifts between the corners of the signal, watches the chat, ">
+ghostie is the resident ghost of the EXiLED channel — a small, pale, persistent presence that drifts between the corners of the signal, watches the chat,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
@@ -13,6 +13,11 @@ ghostie is the resident ghost of the EXiLED channel — a small, pale, persisten
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
+  <div id="cameo" data-who="ghostie" role="img" aria-label="ghostie" title="ghostie">
+    <span class="say"></span>
+    <div class="frame"><img class="f-idle show" src="img/ghostie-idle.png" alt=""><img class="f-blink" src="img/ghostie-blink.png" alt=""><img class="f-talk" src="img/ghostie-talk.png" alt=""></div>
+  </div>
+  <script src="cameo.js" defer></script>
   <header class="wbar">
     <a class="back" href="../index.html">&lt;&lt; EXiLED</a>
     <a class="chan" href="index.html">WIKI</a>

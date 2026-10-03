@@ -1082,6 +1082,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(pu > Date.now()){ poofed = true; poofUntil = pu; gh.classList.add('poof'); setTimeout(unpoof, pu - Date.now()); }
     else if(pu) localStorage.removeItem('exiled.ghostiePoof');
   }catch(e){}
+  /* the wiki tells them when you have read their page (exiled.readFile).
+     they bring it up once, on a later visit, when they are free to talk */
+  try{
+    if(localStorage.getItem('exiled.readFile') === '1'){
+      setTimeout(function(){
+        if(talking || poofed) return;               /* busy or sulking: next visit, then */
+        try{ localStorage.setItem('exiled.readFile', '2'); }catch(e){}
+        speak(pick(['you read my file. rude. accurate though.', "saw you on my page. we're even now.",
+                    'my page, huh? i hope you skipped the slander.']), 3400);
+      }, 7000);
+    }
+  }catch(e){}
 
   /* -- drag ghostie anywhere (mouse + touch) -- */
   var gDrag = null, gMoved = false, gPlaced = false;
@@ -2211,7 +2223,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var FILES = {
     'readme.txt':      { body: 'you found the shell.\nmost of this place is still static.\ntype help. touch nothing you do not understand.' },
     'signal.log':      { body: '[00:00:41] origin unresolved\n[00:02:13] integrity 41%\n[00:03:07] handshake accepted\n[00:03:08] observer connected  <- that is you' },
-    'sealed.log':      { body: '[--:--:--] vault entry recovered: OMS\n[--:--:--] integrity 100%. contents withheld.\n[--:--:--] guard sequence: not yet spoken\n[--:--:--] the file is waiting for something.\n           it will know it when it hears it.' },
+    'sealed.log':      { body: '[--:--:--] vault entry recovered: OMS\n[--:--:--] integrity 100%. contents withheld.\n[--:--:--] guard: armed. more than one lock.\n[--:--:--] it will not open for a command.\n           it answers to its name.\n           call it the way you would call the cat.' },
     'choombas.txt':    { body: 'for the ones who never fit.\nwe are all alone here. together.\nthe stream is the campfire. bring nothing. stay anyway.' },
     'hex.txt':         { locked: true, body: '[HEX] designation: companion / anomaly\nstatus: awake\nnotes: she remembers things that have not happened yet.\n(full file withheld)' },
     'remnant_protocol.md': { locked: true, body: '# remnant protocol\n1. nothing is deleted. only exiled.\n2. the machine keeps its ghosts.\n3. do not name what you cannot unname.' },

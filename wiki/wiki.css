@@ -207,3 +207,24 @@ ul.bul li{margin:.2rem 0;font-size:.85rem;line-height:1.6}
 }
 .portrait.void span{color:var(--rain);font-size:.66rem;letter-spacing:.24em;opacity:.7}
 .entry.sealed .s{color:var(--glitch-b);opacity:.85}
+
+/* ── cameo: a character floating on their own page ───────── */
+#cameo{
+  position:fixed;right:clamp(.6rem,2vw,1.6rem);bottom:clamp(.6rem,2vh,1.4rem);z-index:5;
+  width:clamp(60px,8vw,96px);cursor:pointer;user-select:none;-webkit-user-select:none;
+  filter:drop-shadow(0 0 14px rgba(159,140,255,.45));
+  opacity:0;transition:opacity 1.1s ease;animation:cbob 4.2s ease-in-out infinite;
+}
+#cameo.live{opacity:1}
+#cameo .frame{position:relative;width:100%;aspect-ratio:256/263}
+#cameo img{position:absolute;inset:0;width:100%;display:block;opacity:0}
+#cameo img.show{opacity:1}
+#cameo .say{
+  position:absolute;right:105%;bottom:55%;white-space:nowrap;
+  font-size:.7rem;letter-spacing:.1em;color:var(--ice);
+  background:rgba(11,13,26,.92);border:1px solid rgba(159,140,255,.4);padding:.4rem .6rem;border-radius:.2rem;
+  opacity:0;transform:translateX(6px);transition:opacity .25s,transform .25s;pointer-events:none;
+}
+#cameo .say.on{opacity:1;transform:none}
+@keyframes cbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@media (max-width:560px){#cameo .say{white-space:normal;max-width:52vw;text-align:right;font-size:.64rem}}
