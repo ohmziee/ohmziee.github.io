@@ -523,6 +523,19 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 }
 #ghostie .say.on{opacity:1;transform:none}
 #ghostie.glitch{animation:bob 4.2s ease-in-out infinite,gjit .3s steps(2) 3}
+/* too many taps: a quick dash away, then a poof */
+#ghostie.dash{transition:opacity 1.2s ease 1.6s,left .55s cubic-bezier(.2,.8,.2,1),top .55s cubic-bezier(.2,.8,.2,1)}
+#ghostie.poof{
+  opacity:0;scale:.2;filter:blur(8px);pointer-events:none;
+  transition:opacity .45s ease,scale .45s cubic-bezier(.5,0,.75,0),filter .45s ease;
+}
+#gsmudge{
+  position:fixed;z-index:3;pointer-events:none;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,rgba(159,140,255,.34),rgba(255,79,216,.12) 45%,transparent 70%);
+  filter:blur(6px);
+}
+#gsmudge.on{animation:smudge 60s linear forwards}
+@keyframes smudge{0%{opacity:0;transform:scale(.6)}3%{opacity:.9;transform:scale(1.15)}100%{opacity:0;transform:scale(1.5)}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 @keyframes gjit{50%{filter:drop-shadow(0 0 14px rgba(159,140,255,.45)) hue-rotate(120deg);transform:translate(-4px,-6px)}}
 @media (prefers-reduced-motion:reduce){#ghostie{opacity:1;animation:none}}
@@ -954,20 +967,95 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(!talking){ gframe('closed'); setTimeout(function(){ if(!talking) gframe('idle'); }, 110 + Math.random()*70); }
     setTimeout(blink, 2200 + Math.random()*3800);
   }
+  var sayId = 0, flapIv = 0, poofed = false, poofUntil = 0;
   function speak(text, ms){
+    if(poofed) return;                              /* nobody home */
+    var id = ++sayId;
+    clearInterval(flapIv);
     talking = true; say.textContent = text; say.classList.add('on');
-    var flaps = 0, iv = setInterval(function(){ gframe(flaps++ % 2 ? 'idle' : 'talk'); }, 130);
-    setTimeout(function(){ clearInterval(iv); gframe('idle'); talking = false; say.classList.remove('on'); }, ms || 2600);
+    var flaps = 0; flapIv = setInterval(function(){ gframe(flaps++ % 2 ? 'idle' : 'talk'); }, 130);
+    setTimeout(function(){ if(id !== sayId) return; clearInterval(flapIv); gframe('idle'); talking = false; say.classList.remove('on'); }, ms || 2600);
   }
   var stormMutters = ['i do not like this.', 'it is LOUD out there.', 'hold on to something.',
                       'the sky is doing the thing again.', 'this is fine. this is fine.',
                       'you did this. you turned it up.'];
   var mutters = ['boo.', 'you found the door before the door.', 'choomba? choomba.', 'nostalgia is a curse.',
                  'still building. still haunting.', 'the rain never stops here.', 'xo', 'ghosts in the machine.'];
+  /* two or more taps inside TAP_QUICK is one strike (a whole burst counts
+     once). three strikes, each inside STRIKE_RUN of the last, and ghostie
+     poofs for POOF_MS. the return time is saved so a reload doesn't cheat. */
+  var TAP_QUICK = 400, STRIKE_RUN = 20000, POOF_MS = 60000;
+  var lastTap = 0, burstHit = false, strikes = 0, lastStrike = 0;
+  var cheekLines = ['hands OFF.', 'personal space, choom.', "i'm not a button.", 'one tap. ONE.',
+                    'ow. rude.', 'easy. i bruise. probably.'];
+  var warnLines  = ['last warning.', "do that again and i'm gone.", 'i will leave. i have done it before.',
+                    'third time and i vanish. try me.'];
+  var backLines  = ["...ok. i'm back. don't do that again.", 'a whole minute in the static. thanks for that.',
+                    'did you miss me? you should have.', 'i came back for the view. not for you.',
+                    'the static says hi. it also says you owe me.'];
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
   gh.addEventListener('click', function(){
     if(gMoved){ gMoved = false; return; }          /* that was a drag, not a tap */
-    if(!talking) speak(mutters[Math.floor(Math.random()*mutters.length)]);
+    if(poofed) return;
+    var t = Date.now(), quick = t - lastTap < TAP_QUICK;
+    lastTap = t;
+    if(quick){ if(!burstHit){ burstHit = true; tapStrike(); } return; }
+    burstHit = false;
+    if(!talking) speak(pick(mutters));
   });
+  function tapStrike(){
+    var t = Date.now();
+    strikes = t - lastStrike < STRIKE_RUN ? strikes + 1 : 1;
+    lastStrike = t;
+    if(strikes >= 3){ strikes = 0; return poof(); }
+    speak(pick(strikes === 1 ? cheekLines : warnLines), 2400);
+    dash();
+  }
+  function dash(){
+    var r = gh.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+    var far = haunts().map(function(p){ return { p: p, d: Math.hypot(p[0] - cx, p[1] - cy) }; })
+      .filter(function(h){ return !hitsBaby(h.p[0], h.p[1], r.width, r.height); })
+      .sort(function(a, b){ return b.d - a.d; }).slice(0, 3);
+    if(!far.length) return;
+    var to = far[Math.floor(Math.random()*far.length)].p;
+    placeGhostie(r.left, r.top);                    /* pin where she is so the dash animates */
+    void gh.offsetWidth;
+    gh.classList.add('dash');
+    var q = placeGhostie(to[0], to[1]);
+    if(gPlaced){ try{ localStorage.setItem('exiled.ghostiePos', JSON.stringify({ x: q[0], y: q[1] })); }catch(e){} }
+    setTimeout(function(){ gh.classList.remove('dash'); }, 700);
+  }
+  var smudge = null;
+  function poof(){
+    speak("that's it. i'm out.", 1100);
+    poofed = true; poofUntil = Date.now() + POOF_MS;
+    try{ localStorage.setItem('exiled.ghostiePoof', String(poofUntil)); }catch(e){}
+    gh.classList.add('glitch');
+    setTimeout(function(){
+      gh.classList.remove('glitch');
+      var r = gh.getBoundingClientRect(), d = Math.max(r.width, r.height) * 1.5;
+      if(!smudge){ smudge = document.createElement('div'); smudge.id = 'gsmudge'; document.body.appendChild(smudge); }
+      smudge.style.width = smudge.style.height = d + 'px';
+      smudge.style.left = (r.left + r.width/2 - d/2) + 'px';
+      smudge.style.top = (r.top + r.height/2 - d/2) + 'px';
+      smudge.classList.remove('on'); void smudge.offsetWidth; smudge.classList.add('on');
+      gh.classList.add('poof');
+    }, 1000);
+    setTimeout(unpoof, POOF_MS);
+  }
+  function unpoof(){
+    if(!poofed || Date.now() < poofUntil - 50) return;   /* a stale timer, or not yet */
+    poofed = false; poofUntil = 0;
+    try{ localStorage.removeItem('exiled.ghostiePoof'); }catch(e){}
+    gh.classList.remove('poof');
+    if(smudge) smudge.classList.remove('on');
+    setTimeout(function(){ speak(pick(backLines), 3200); }, 2400);   /* once she has faded back in */
+  }
+  try{
+    var pu = +localStorage.getItem('exiled.ghostiePoof') || 0;
+    if(pu > Date.now()){ poofed = true; poofUntil = pu; gh.classList.add('poof'); setTimeout(unpoof, pu - Date.now()); }
+    else if(pu) localStorage.removeItem('exiled.ghostiePoof');
+  }catch(e){}
 
   /* -- drag ghostie anywhere (mouse + touch) -- */
   var gDrag = null, gMoved = false, gPlaced = false;
@@ -1041,15 +1129,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   window.addEventListener('scroll', function(){ clearTimeout(nudgeT); nudgeT = setTimeout(nudgeGhostie, 150); }, { passive: true });
   /* wander: drift to a random haunt every so often */
-  function wander(){
-    if(gPlaced || gDrag){ setTimeout(wander, 18000 + Math.random()*22000); return; }
+  function haunts(){
     var w = window.innerWidth, h = window.innerHeight, gw = gh.offsetWidth, ghh = gh.offsetHeight, m = 14;
-    var haunts = [
+    return [
       [m, m], [w-gw-m, m], [m, h-ghh-m], [w-gw-m, h-ghh-m],
       [m, h*.45], [w-gw-m, h*.45], [w*.5-gw/2, h-ghh-m]
     ];
+  }
+  function wander(){
+    if(gPlaced || gDrag || poofed){ setTimeout(wander, 18000 + Math.random()*22000); return; }
+    var w = window.innerWidth, gw = gh.offsetWidth, ghh = gh.offsetHeight, spots = haunts();
     var p, tries = 0;
-    do { p = haunts[Math.floor(Math.random()*haunts.length)]; tries++; } while(tries < 12 && hitsBaby(p[0], p[1], gw, ghh));
+    do { p = spots[Math.floor(Math.random()*spots.length)]; tries++; } while(tries < 12 && hitsBaby(p[0], p[1], gw, ghh));
     gh.style.right = 'auto'; gh.style.bottom = 'auto';
     gh.style.left = p[0] + 'px'; gh.style.top = p[1] + 'px';
     gh.classList.toggle('flip', p[0] < w/2);
@@ -2074,6 +2165,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       tprint('rain set to ' + intensity + (intensity >= 100 ? '  // FULL STORM. something is awake in it.' : intensity >= 75 ? '  // lightning' : intensity ? '' : '  // silence'), 'ok');
     },
     ghostie: function(a){
+      if(poofed){
+        var left = Math.max(0, Math.ceil((poofUntil - Date.now()) / 1000));
+        return tprint('no signal. try again in ' + Math.floor(left/60) + ':' + ('0' + left%60).slice(-2) + '.', 'dim');
+      }
       var k = (a || '').toLowerCase();
       if(k === 'reset' || k === 'home'){
         releaseGhostie(); speak('back to my corner, then.', 2400);
