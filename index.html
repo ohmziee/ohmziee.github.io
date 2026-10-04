@@ -454,6 +454,45 @@ body.stormmax .vignette{background:radial-gradient(ellipse at center,transparent
 #termIn{flex:1;background:none;border:0;outline:0;color:var(--ice);font:inherit;caret-color:var(--lavender)}
 #term.open ~ #ghostie{z-index:41}
 
+/* ── databytes, opened over the page. under the docks (30) so the radio
+   and chat stay usable; ghostie rises above it while it is open. ── */
+#bytes{position:fixed;inset:0;z-index:25;display:none;overflow-y:auto;background:var(--void);overscroll-behavior:contain}
+#bytes.open{display:block}
+#bytes.open ~ #ghostie{z-index:26}
+body.bytes-open{overflow:hidden}
+#bytes .b-main{max-width:960px;margin:0 auto;padding:clamp(1.2rem,4vh,2.5rem) 16px 7rem}
+@media (min-width:1100px) and (min-height:640px){
+  #bytes .b-main{max-width:min(960px,calc(100vw - 2 * (max(380px,clamp(300px,24vw,420px)) + 2.5rem)))}
+}
+#bytes .b-top{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:2.2rem;font-size:.72rem;letter-spacing:.16em;color:var(--rain)}
+#bytes .b-top button{font:inherit;letter-spacing:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+#bytes .b-top button:hover,#bytes .b-top button:focus-visible{color:var(--lavender)}
+#bytes h1{font-family:var(--font-display);font-weight:700;font-size:clamp(1.8rem,5vw,2.8rem);letter-spacing:.1em;line-height:1;color:var(--ice)}
+#bytes h1 small{display:block;font-family:var(--font-mono);font-weight:400;font-size:.74rem;letter-spacing:.14em;color:var(--rain);margin-top:.5rem}
+#bytes .b-filters{display:flex;flex-wrap:wrap;gap:.4rem;margin:1.6rem 0 2rem}
+#bytes .b-filters button{background:none;border:1px solid var(--violet);color:var(--rain);font:inherit;font-size:.7rem;letter-spacing:.14em;padding:.35rem .7rem;cursor:pointer}
+#bytes .b-filters button:hover{border-color:var(--lavender);color:var(--ice)}
+#bytes .b-filters button.on{border-color:var(--lavender);color:var(--lavender)}
+#bytes .b-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+#bytes .byte{border:1px solid var(--violet);background:linear-gradient(180deg,rgba(42,29,94,.16),transparent 60%);display:flex;flex-direction:column}
+#bytes .byte.wide{grid-column:1/-1}
+#bytes .byte .meta{display:flex;justify-content:space-between;gap:.8rem;padding:.7rem .9rem 0;font-size:.66rem;letter-spacing:.14em;color:var(--rain)}
+#bytes .byte .meta b{font-weight:400;color:var(--lavender)}
+#bytes .byte h3{font-family:var(--font-display);font-weight:600;font-size:1.15rem;letter-spacing:.08em;padding:.35rem .9rem .6rem;color:var(--ice)}
+#bytes .byte img,#bytes .byte video{width:100%;display:block;max-height:70vh;object-fit:cover;background:var(--deep)}
+#bytes .byte audio{width:100%;display:block;filter:invert(1) hue-rotate(180deg) saturate(.6);padding:.6rem .9rem}
+#bytes .byte p{padding:.8rem .9rem;font-size:.86rem;line-height:1.7;color:var(--ice);flex:1}
+#bytes .byte.transmission p{font-size:.95rem;padding:.4rem .9rem 1rem}
+#bytes .byte .tags{padding:0 .9rem .8rem;font-size:.64rem;letter-spacing:.12em;color:var(--rain)}
+#bytes .byte .tags span::before{content:'#'}
+#bytes .byte .tags span{margin-right:.7rem}
+#bytes .b-empty,#bytes .b-err{border:1px dashed var(--violet);padding:2.5rem 1.5rem;text-align:center;color:var(--rain);font-size:.8rem;letter-spacing:.12em;line-height:1.8}
+#bytes .b-err{border-color:rgba(255,79,216,.5);color:var(--glitch-b)}
+@media (prefers-reduced-motion:no-preference){
+  #bytes .byte{opacity:0;transform:translateY(6px);animation:bytein .5s ease forwards}
+  @keyframes bytein{to{opacity:1;transform:none}}
+}
+
 /* ── manifesto ─────────────────────────────────────── */
 .wanted{
   position:relative;z-index:3;
@@ -624,7 +663,7 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
 @keyframes beckon{to{scale:1.14}}
 @media (prefers-reduced-motion:reduce){#ghostie.beckon{animation:none}}
 /* the vault's last lock: a maze you mostly cannot see */
-#term .bo{font-family:var(--font-mono);line-height:1.05;letter-spacing:.12em;margin:.4rem 0;white-space:pre;color:var(--lavender)}
+#term .bo{font-family:var(--font-mono);font-size:1.4em;line-height:1;letter-spacing:0;margin:.4rem 0;white-space:pre;color:var(--lavender)}
 #term .bo.flash{color:var(--ice);text-shadow:0 0 8px var(--lavender)}
 #term .bo-pad{display:flex;gap:.4rem;margin:.3rem 0 .6rem}
 #term .bo-pad button{font:inherit;font-size:.9rem;min-width:2.6rem;padding:.35rem .5rem;background:rgba(159,140,255,.12);border:1px solid rgba(159,140,255,.35);color:var(--lavender);border-radius:.3rem;cursor:pointer}
@@ -801,7 +840,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         </a>
       </li>
       <li>
-        <a class="node live" href="databytes.html">
+        <a class="node live" href="databytes.html" id="bytesOpen">
           <span class="dot" aria-hidden="true"></span>
           <span class="name">DATABYTES<small>case files, stills, footage, transmissions</small></span>
           <span class="state">RECOVERING</span>
@@ -940,6 +979,16 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
 
 <footer>EXiLED &nbsp;//&nbsp; remnant protocol &nbsp;//&nbsp; <span id="yr"></span> &nbsp;//&nbsp; <span id="clock">--:--:--</span></footer>
+</div>
+
+<!-- ═══ DATABYTES ═══ opened over the page, so the radio and chat keep going -->
+<div id="bytes" role="dialog" aria-labelledby="bytesTitle">
+  <div class="b-main">
+    <div class="b-top"><button type="button" id="bytesClose">&larr; back to the signal</button><span id="bytesCount"></span></div>
+    <h1 id="bytesTitle">Databytes<small>recovered fragments // case files, stills, footage, transmissions</small></h1>
+    <div class="b-filters" id="bytesFilters"></div>
+    <div class="b-grid" id="bytesGrid"></div>
+  </div>
 </div>
 
 <!-- ═══ CHAT WINDOW ═══ the chat moves in here on wide screens -->
@@ -2751,7 +2800,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         'hollows', 'lantern', 'wardens', 'daemons', 'archive', 'transit', 'shelter', 'signals', 'reactor', 'neurons',
         'cyborgs', 'outcast', 'drifter', 'streets', 'haunted', 'shadows', 'ciphers', 'sockets', 'mirrors', 'chamber']
   };
-  var BREACH = [{ len: 5, n: 7 }, { len: 6, n: 8 }, { len: 7, n: 8 }], BREACH_TRIES = 4;
+  var BREACH = [{ len: 5, n: 7 }, { len: 6, n: 8 }, { len: 7, n: 8 }], BREACH_TRIES = 5;
   var breachId = 0, breachTap = null;
   function likeness(a, b){ var n = 0; for(var i = 0; i < a.length; i++) if(a.charAt(i) === b.charAt(i)) n++; return n; }
   /* can someone who only guesses words from the set always land the
@@ -2814,6 +2863,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(vault.step !== 2) return;
     if(i >= BREACH.length) return breachDone();
     var L = BREACH[i], d = breachDeal(L.len, L.n), id = ++breachId, left = BREACH_TRIES, tried = {};
+    breachWords = d.words;
     tprint('<span class="p">LOCK ' + (i + 1) + '/' + BREACH.length + '</span>   memory dump // ' + L.len + ' letters   tries ' + breachTries(left), 'ok');
     var dump = tprint(breachDump(d.words), 'dump');
     tPrompt.textContent = 'ICE>';
@@ -2909,6 +2959,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var id = ++gameId, g = boMaze();
     var me = { x: 1, y: BO_H * 2 - 1 }, exit = { x: BO_W * 2 - 1, y: 1 };
     var lit = true, deadline = 0;
+    /* the lights go out: a clean screen, so the whole maze, the pad and the
+       clock are in view at once (the board fills after it is printed, so
+       a long scrollback used to leave most of it below the fold) */
+    tOut.innerHTML = '';
     tprint('BLACKOUT.\nthe door is at the far end of the dark. find it before the clock does.\nlearn the way while you can.', 'dim');
     var board = tprint('', 'bo'), clock = tprint('', 'dim');
     tprint('<div class="bo-pad"><button type="button" data-dir="left">\u2190</button><button type="button" data-dir="up">\u2191</button><button type="button" data-dir="down">\u2193</button><button type="button" data-dir="right">\u2192</button></div>');
@@ -2927,6 +2981,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       board.textContent = rows.join('\n');
       board.className = 'bo' + (lit ? ' flash' : '');
       if(deadline) clock.textContent = 'signal: ' + Math.max(0, (deadline - Date.now()) / 1000).toFixed(1) + 's';
+      tOut.scrollTop = tOut.scrollHeight;
     }
     function move(dx, dy){
       if(id !== gameId) return;
@@ -3338,10 +3393,127 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     try { localStorage.setItem('exiled.radioVol', rVol.value); } catch(e){}
   });
 
+  /* ── DATABYTES, opened in place ─────────────────────────────
+     The channel used to navigate to databytes.html, which stopped the radio
+     and dropped the chat. It now opens over the page: the docks stay on
+     top and keep running. #databytes goes in the address bar, so back
+     closes it and the link can be shared. databytes.html stays for direct
+     visits; a ctrl/cmd/middle click on the channel still opens it. */
+  var bytesEl = document.getElementById('bytes'), bytesGrid = document.getElementById('bytesGrid');
+  var bytesFilters = document.getElementById('bytesFilters'), bytesCount = document.getElementById('bytesCount');
+  var bytesData = null, bytesActive = 'all', bytesPushed = false;
+  var bytesLabels = { still: 'STILL', footage: 'FOOTAGE', audio: 'AUDIO', transmission: 'TRANSMISSION' };
+  function bytesEsc(t){ return String(t || '').replace(/[&<>"]/g, function(m){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]; }); }
+  function bytesCard(b, i){
+    var cls = 'byte ' + bytesEsc(b.type) + (b.type === 'transmission' || b.type === 'footage' ? ' wide' : ''), media = '';
+    if(b.type === 'still' && b.file) media = '<img src="' + bytesEsc(b.file) + '" alt="' + bytesEsc(b.title) + '" loading="lazy">';
+    if(b.type === 'footage' && b.file) media = '<video src="' + bytesEsc(b.file) + '" controls preload="metadata"' + (b.poster ? ' poster="' + bytesEsc(b.poster) + '"' : '') + '></video>';
+    if(b.type === 'audio' && b.file) media = '<audio src="' + bytesEsc(b.file) + '" controls preload="none"></audio>';
+    var tags = (b.tags || []).map(function(t){ return '<span>' + bytesEsc(t) + '</span>'; }).join('');
+    return '<article class="' + cls + '" style="animation-delay:' + (i * 60) + 'ms">' +
+      '<div class="meta"><b>' + (bytesLabels[b.type] || bytesEsc(b.type).toUpperCase()) + '</b><span>' + bytesEsc(b.date) + ' // #' + bytesEsc(b.id) + '</span></div>' +
+      '<h3>' + bytesEsc(b.title) + '</h3>' + media +
+      (b.text ? '<p>' + bytesEsc(b.text) + '</p>' : '') +
+      (tags ? '<div class="tags">' + tags + '</div>' : '') + '</article>';
+  }
+  function bytesRender(){
+    var list = bytesData.filter(function(b){ return bytesActive === 'all' || b.type === bytesActive || (b.tags || []).indexOf(bytesActive) > -1; });
+    bytesCount.textContent = list.length + ' / ' + bytesData.length + ' recovered';
+    bytesGrid.innerHTML = list.length ? list.map(bytesCard).join('') : '<div class="b-empty">nothing recovered on this frequency.</div>';
+  }
+  function bytesBuildFilters(){
+    var keys = ['all'];
+    bytesData.forEach(function(b){ if(keys.indexOf(b.type) < 0) keys.push(b.type); });
+    bytesData.forEach(function(b){ (b.tags || []).forEach(function(t){ if(keys.indexOf(t) < 0) keys.push(t); }); });
+    bytesFilters.innerHTML = keys.map(function(k){ return '<button type="button" data-k="' + bytesEsc(k) + '"' + (k === bytesActive ? ' class="on"' : '') + '>' + bytesEsc(k) + '</button>'; }).join('');
+  }
+  function bytesLoad(){
+    if(bytesData) return;
+    bytesGrid.innerHTML = '<div class="b-empty">recovering...</div>';
+    fetch('databytes.json', { cache: 'no-store' }).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(data){
+        bytesData = data.slice().sort(function(a, b){ return (b.date || '').localeCompare(a.date || ''); });
+        bytesBuildFilters(); bytesRender();
+      })
+      .catch(function(){ bytesGrid.innerHTML = '<div class="b-err">databytes unreadable right now. try again in a minute.</div>'; });
+  }
+  function bytesIsOpen(){ return bytesEl.classList.contains('open'); }
+  function bytesOpen(push){
+    if(bytesIsOpen()) return;
+    bytesEl.classList.add('open'); document.body.classList.add('bytes-open');
+    bytesEl.scrollTop = 0; bytesLoad();
+    if(push){ try { history.pushState({ bytes: 1 }, '', '#databytes'); bytesPushed = true; } catch(e){} }
+    setTimeout(function(){ document.getElementById('bytesClose').focus(); }, 50);
+  }
+  function bytesShut(fromNav){
+    if(!bytesIsOpen()) return;
+    bytesEl.classList.remove('open'); document.body.classList.remove('bytes-open');
+    [].forEach.call(bytesEl.querySelectorAll('video, audio'), function(m){ try { m.pause(); } catch(e){} });
+    if(fromNav){ bytesPushed = false; return; }
+    if(bytesPushed){ bytesPushed = false; history.back(); return; }
+    if(location.hash === '#databytes') try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+  }
+  document.getElementById('bytesOpen').addEventListener('click', function(e){
+    if(e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault(); bytesOpen(true);
+  });
+  document.getElementById('bytesClose').addEventListener('click', function(){ bytesShut(false); });
+  bytesFilters.addEventListener('click', function(e){
+    var b = e.target && e.target.closest && e.target.closest('button');
+    if(!b) return;
+    bytesActive = b.getAttribute('data-k'); bytesBuildFilters(); bytesRender();
+  });
+  window.addEventListener('hashchange', function(){
+    if(location.hash === '#databytes') bytesOpen(false); else bytesShut(true);
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && bytesIsOpen() && !term.classList.contains('open')) bytesShut(false);
+  });
+  if(location.hash === '#databytes') bytesOpen(false);
+
   document.getElementById('termOpen').addEventListener('click', function(e){ e.preventDefault(); openTerm(); });
   document.getElementById('termClose').addEventListener('click', closeTerm);
+  /* tab completion, PowerShell-style: Tab fills in the first match, Tab
+     again cycles, Shift+Tab goes back. Commands are only the ones help
+     lists, so the hidden ones stay hidden, and summon / unlock targets are
+     never offered. After cat: the files ls would show. During the password
+     crack: the words in the dump on screen. */
+  var tabCmds = ['help', 'ls', 'cat', 'whoami', 'rain', 'ghostie', 'summon', 'unlock', 'radio', 'clear', 'exit'];
+  var tabArgs = { ghostie: ['reset'], radio: ['next', 'off'] }, tabCycle = null, breachWords = null;
+  function tabOptions(line){
+    if(termTrap) return vault.step === 2 && breachWords && /^\S*$/.test(line) ? { head: '', word: line, list: breachWords } : null;
+    var m = /^(\s*)(\S*)$/.exec(line);
+    if(m) return { head: m[1], word: m[2], list: tabCmds };
+    m = /^(\s*(\S+)\s+)(\S*)$/.exec(line);
+    if(!m) return null;
+    var c = m[2].toLowerCase();
+    var list = c === 'cat' ? Object.keys(FILES).filter(function(f){ return f[0] !== '.' || mainframeOpen; }) : tabArgs[c];
+    return list ? { head: m[1], word: m[3], list: list } : null;
+  }
+  function tabComplete(step){
+    if(!tabCycle){
+      var o = tabOptions(tIn.value);
+      if(!o) return;
+      var w = o.word.toLowerCase();
+      var hits = o.list.filter(function(x){ return x.toLowerCase().indexOf(w) === 0; });
+      if(!hits.length) return;
+      tabCycle = { head: o.head, hits: hits, i: step > 0 ? 0 : hits.length - 1 };
+    } else {
+      tabCycle.i = (tabCycle.i + step + tabCycle.hits.length) % tabCycle.hits.length;
+    }
+    tIn.value = tabCycle.head + tabCycle.hits[tabCycle.i];
+    var end = tIn.value.length;
+    try { tIn.setSelectionRange(end, end); } catch(e){}
+  }
+  tIn.addEventListener('input', function(){ tabCycle = null; });
   tIn.addEventListener('keydown', function(e){
     if(gameKey && e.key !== 'Escape' && gameKey(e.key)){ if(e.preventDefault) e.preventDefault(); tIn.value = ''; return; }
+    if(e.key === 'Tab'){
+      if(e.preventDefault) e.preventDefault();      /* never lets focus leave the shell */
+      if(!gameKey) tabComplete(e.shiftKey ? -1 : 1);
+      return;
+    }
+    if(e.key !== 'Shift') tabCycle = null;
     if(e.key === 'Enter'){ run(tIn.value); tIn.value = ''; } if(e.key === 'Escape') closeTerm();
     if((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !termTrap){
       if(e.preventDefault) e.preventDefault();
@@ -3356,7 +3528,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var w = e && e.target && e.target.getAttribute && e.target.getAttribute('data-word');
     if(w && breachTap){ breachTap(w); tIn.focus(); }
   });
-  term.addEventListener('click', function(e){ if(e.target === term || e.target === tOut) tIn.focus(); });
+  /* a click anywhere in the open terminal puts the cursor back on the
+     command line, like a real console window. Buttons, links and tappable
+     words keep their own job, a text selection is left alone, and on touch
+     screens only the empty background does it, so the keyboard does not
+     pop up on every tap. */
+  var finePointer = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  term.addEventListener('click', function(e){
+    var t = e.target;
+    if(t && t.closest && t.closest('button, a, input, [data-word], [data-dir]')) return;
+    if(window.getSelection && String(window.getSelection())) return;
+    if(finePointer || t === term || t === tOut) tIn.focus();
+  });
   if(location.hash === '#terminal') setTimeout(openTerm, 2400);
 })();
 </script>
