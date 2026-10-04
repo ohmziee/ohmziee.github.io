@@ -503,6 +503,23 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-tracks li.dead button{color:rgba(74,80,104,.8);font-style:italic}
 #radio .r-src{display:block;padding:.5rem .75rem;font-size:.66rem;letter-spacing:.12em;color:var(--rain);border-top:1px solid rgba(42,29,94,.7);text-decoration:none}
 #radio .r-src:hover{color:var(--lavender)}
+#radioPanel{max-height:calc(100dvh - 2rem);overflow-y:auto}
+#radio .r-find{display:flex;gap:.4rem;padding:0 .75rem .7rem}
+#radio .r-find input{flex:1 1 auto;min-width:0;font:inherit;font-size:.74rem;color:var(--ice);background:rgba(5,6,11,.7);border:1px solid var(--violet);padding:.45rem .55rem;border-radius:0}
+#radio .r-find input::placeholder{color:rgba(220,227,255,.32)}
+#radio .r-find input:focus{outline:none;border-color:var(--lavender)}
+#radio .r-find button{padding:.45rem .6rem;border:1px solid var(--violet);color:var(--ice);font-size:.74rem;letter-spacing:.12em}
+#radio .r-find button:hover,#radio .r-find button:focus-visible{border-color:var(--lavender);background:rgba(42,29,94,.4)}
+#radio .r-results{border-top:1px solid rgba(42,29,94,.7);max-height:min(34vh,17rem);overflow-y:auto}
+#radio .r-results[hidden]{display:none}
+#radio .r-results ol{list-style:none}
+#radio .r-results li button{display:flex;gap:.6rem;align-items:center;width:100%;text-align:left;padding:.4rem .75rem;font-size:.72rem;color:var(--ice);line-height:1.35}
+#radio .r-results li button:hover,#radio .r-results li button:focus-visible{background:rgba(42,29,94,.35)}
+#radio .r-results img{width:64px;height:48px;object-fit:cover;flex:0 0 auto;border:1px solid var(--violet)}
+#radio .r-results small{display:block;color:var(--rain);font-size:.64rem;margin-top:.15rem}
+#radio .r-note{padding:.6rem .75rem;font-size:.7rem;color:var(--rain)}
+#radio .r-back{display:block;width:100%;text-align:left;padding:.5rem .75rem;font-size:.7rem;letter-spacing:.12em;color:#7CFFB2;border-top:1px solid rgba(42,29,94,.7)}
+#radio .r-back[hidden]{display:none}
 #term.open ~ #radio{z-index:39}
 body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accent)}
 @media (prefers-reduced-motion:reduce){#radio.on .r-dot{animation:none}}
@@ -894,6 +911,12 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <button type="button" id="radioNext" aria-label="next track">&raquo;</button>
       <input type="range" id="radioVol" min="0" max="100" value="70" aria-label="volume">
     </div>
+    <form class="r-find" id="radioFind" autocomplete="off" role="search">
+      <input type="search" id="radioQ" maxlength="200" placeholder="search youtube or paste a link" aria-label="search youtube or paste a link">
+      <button type="submit">find</button>
+    </form>
+    <div class="r-results" id="radioResults" hidden></div>
+    <button type="button" class="r-back" id="radioBack" hidden>&laquo; back to EXiLED RADIO</button>
     <ol class="r-tracks" id="radioTracks"></ol>
     <a class="r-src" id="radioSrc" href="#" target="_blank" rel="noopener">open the playlist on youtube &rsaquo;</a>
   </div>
@@ -2625,16 +2648,23 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      Nothing is fetched from YouTube until someone opens the radio. Titles
      for the track list come from YouTube's oEmbed endpoint. */
   var RADIO_LIST = 'PLIY4P9Reir_c';
-  var radio = { yt: null, loading: false, ready: false, want: false, ids: [], titles: {}, idx: -1, playing: false, tries: 0 };
+  /* YouTube Data API key for the search box. It is meant to be public:
+     Google only honours it from https://ohmziee.github.io/*, so a copy
+     lifted from this source is useless anywhere else. Free quota is about
+     100 searches a day across everyone; pasted links cost nothing. */
+  var RADIO_KEY = 'AIzaSyDvNwLvXTuo2yCUSRhIHS0puXZpt8ZVSB8';
+  var radio = { yt: null, loading: false, ready: false, want: false, ids: [], titles: {}, idx: -1, playing: false, tries: 0,
+                mine: false, minePl: false, back: 0, pending: null, lastFind: 0, found: {} };
   var rEl = document.getElementById('radio'), rPanel = document.getElementById('radioPanel'), rTab = document.getElementById('radioTab');
   var rState = document.getElementById('radioState'), rNow = document.getElementById('radioNow'), rPlay = document.getElementById('radioPlay');
   var rTracks = document.getElementById('radioTracks'), rVol = document.getElementById('radioVol'), rNode = document.getElementById('radioNode');
+  var rQ = document.getElementById('radioQ'), rResults = document.getElementById('radioResults'), rBack = document.getElementById('radioBack');
   document.getElementById('radioSrc').href = 'https://www.youtube.com/playlist?list=' + RADIO_LIST;
   try { var v0 = localStorage.getItem('exiled.radioVol'); if(v0 !== null && !isNaN(+v0)) rVol.value = +v0; } catch(e){}
 
   function radioPaint(label){
     rEl.classList.toggle('on', radio.playing);
-    rState.textContent = label || (radio.playing ? 'ON AIR' : radio.ready ? 'PAUSED' : 'OFF AIR');
+    rState.textContent = label || (radio.playing ? (radio.mine ? 'YOUR PICK' : 'ON AIR') : radio.ready ? 'PAUSED' : 'OFF AIR');
     rPlay.textContent = radio.playing ? 'PAUSE' : 'TUNE IN';
     rNode.textContent = radio.playing ? 'ON AIR' : 'TUNE IN';
     var lis = rTracks.children;
@@ -2649,6 +2679,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       .catch(function(){});
   }
   function radioList(){
+    /* a visitor's own pick is playing: the station list stays as it is */
+    if(radio.mine) return;
     var ids = radio.yt && radio.yt.getPlaylist && radio.yt.getPlaylist();
     if(!ids || !ids.length){
       /* the playlist arrives a beat after the player does */
@@ -2671,7 +2703,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function radioState(e){
     var st = e.data;
     radio.playing = st === 1;
-    radio.idx = radio.yt.getPlaylistIndex ? radio.yt.getPlaylistIndex() : -1;
+    /* a single pick finished: back to the station where it left off */
+    if(st === 0 && radio.mine && !radio.minePl) return radioHome();
+    radio.idx = radio.mine ? -1 : radio.yt.getPlaylistIndex ? radio.yt.getPlaylistIndex() : -1;
     radioList();
     var d = radio.yt.getVideoData ? radio.yt.getVideoData() : null;
     if(d && d.title) rNow.textContent = d.title;
@@ -2687,7 +2721,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           radio.ready = true;
           radio.yt.setLoop(true); radio.yt.setVolume(+rVol.value);
           radioList(); radioPaint();
-          if(radio.want) radio.yt.playVideo();
+          if(radio.pending){ var p = radio.pending; radio.pending = null; radioMine(p); }
+          else if(radio.want) radio.yt.playVideo();
         },
         onStateChange: radioState,
         /* a track that was removed or blocks embedding: skip it */
@@ -2720,6 +2755,76 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     rPanel.hidden = true; rTab.hidden = false; rTab.setAttribute('aria-expanded', 'false');
     radioPaint();
   }
+  /* ── a visitor's own pick ──
+     Plays only on their screen. Nothing they choose reaches anyone else. */
+  function radioLink(t){
+    var m = /(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live)\/)([\w-]{11})/.exec(t);
+    if(m) return { v: m[1] };
+    m = /[?&]list=([\w-]{10,})/.exec(t);
+    return m ? { list: m[1] } : null;
+  }
+  function radioMine(p){
+    if(!radio.mine) radio.back = radio.idx < 0 ? 0 : radio.idx;
+    radio.mine = true; radio.minePl = !!p.list; radio.want = true;
+    rBack.hidden = false; rResults.hidden = true;
+    if(!radio.ready){ radio.pending = p; return radioLoad(); }
+    if(p.list) radio.yt.loadPlaylist({ list: p.list, listType: 'playlist' });
+    else radio.yt.loadVideoById(p.v);
+    radio.idx = -1; radioPaint('TUNING');
+  }
+  function radioHome(){
+    radio.mine = false; radio.minePl = false; rBack.hidden = true;
+    radio.yt.loadPlaylist({ list: RADIO_LIST, listType: 'playlist', index: radio.back });
+    radioPaint('TUNING');
+  }
+  function radioText(t){ return new DOMParser().parseFromString(t || '', 'text/html').documentElement.textContent; }
+  function radioNote(t){
+    var p = document.createElement('p'); p.className = 'r-note'; p.textContent = t;
+    rResults.textContent = ''; rResults.appendChild(p); rResults.hidden = false;
+  }
+  function radioShow(items){
+    if(!items.length) return radioNote('nothing found. try other words.');
+    rResults.textContent = ''; rResults.hidden = false;
+    var ol = document.createElement('ol');
+    items.forEach(function(it){
+      var id = it.id && it.id.videoId; if(!id || !it.snippet) return;
+      var li = document.createElement('li'), b = document.createElement('button'), img = document.createElement('img');
+      var t = document.createElement('span'), c = document.createElement('small');
+      b.type = 'button'; img.alt = ''; img.loading = 'lazy';
+      img.src = 'https://i.ytimg.com/vi/' + id + '/default.jpg';
+      t.textContent = radioText(it.snippet.title); c.textContent = radioText(it.snippet.channelTitle);
+      t.appendChild(c); b.appendChild(img); b.appendChild(t);
+      b.addEventListener('click', function(){ radioMine({ v: id }); });
+      li.appendChild(b); ol.appendChild(li);
+    });
+    rResults.appendChild(ol);
+  }
+  function radioFind(q){
+    var k = q.toLowerCase();
+    if(RADIO_KEY.indexOf('AIza') !== 0) return radioNote('search is not wired up yet. paste a youtube link instead.');
+    if(radio.found[k]) return radioShow(radio.found[k]);
+    if(Date.now() - radio.lastFind < 3000) return radioNote('easy. one search every few seconds.');
+    radio.lastFind = Date.now(); radioNote('searching...');
+    fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&safeSearch=moderate&maxResults=6&q=' + encodeURIComponent(q) + '&key=' + RADIO_KEY)
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(j.error){
+          var why = (j.error.errors && j.error.errors[0] && j.error.errors[0].reason) || '';
+          return radioNote(/quota/i.test(why) ? 'search is out of juice for today. paste a youtube link instead.' : 'search failed. paste a youtube link instead.');
+        }
+        radio.found[k] = j.items || []; radioShow(radio.found[k]);
+      })
+      .catch(function(){ radioNote('no signal. paste a youtube link instead.'); });
+  }
+  document.getElementById('radioFind').addEventListener('submit', function(e){
+    e.preventDefault();
+    var q = rQ.value.trim(); if(!q) return;
+    var p = radioLink(q);
+    if(p){ rQ.value = ''; return radioMine(p); }
+    radioFind(q.slice(0, 200));
+  });
+  rBack.addEventListener('click', function(){ if(radio.ready) radioHome(); });
+
   rTab.addEventListener('click', function(){ radioOpen(false); });
   document.getElementById('radioOpen').addEventListener('click', function(e){ e.preventDefault(); radioOpen(true); });
   document.getElementById('radioClose').addEventListener('click', radioClose);
