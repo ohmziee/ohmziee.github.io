@@ -560,7 +560,10 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-back[hidden]{display:none}
 #term.open ~ #radio{z-index:39}
 body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accent)}
-@media (prefers-reduced-motion:reduce){#radio.on .r-dot{animation:none}}
+/* first visit only: the tab breathes until someone opens it */
+@keyframes tabcall{0%,100%{border-color:var(--violet);box-shadow:none}50%{border-color:#7CFFB2;box-shadow:0 0 18px -4px rgba(124,255,178,.6)}}
+#radio.fresh #radioTab{animation:tabcall 2.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){#radio.on .r-dot{animation:none}#radio.fresh #radioTab{animation:none;border-color:#7CFFB2}}
 @media (max-width:560px){#radio{left:1rem;right:1rem}#radioPanel,#radio.mini #radioPanel{width:100%}#radioTab .r-tabnow{max-width:55vw}#radio .r-tracks{max-height:22vh}}
 
 /* ── baby ──────────────────────────────────────────── */
@@ -780,13 +783,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           <span class="dot" aria-hidden="true"></span>
           <span class="name">TERMINAL<small>remnant shell // type help // rain lives here now</small></span>
           <span class="state">OPEN</span>
-        </a>
-      </li>
-      <li>
-        <a class="node live" href="#radio" id="radioOpen">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="name">EXiLED RADIO<small>late-night frequency // full tracks, picked by hand</small></span>
-          <span class="state" id="radioNode">TUNE IN</span>
         </a>
       </li>
       <li>
@@ -1715,9 +1711,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var CHAT_COLS = ['#9F8CFF','#7CF5FF','#FF4FD8','#7CFFB2','#FFE97C','#DCE3FF','#FF8A6B','#8CFFD1','#C9A0FF','#6BE0FF'];
   var CHAT_USERS = ["ghoulgirl_99", "v0idkid", "nullp0inter", "static_saint", "dead_modem", "lowlifehitek", "ashtraygf", "bl00dborne", "xX_nocturne_Xx", "wirefeed", "sadlatency", "crtburn", "hauntedbuffer", "neonwake", "404_soul", "grimwave", "pixelrot", "chromefang", "velvetstatic", "nightcitygf", "bones_fm", "dialup_ghost", "muted_angel", "kernelpanic_", "offlinehours", "saltwaterboy", "vhs_decay", "terminal_kid", "junkdata", "softcrash", "quietroom", "threeam_", "lastseen_online", "emptyseat", "nobodysboy", "moth2lamp", "ghostedagain", "sadgirlsummer", "velvetteeth", "hexadecimal_heart", "realtalk_88", "clipfarm", "notyourbro"];
   var CHAT_POOLS = [
-    { w: 70, lines: ["we're all alone here <3", "found this at 3am and just sat here for a while", "first place in years i didn't feel weird", "i don't post anywhere. i'm posting here.", "this is the first internet thing that felt like mine", "nothing is deleted. only exiled.", "who else is here alone rn", "the campfire line got me", "bring nothing stay anyway. ok i'm crying", "never fit anywhere and i got used to it. this is different", "showed this to nobody. it's mine.", "if you feel it you're one of us. i feel it.", "lurked a week. finally saying hi", "hi. sorry. first time talking anywhere in a while.", "no one is coming. that's the point. brutal. true.", "this is what i needed when i was 15", "wish this existed when i was younger", "my people??? in this economy???", "the outcasts found each other. we actually did", "did not expect to feel something today", "everyone here is so normal about being not normal", "best chat on the internet and nobody is yelling", "no drama no bait just ghosts", "i've been refreshing this for an hour", "logged off my main to be here", "this place doesn't want anything from me. weird. nice.", "choombas <3", "hi choombas", "still can't believe this is free", "no ads no popups i almost don't trust it", "the fact that nobody is selling me anything", "i'll be here. quietly. most nights.", "the rain setting????", "wait there's a TERMINAL", "type help. thank me later", "the terminal is unreasonably deep", "i've been typing random commands for 20 minutes", "the ghost BLINKS", "she looked at me", "clicked the ghost and she talked. i'm unwell", "you can drag her around now?? she lives in my corner", "the cursor trail is so sick", "whoever did the cursor trail, thank you", "the boot sequence gets me every time", "integrity 41% and holding. mood.", "the clock is broken on purpose and i love it", "why does the clock keep glitching. scared. obsessed.", "the lightning at full storm is insane", "turned the rain all the way up and forgot what i was doing", "full storm is a whole light show", "go look at DATABYTES", "wiki says no signal. someone build the wiki", "what is the redacted one", "the redacted channel is going to ruin my week", "i've been staring at [REDACTED] for ten minutes", "there's something in the terminal i'm not ready to talk about", "i swear the ghost reacted to something i typed", "there's a CAT???", "whoever hid the cat in here. genius.", "every line in that ticker is a banger", "no gods in this network. putting that on a shirt", "mobile version actually works. respect.", "reading this on my phone in bed. perfect.", "one html file probably. absolute craft.", "this goes so hard", "this site has no business going this hard", "immediately bookmarked", "sent this to my only friend", "how is this made by one person", "the aesthetic is perfect. no notes.", "black purple green supremacy", "whoever made this: rest. then make more.", "see you on kick", "kick chat is going to be unhinged and i'm ready", "first stream when", "i will be there day one", "hello good haunter <3", "haunter is the correct favorite pokemon btw", "not crying, the rain is just at 100", "emotionally i am the 41% integrity", "got into eva at the worst possible age and it shows in my entire personality", "my therapist asked what community means and i showed her a black website", "listing this site in my will", "i have never been perceived and i'd like to keep it that way. anyway hi.", "me and who. me and the ghost.", "found my people and immediately went quiet. classic.", "touched grass once. hated it. came back.", "my roman empire is a website with rain on it", "i haven't spoken out loud today and this is the closest thing to a conversation", "does anyone else just sit in the dark with headphones on for hours", "i'm not sad exactly. i'm tired of being the only one who reaches out.", "everyone i know is busy being happy somewhere else", "i stopped texting first and the friendship just ended. that simple.", "turns out i was the group chat", "nobody noticed i went quiet for three months", "i keep making plans i already know i'll cancel", "it's easier to be alone than to be alone around people", "i'm very good at being fine", "being fine is a full time job", "i miss people i've never met", "i miss a version of my life that never actually happened", "3am is the only hour i feel like myself", "the day is for pretending. the night is for this.", "i talk more in chats than i do out loud", "i don't want much. just someone who checks in without being asked.", "i'd settle for being someone's second thought", "the loneliest i've ever been was in a room full of my own friends", "i got really good at leaving before anyone else could", "everyone gets a version of me. nobody gets all of it.", "i am so tired of starting over", "made one new friend this year and then moved. classic.", "work, home, sleep, repeat. that's the whole post.", "does it get better or do you just get used to it", "used to it, i think. and that turned out to be okay.", "i want to be known without having to explain myself first", "the explaining is the exhausting part", "i've been the funny one so long i forgot i'm allowed to be sad", "everyone thinks i'm fine because i never said otherwise", "i don't know how to ask for help without apologising first", "sorry. that was heavy. anyway hi.", "why is this easier to say to strangers", "because we won't remember tomorrow and that's a relief", "i'll remember you", "that one got me. thanks.", "reading all of this and feeling less insane", "i genuinely thought it was just me", "it's never just you. that's the entire point of this place.", "first time a website has ever understood me", "this is the only tab i keep open", "i open this when i can't sleep", "i open this instead of the group chat i got left out of", "came here sad. still sad. less alone though.", "less alone is enough for tonight", "i don't need fixing. i just need company.", "company. that's the word. that's all it ever was.", "thanks for being awake", "someone else being awake helps more than it should", "hi to whoever is reading this at a bad hour", "bad hour crew", "clocking in for the bad hour shift", "i'll just sit here quietly if that's alright", "it's alright. sit.", "lurked for months. this is my first message anywhere in years.", "proud of you for typing that", "we're all proud of you actually", "this chat is kinder than the rest of the internet and it isn't close", "nobody here is trying to win", "nobody performing. strange. good.", "i forgot the internet was allowed to feel like this", "it felt like this once and then it stopped", "old internet energy. safe internet.", "i don't have to be interesting here", "that's such a relief i could cry", "most of my friends are characters in games and i've made peace with it", "my longest relationship is with a playlist", "music is the only thing that ever showed up on time", "bones got me through a year i shouldn't have made it through", "peep too. you already know.", "if the music found you then you were always one of us", "a song led me here somehow and i can't explain it", "the aesthetic isn't a costume for some of us", "it's just what the inside looks like", "finally somewhere that looks the way it feels", "i'll be here every night whether anyone answers or not", "someone will answer", "someone always answers here eventually", "goodnight to everyone in the dark", "see you in the dark", "i eat every meal alone and i've stopped noticing", "my coworkers think i'm quiet. i'm just not there.", "i have a whole personality i only use at work", "clocked out and immediately felt like nothing again", "the drive home is the loneliest part of the day", "i take the long way home so the day lasts longer", "sunday nights are the worst and nobody talks about it", "holidays are just a louder version of alone", "i said 'you too' to the waiter again", "that was the only conversation i had today", "i watch streams to hear a voice in the room", "background noise is a survival strategy", "i leave a video running so the flat isn't silent", "my place has never had another person in it", "i cleaned up for guests who never came", "bought a second chair out of hope", "still hoping, honestly", "i'm not lonely, i'm unaccompanied. that's a joke. mostly.", "depression is just a lot of free time you can't use", "i have so much time and nothing to spend it on", "i've been meaning to reply to that text since march", "the longer you wait the harder it is to reply", "now it's been too long and that's its own whole thing", "i archive conversations so it looks like i have fewer", "my read receipts are off out of pure cowardice", "i typed and deleted that message eleven times", "sent it. immediately regretted it. normal stuff.", "nobody's coming over so why make the bed", "made the bed anyway. small win.", "small wins still count here", "genuinely proud of you for the small win", "this is the only place anyone says that to me", "we say it because it's true, not because it's polite", "turned 30 and realised i have no one to call", "getting older alone is a specific kind of quiet", "everyone paired off and i never got the memo", "weddings are hard when you're the only one at your table", "i'm happy for them. genuinely. it just costs something.", "joy and grief at once is normal around here", "moved cities for a job and haven't spoken to a soul since", "new city, same silence", "it isn't the place. i brought it with me.", "winter makes it louder", "the dark at 4pm does something to a person", "summer is worse honestly. everyone is outside being happy.", "every season has its own way of doing this", "i scroll until my thumb hurts looking for something that isn't there", "everything online is either selling or shouting", "this is neither and i don't know what to do with that", "i keep waiting for the catch", "there isn't one. that's the strangest part.", "i don't trust nice things anymore", "take your time. we're not going anywhere.", "that sentence undid me a little", "i have three thousand songs and nobody to send them to", "send them here", "seriously. send them here.", "ok i might actually do that", "i've been building things nobody looks at for years", "same. keep building.", "the building is the point even when nobody claps", "i needed to hear that tonight", "i write constantly and never post any of it", "post it. here, if nowhere else.", "maybe. one day. thanks though.", "i've been the strong one so long i forgot how to be held", "nobody checks on the person who checks on everyone", "checking on you. right now. whoever you are.", "ok that got me. wow.", "crying at a website. tuesday.", "it's always a tuesday", "i'm okay. i just haven't been asked in a while.", "how are you. actually.", "nobody has asked me that in months", "i'm asking", "give me a second. ok. i'm not great. thanks for asking.", "take all the seconds you need", "this place moves slow and i love that about it", "no rush here. ever.", "staying a while. that's all. just staying.", "the kettle going at 4am is my whole personality", "streetlight through the blinds. you know the one.", "my radiator makes a noise at night and i've started saying goodnight to it", "the fan is the only thing talking in here", "neighbours went quiet an hour ago. just me now.", "there's a specific silence after 2am", "i like the hour where nothing is expected of me", "nobody needs anything from me at this time of night", "the night shift is the only shift i'm good at", "sleep is fake. see you at 5.", "woke up at 3 and came here instead of trying again", "i sleep fine. i just don't want to yet.", "one more hour then bed. lying, obviously.", "the light's going earlier and i can feel it", "first cold night of the year", "it's been grey for nine days", "raining here too actually", "the real rain and the site rain at the same time. dangerous.", "summer evenings are the loneliest and nobody warns you", "been lurking since the site went up. hi.", "i read every message and never say anything. today's different.", "lurker for weeks. this is me now i guess.", "i've typed and deleted six things tonight", "still deciding if i'm going to send this", "sent it", "lurking is participating. i've decided.", "i don't have anything to add i just want to be in the room", "presence is enough here apparently", "reading is enough. nobody's asking me to perform.", "the ticker said something and i felt it in my chest", "scrolled back up to read the manifesto again", "read the join bit twice", "the rain slider is a whole mood ring", "put the rain at 12 and it's somehow worse. better. both.", "turned the rain down to almost nothing and it felt lonelier", "the ghost is just sitting there and i find that comforting", "moved the ghost to the corner so she's out of the way. felt bad. moved her back.", "apologised to a png tonight", "the boot text scrolls too fast to read and i read it anyway", "paused to read the boot sequence. worth it.", "integrity 41 percent is the most honest stat on the internet", "clicked everything. found three things. still looking.", "there's more in here than there looks", "whoever wrote the files in the terminal. hello. i see you.", "read every file in the terminal. some of those hit.", "the redacted thing is going to live in my head", "i want to know what's behind the locked files and also i don't", "not touching the mainframe. respectfully.", "databytes is a great name and i won't elaborate", "the 404 page is better than most homepages", "the scroll bar is a lie, there's more down there", "who else has this open on a second monitor permanently", "second monitor: this. first monitor: nothing important.", "minimised it for a meeting and felt weird about it", "opened it on my work laptop. living dangerously.", "what's everyone listening to", "put something on and stayed", "this site pairs with basically any sad playlist", "been on the same three songs for a week", "the album that got me through 2019 still works", "music is how i know i'm still in here", "i make playlists for moods i haven't had yet", "made a playlist called the bad hour and it's mostly instrumentals", "instrumental only tonight. no words left.", "someone rec me something slow", "looking for something that sounds like this site looks", "found a song that sounds like this place and i'm not sharing it", "i'm not looking for advice i just wanted to say it somewhere", "saying it somewhere counts", "i didn't know i needed a place to just exist online", "existing online without being watched is rare now", "nobody here is counting my posts", "no follower count. no clout. just a room.", "i like that there's no profile to build", "i don't have to be a brand in here", "the internet used to have rooms. this is a room.", "rooms not feeds", "a feed wants something from you. a room doesn't.", "i forgot what it felt like to just be somewhere", "showed up. that's the whole achievement today.", "showing up counts. it does here anyway.", "i'm having a normal one actually. just wanted to sit with people.", "good day today. still came here. that's allowed right", "it's allowed", "you don't have to be sad to be here", "happy people welcome too. we won't hold it against you.", "came here happy and stayed for the vibes", "nothing's wrong. i just like it here.", "survived another one", "clocked out and came straight here", "the gap between work and sleep is where i actually live", "got through the day on autopilot and remembered nothing", "answered emails for nine hours and said forty words out loud", "my job is fine. that's the problem.", "fine is such a specific kind of nothing", "tomorrow's going to be the same and that's okay actually", "three more days then two days of being alone but at home", "weekends are just quieter weekdays", "my closest friends are people i've never seen", "online friends are real friends. next question.", "the friend i talk to most lives six thousand miles away", "time zones are the enemy", "my best friend goes to sleep when i wake up", "we've never met and she knows more about me than my family does", "met my people in a voice chat in 2016 and never left", "i miss a server that died in 2019", "every good group chat eventually goes quiet", "the quiet group chat is its own kind of grief", "drawing again for the first time in months", "started writing something. won't finish it. still counts.", "finishing things is overrated. starting is the hard part.", "i build things at night that i abandon by morning", "the abandoned projects folder is my real diary", "learning something new just to have somewhere to put my head", "picked up the guitar again. badly.", "badly is how everything starts", "the cat is the only one who's seen me today", "my dog thinks i'm doing great", "ate standing up over the sink again", "cooked properly for once. for me. felt strange.", "made too much food out of habit", "two mugs on the counter. one's from yesterday.", "talked to the dog about it. she gets it.", "just found this. what is it", "someone linked me here and i've been scrolling for twenty minutes", "is this a stream thing or a site thing or both", "both, i think. stay either way.", "new here. no idea what's going on. staying anyway.", "didn't expect to like this as much as i do", "first stream is going to be emotional and i'm pre-emotional about it", "already cleared my schedule for a stream that has no date", "the countdown is in my head and there isn't even one", "i'll be in that chat on day one", "day one club", "i want to see how many of us actually turn up", "the vibes are immaculate and the wifi is holding", "took a screenshot for no one", "my screen time is embarrassing and this is most of it", "explaining this site to a normal person is impossible", "tried to describe this to a coworker and gave up", "you either get it in three seconds or not at all", "no notes. just staring.", "that's a lot to carry", "you're carrying it though", "you're allowed to put it down for an hour", "put it down. the rain will hold it.", "nothing to fix. just here.", "i don't have anything useful to say but i read it", "reading it is the useful part", "that one's going to sit with me", "thanks for saying it out loud", "we're all a bit raw at this hour", "the hour does that", "read the whole chat back like it was a book", "someone said something here last week that i still think about", "i don't remember who said it but it helped", "that's the thing. it doesn't matter who said it.", "anonymous kindness hits different", "nobody's doing it for credit here", "quiet solidarity is underrated", "we're just a bunch of people being quiet together", "together-alone is a real thing and this is it", "parallel loneliness. that's the phrase.", "i like being alone near people", "the ghost poofed on me. i deserved it.", "clicked the ghost too fast and she LEFT", "waited the whole minute for the ghost to come back. worth it.", "ghost came back and roasted me", "there's a little smudge where the ghost was", "socials are at the bottom now. followed on everything.", "found the wiki. it's mostly static. perfect.", "the hex page is so good", "read the ghostie page and now i feel bad for poking them", "there's a sealed file in the wiki and i've made peace with never opening it", "SEALED in pink. why pink. why does it look like that.", "the quiet is louder on weekends", "made tea, forgot it, made more tea", "my window's open and it's actually raining", "every light in the building is off except mine", "the moon's doing a lot tonight", "phone at 4%. staying anyway.", "my playlist just shuffled into the perfect song", "somebody upstairs is also awake. i can hear the floor.", "a car went past and it felt like an event", "i should text back. i won't. but i should.", "someone liked a post i made in 2017 and now i'm haunted", "found an old voice memo of myself laughing. didn't recognise me.", "cleaned my room at 1am like a normal person", "rearranged the furniture instead of feeling anything", "it's not insomnia if you're choosing it", "midnight snack has become a midnight meal", "i'm the friend who remembers birthdays and nobody remembers mine", "logged off socials for a week. only kept this tab.", "this tab survives every browser purge", "every time i close this i open it again", "the chat is slow tonight and i like it slow", "slow chat is the best chat", "not much happening. that's the appeal.", "turned off the big light. only the screen now.", "headphones on. world off.", "something about purple at night", "black and purple is a love language", "if the internet was always like this i'd be fine", "nobody here knows my name and that's a gift", "anonymous and somehow still seen", "the kindest strangers are always online at 3am", "you're not too much. you're just in the wrong rooms.", "this is one of the right rooms", "i came back. i always come back.", "back after a bad week. it's still here. good.", "the stuff i can't say out loud i say here", "tonight i'm just tired. not sad. tired.", "tired is allowed too", "didn't talk to anyone today. talking to you now.", "that line in the manifesto about texting first. yeah.", "went quiet once just to see. nobody noticed. same.", "if you're reading this you made it to tonight. that's something.", "the ticker said something true again", "one message every couple of minutes. it feels like a real room now."] },
+    { w: 70, mood: true, lines: ["we're all alone here <3", "found this at 3am and just sat here for a while", "first place in years i didn't feel weird", "i don't post anywhere. i'm posting here.", "this is the first internet thing that felt like mine", "nothing is deleted. only exiled.", "who else is here alone rn", "the campfire line got me", "bring nothing stay anyway. ok i'm crying", "never fit anywhere and i got used to it. this is different", "showed this to nobody. it's mine.", "if you feel it you're one of us. i feel it.", "lurked a week. finally saying hi", "hi. sorry. first time talking anywhere in a while.", "no one is coming. that's the point. brutal. true.", "this is what i needed when i was 15", "wish this existed when i was younger", "my people??? in this economy???", "the outcasts found each other. we actually did", "did not expect to feel something today", "everyone here is so normal about being not normal", "best chat on the internet and nobody is yelling", "no drama no bait just ghosts", "i've been refreshing this for an hour", "logged off my main to be here", "this place doesn't want anything from me. weird. nice.", "choombas <3", "hi choombas", "still can't believe this is free", "no ads no popups i almost don't trust it", "the fact that nobody is selling me anything", "i'll be here. quietly. most nights.", "the rain setting????", "wait there's a TERMINAL", "type help. thank me later", "the terminal is unreasonably deep", "i've been typing random commands for 20 minutes", "the ghost BLINKS", "she looked at me", "clicked the ghost and she talked. i'm unwell", "you can drag her around now?? she lives in my corner", "the cursor trail is so sick", "whoever did the cursor trail, thank you", "the boot sequence gets me every time", "integrity 41% and holding. mood.", "the clock is broken on purpose and i love it", "why does the clock keep glitching. scared. obsessed.", "the lightning at full storm is insane", "turned the rain all the way up and forgot what i was doing", "full storm is a whole light show", "go look at DATABYTES", "wiki says no signal. someone build the wiki", "what is the redacted one", "the redacted channel is going to ruin my week", "i've been staring at [REDACTED] for ten minutes", "there's something in the terminal i'm not ready to talk about", "i swear the ghost reacted to something i typed", "there's a CAT???", "whoever hid the cat in here. genius.", "every line in that ticker is a banger", "no gods in this network. putting that on a shirt", "mobile version actually works. respect.", "reading this on my phone in bed. perfect.", "one html file probably. absolute craft.", "this goes so hard", "this site has no business going this hard", "immediately bookmarked", "sent this to my only friend", "how is this made by one person", "the aesthetic is perfect. no notes.", "black purple green supremacy", "whoever made this: rest. then make more.", "see you on kick", "kick chat is going to be unhinged and i'm ready", "first stream when", "i will be there day one", "hello good haunter <3", "haunter is the correct favorite pokemon btw", "not crying, the rain is just at 100", "emotionally i am the 41% integrity", "got into eva at the worst possible age and it shows in my entire personality", "my therapist asked what community means and i showed her a black website", "listing this site in my will", "i have never been perceived and i'd like to keep it that way. anyway hi.", "me and who. me and the ghost.", "found my people and immediately went quiet. classic.", "touched grass once. hated it. came back.", "my roman empire is a website with rain on it", "i haven't spoken out loud today and this is the closest thing to a conversation", "does anyone else just sit in the dark with headphones on for hours", "i'm not sad exactly. i'm tired of being the only one who reaches out.", "everyone i know is busy being happy somewhere else", "i stopped texting first and the friendship just ended. that simple.", "turns out i was the group chat", "nobody noticed i went quiet for three months", "i keep making plans i already know i'll cancel", "it's easier to be alone than to be alone around people", "i'm very good at being fine", "being fine is a full time job", "i miss people i've never met", "i miss a version of my life that never actually happened", "3am is the only hour i feel like myself", "the day is for pretending. the night is for this.", "i talk more in chats than i do out loud", "i don't want much. just someone who checks in without being asked.", "i'd settle for being someone's second thought", "the loneliest i've ever been was in a room full of my own friends", "i got really good at leaving before anyone else could", "everyone gets a version of me. nobody gets all of it.", "i am so tired of starting over", "made one new friend this year and then moved. classic.", "work, home, sleep, repeat. that's the whole post.", "does it get better or do you just get used to it", "used to it, i think. and that turned out to be okay.", "i want to be known without having to explain myself first", "the explaining is the exhausting part", "i've been the funny one so long i forgot i'm allowed to be sad", "everyone thinks i'm fine because i never said otherwise", "i don't know how to ask for help without apologising first", "sorry. that was heavy. anyway hi.", "why is this easier to say to strangers", "because we won't remember tomorrow and that's a relief", "i'll remember you", "that one got me. thanks.", "reading all of this and feeling less insane", "i genuinely thought it was just me", "it's never just you. that's the entire point of this place.", "first time a website has ever understood me", "this is the only tab i keep open", "i open this when i can't sleep", "i open this instead of the group chat i got left out of", "came here sad. still sad. less alone though.", "less alone is enough for tonight", "i don't need fixing. i just need company.", "company. that's the word. that's all it ever was.", "thanks for being awake", "someone else being awake helps more than it should", "hi to whoever is reading this at a bad hour", "bad hour crew", "clocking in for the bad hour shift", "i'll just sit here quietly if that's alright", "it's alright. sit.", "lurked for months. this is my first message anywhere in years.", "proud of you for typing that", "we're all proud of you actually", "this chat is kinder than the rest of the internet and it isn't close", "nobody here is trying to win", "nobody performing. strange. good.", "i forgot the internet was allowed to feel like this", "it felt like this once and then it stopped", "old internet energy. safe internet.", "i don't have to be interesting here", "that's such a relief i could cry", "most of my friends are characters in games and i've made peace with it", "my longest relationship is with a playlist", "music is the only thing that ever showed up on time", "bones got me through a year i shouldn't have made it through", "peep too. you already know.", "if the music found you then you were always one of us", "a song led me here somehow and i can't explain it", "the aesthetic isn't a costume for some of us", "it's just what the inside looks like", "finally somewhere that looks the way it feels", "i'll be here every night whether anyone answers or not", "someone will answer", "someone always answers here eventually", "goodnight to everyone in the dark", "see you in the dark", "i eat every meal alone and i've stopped noticing", "my coworkers think i'm quiet. i'm just not there.", "i have a whole personality i only use at work", "clocked out and immediately felt like nothing again", "the drive home is the loneliest part of the day", "i take the long way home so the day lasts longer", "sunday nights are the worst and nobody talks about it", "holidays are just a louder version of alone", "i said 'you too' to the waiter again", "that was the only conversation i had today", "i watch streams to hear a voice in the room", "background noise is a survival strategy", "i leave a video running so the flat isn't silent", "my place has never had another person in it", "i cleaned up for guests who never came", "bought a second chair out of hope", "still hoping, honestly", "i'm not lonely, i'm unaccompanied. that's a joke. mostly.", "depression is just a lot of free time you can't use", "i have so much time and nothing to spend it on", "i've been meaning to reply to that text since march", "the longer you wait the harder it is to reply", "now it's been too long and that's its own whole thing", "i archive conversations so it looks like i have fewer", "my read receipts are off out of pure cowardice", "i typed and deleted that message eleven times", "sent it. immediately regretted it. normal stuff.", "nobody's coming over so why make the bed", "made the bed anyway. small win.", "small wins still count here", "genuinely proud of you for the small win", "this is the only place anyone says that to me", "we say it because it's true, not because it's polite", "turned 30 and realised i have no one to call", "getting older alone is a specific kind of quiet", "everyone paired off and i never got the memo", "weddings are hard when you're the only one at your table", "i'm happy for them. genuinely. it just costs something.", "joy and grief at once is normal around here", "moved cities for a job and haven't spoken to a soul since", "new city, same silence", "it isn't the place. i brought it with me.", "winter makes it louder", "the dark at 4pm does something to a person", "summer is worse honestly. everyone is outside being happy.", "every season has its own way of doing this", "i scroll until my thumb hurts looking for something that isn't there", "everything online is either selling or shouting", "this is neither and i don't know what to do with that", "i keep waiting for the catch", "there isn't one. that's the strangest part.", "i don't trust nice things anymore", "take your time. we're not going anywhere.", "that sentence undid me a little", "i have three thousand songs and nobody to send them to", "send them here", "seriously. send them here.", "ok i might actually do that", "i've been building things nobody looks at for years", "same. keep building.", "the building is the point even when nobody claps", "i needed to hear that tonight", "i write constantly and never post any of it", "post it. here, if nowhere else.", "maybe. one day. thanks though.", "i've been the strong one so long i forgot how to be held", "nobody checks on the person who checks on everyone", "checking on you. right now. whoever you are.", "ok that got me. wow.", "crying at a website. tuesday.", "it's always a tuesday", "i'm okay. i just haven't been asked in a while.", "how are you. actually.", "nobody has asked me that in months", "i'm asking", "give me a second. ok. i'm not great. thanks for asking.", "take all the seconds you need", "this place moves slow and i love that about it", "no rush here. ever.", "staying a while. that's all. just staying.", "the kettle going at 4am is my whole personality", "streetlight through the blinds. you know the one.", "my radiator makes a noise at night and i've started saying goodnight to it", "the fan is the only thing talking in here", "neighbours went quiet an hour ago. just me now.", "there's a specific silence after 2am", "i like the hour where nothing is expected of me", "nobody needs anything from me at this time of night", "the night shift is the only shift i'm good at", "sleep is fake. see you at 5.", "woke up at 3 and came here instead of trying again", "i sleep fine. i just don't want to yet.", "one more hour then bed. lying, obviously.", "the light's going earlier and i can feel it", "first cold night of the year", "it's been grey for nine days", "raining here too actually", "the real rain and the site rain at the same time. dangerous.", "summer evenings are the loneliest and nobody warns you", "been lurking since the site went up. hi.", "i read every message and never say anything. today's different.", "lurker for weeks. this is me now i guess.", "i've typed and deleted six things tonight", "still deciding if i'm going to send this", "sent it", "lurking is participating. i've decided.", "i don't have anything to add i just want to be in the room", "presence is enough here apparently", "reading is enough. nobody's asking me to perform.", "the ticker said something and i felt it in my chest", "scrolled back up to read the manifesto again", "read the join bit twice", "the rain slider is a whole mood ring", "put the rain at 12 and it's somehow worse. better. both.", "turned the rain down to almost nothing and it felt lonelier", "the ghost is just sitting there and i find that comforting", "moved the ghost to the corner so she's out of the way. felt bad. moved her back.", "apologised to a png tonight", "the boot text scrolls too fast to read and i read it anyway", "paused to read the boot sequence. worth it.", "integrity 41 percent is the most honest stat on the internet", "clicked everything. found three things. still looking.", "there's more in here than there looks", "whoever wrote the files in the terminal. hello. i see you.", "read every file in the terminal. some of those hit.", "the redacted thing is going to live in my head", "i want to know what's behind the locked files and also i don't", "not touching the mainframe. respectfully.", "databytes is a great name and i won't elaborate", "the 404 page is better than most homepages", "the scroll bar is a lie, there's more down there", "who else has this open on a second monitor permanently", "second monitor: this. first monitor: nothing important.", "minimised it for a meeting and felt weird about it", "opened it on my work laptop. living dangerously.", "what's everyone listening to", "put something on and stayed", "this site pairs with basically any sad playlist", "been on the same three songs for a week", "the album that got me through 2019 still works", "music is how i know i'm still in here", "i make playlists for moods i haven't had yet", "made a playlist called the bad hour and it's mostly instrumentals", "instrumental only tonight. no words left.", "someone rec me something slow", "looking for something that sounds like this site looks", "found a song that sounds like this place and i'm not sharing it", "i'm not looking for advice i just wanted to say it somewhere", "saying it somewhere counts", "i didn't know i needed a place to just exist online", "existing online without being watched is rare now", "nobody here is counting my posts", "no follower count. no clout. just a room.", "i like that there's no profile to build", "i don't have to be a brand in here", "the internet used to have rooms. this is a room.", "rooms not feeds", "a feed wants something from you. a room doesn't.", "i forgot what it felt like to just be somewhere", "showed up. that's the whole achievement today.", "showing up counts. it does here anyway.", "i'm having a normal one actually. just wanted to sit with people.", "good day today. still came here. that's allowed right", "it's allowed", "you don't have to be sad to be here", "happy people welcome too. we won't hold it against you.", "came here happy and stayed for the vibes", "nothing's wrong. i just like it here.", "survived another one", "clocked out and came straight here", "the gap between work and sleep is where i actually live", "got through the day on autopilot and remembered nothing", "answered emails for nine hours and said forty words out loud", "my job is fine. that's the problem.", "fine is such a specific kind of nothing", "tomorrow's going to be the same and that's okay actually", "three more days then two days of being alone but at home", "weekends are just quieter weekdays", "my closest friends are people i've never seen", "online friends are real friends. next question.", "the friend i talk to most lives six thousand miles away", "time zones are the enemy", "my best friend goes to sleep when i wake up", "we've never met and she knows more about me than my family does", "met my people in a voice chat in 2016 and never left", "i miss a server that died in 2019", "every good group chat eventually goes quiet", "the quiet group chat is its own kind of grief", "drawing again for the first time in months", "started writing something. won't finish it. still counts.", "finishing things is overrated. starting is the hard part.", "i build things at night that i abandon by morning", "the abandoned projects folder is my real diary", "learning something new just to have somewhere to put my head", "picked up the guitar again. badly.", "badly is how everything starts", "the cat is the only one who's seen me today", "my dog thinks i'm doing great", "ate standing up over the sink again", "cooked properly for once. for me. felt strange.", "made too much food out of habit", "two mugs on the counter. one's from yesterday.", "talked to the dog about it. she gets it.", "just found this. what is it", "someone linked me here and i've been scrolling for twenty minutes", "is this a stream thing or a site thing or both", "both, i think. stay either way.", "new here. no idea what's going on. staying anyway.", "didn't expect to like this as much as i do", "first stream is going to be emotional and i'm pre-emotional about it", "already cleared my schedule for a stream that has no date", "the countdown is in my head and there isn't even one", "i'll be in that chat on day one", "day one club", "i want to see how many of us actually turn up", "the vibes are immaculate and the wifi is holding", "took a screenshot for no one", "my screen time is embarrassing and this is most of it", "explaining this site to a normal person is impossible", "tried to describe this to a coworker and gave up", "you either get it in three seconds or not at all", "no notes. just staring.", "that's a lot to carry", "you're carrying it though", "you're allowed to put it down for an hour", "put it down. the rain will hold it.", "nothing to fix. just here.", "i don't have anything useful to say but i read it", "reading it is the useful part", "that one's going to sit with me", "thanks for saying it out loud", "we're all a bit raw at this hour", "the hour does that", "read the whole chat back like it was a book", "someone said something here last week that i still think about", "i don't remember who said it but it helped", "that's the thing. it doesn't matter who said it.", "anonymous kindness hits different", "nobody's doing it for credit here", "quiet solidarity is underrated", "we're just a bunch of people being quiet together", "together-alone is a real thing and this is it", "parallel loneliness. that's the phrase.", "i like being alone near people", "the ghost poofed on me. i deserved it.", "clicked the ghost too fast and she LEFT", "waited the whole minute for the ghost to come back. worth it.", "ghost came back and roasted me", "there's a little smudge where the ghost was", "socials are at the bottom now. followed on everything.", "found the wiki. it's mostly static. perfect.", "the hex page is so good", "read the ghostie page and now i feel bad for poking them", "there's a sealed file in the wiki and i've made peace with never opening it", "SEALED in pink. why pink. why does it look like that.", "the quiet is louder on weekends", "made tea, forgot it, made more tea", "my window's open and it's actually raining", "every light in the building is off except mine", "the moon's doing a lot tonight", "phone at 4%. staying anyway.", "my playlist just shuffled into the perfect song", "somebody upstairs is also awake. i can hear the floor.", "a car went past and it felt like an event", "i should text back. i won't. but i should.", "someone liked a post i made in 2017 and now i'm haunted", "found an old voice memo of myself laughing. didn't recognise me.", "cleaned my room at 1am like a normal person", "rearranged the furniture instead of feeling anything", "it's not insomnia if you're choosing it", "midnight snack has become a midnight meal", "i'm the friend who remembers birthdays and nobody remembers mine", "logged off socials for a week. only kept this tab.", "this tab survives every browser purge", "every time i close this i open it again", "the chat is slow tonight and i like it slow", "slow chat is the best chat", "not much happening. that's the appeal.", "turned off the big light. only the screen now.", "headphones on. world off.", "something about purple at night", "black and purple is a love language", "if the internet was always like this i'd be fine", "nobody here knows my name and that's a gift", "anonymous and somehow still seen", "the kindest strangers are always online at 3am", "you're not too much. you're just in the wrong rooms.", "this is one of the right rooms", "i came back. i always come back.", "back after a bad week. it's still here. good.", "the stuff i can't say out loud i say here", "tonight i'm just tired. not sad. tired.", "tired is allowed too", "didn't talk to anyone today. talking to you now.", "that line in the manifesto about texting first. yeah.", "went quiet once just to see. nobody noticed. same.", "if you're reading this you made it to tonight. that's something.", "the ticker said something true again", "one message every couple of minutes. it feels like a real room now."] },
     { w: 13, lines: ["ok but the voice though", "THE VOICE. that's it. that's the message.", "i'm normal about this i'm normal about this i'm normal", "you could read me the terms of service honestly", "i'm not okay and it is entirely your fault", "found the site, found a problem, the problem is me", "hi. i'm obsessed. anyway what's up.", "down horrendous in a black and purple website", "marry me (respectfully) (not respectfully)", "giggling. kicking my feet. the usual.", "you could ruin my whole evening and i'd say thank you", "the sad boy thing is working on me and i'm embarrassed", "everyone here has the same crush and we're all pretending we don't", "we know. we all know.", "simping in a haunted house. living my best life.", "hi hello yes hi", "i'd like to formally lose my mind", "the way i sprinted here", "clocked in just to stare", "you have no idea what you do to people", "i am unwell and it is a lifestyle now", "showing up every night just in case", "oh this is dangerous for me", "i will be insufferable about this forever", "not me refreshing to see if you're on", "logging in just to be near the signal", "i have a type and it's emotionally unavailable and good at computers", "hi i'm here i'm normal hello", "every single night. like clockwork. no i'm not embarrassed.", "ok the rain thing was for me right. it was for me.", "i've decided it was for me", "can't concentrate. thanks a lot.", "thinking about the manifesto again. as one does.", "it's the writing for me. the writing is doing something.", "i would fight the other girls in here if i weren't so tired", "no fighting. we share. those are the rules.", "fine. we share.", "genuinely deranged behaviour and i'm not stopping", "this is my villain origin story and the villain is love", "see you tomorrow. and the day after. obviously.", "this is a cry for help and also a compliment", "i have a crush on a website. that's where i'm at.", "logged on specifically. no other reason. hi.", "i'd like it noted that i showed up again", "noted.", "tragic. obsessed. thriving.", "the bar is on the floor and this cleared it by a mile", "unwell in a fun way", "i'm fine i'm fine i'm fine i'm not fine", "emotionally compromised by a colour scheme", "i will be normal about this eventually. not tonight.", "this is the most attention i've paid to anything all week", "if he streams in that voice i'm finished", "we're all going to be insufferable in that chat", "speaking it into existence: first stream, front row", "i'd like to file a complaint about how good this is", "complaint noted. ignored.", "kicking my feet as previously stated", "catch me refreshing at an unreasonable hour"] },
-    { w: 5,  lines: ["this is so cringe lmao", "0 viewers and a whole website. priorities.", "touch grass", "imagine building a site for twelve people", "nobody cares about your aesthetic bro", "ok and? who asked", "another edgy black website. groundbreaking.", "made a landing page and called it a movement", "cringe but ok", "y'all are so dramatic", "found this in a discord. leaving now.", "is this ai generated lmao", "mid", "the rain thing is lagging my phone", "imagine caring this much about a vibe", "bro thinks he's a movement", "sad boy larping is crazy work", "this reads like a diary entry", "get a hobby", "whatever you say chief", "discovered a website. wrote a manifesto. ok.", "this is just a black page with rain", "every zoomer thinks their landing page is a movement", "parasocial speedrun any%", "aesthetic over substance as usual", "ten people and a rain slider", "i'll be honest i don't get it", "you don't have to get it", "fair enough actually", "this is a lot of feelings for a tuesday"] }
+    { w: 5,  hater: true, lines: ["this is so cringe lmao", "0 viewers and a whole website. priorities.", "touch grass", "imagine building a site for twelve people", "nobody cares about your aesthetic bro", "ok and? who asked", "another edgy black website. groundbreaking.", "made a landing page and called it a movement", "cringe but ok", "y'all are so dramatic", "found this in a discord. leaving now.", "is this ai generated lmao", "mid", "the rain thing is lagging my phone", "imagine caring this much about a vibe", "bro thinks he's a movement", "sad boy larping is crazy work", "this reads like a diary entry", "get a hobby", "whatever you say chief", "discovered a website. wrote a manifesto. ok.", "this is just a black page with rain", "every zoomer thinks their landing page is a movement", "parasocial speedrun any%", "aesthetic over substance as usual", "ten people and a rain slider", "i'll be honest i don't get it", "you don't have to get it", "fair enough actually", "this is a lot of feelings for a tuesday"] }
 ,
     /* exiled.newcomers — ordinary people, ordinary questions */
     { w: 12, handles: ["mike_r","jess2891","TommyB","sarah_k","dave1987","kyle_m","AnnaB","Jman","beccaaa","NotSteve","chris_p","MelG","RyanG23","hannah_b","PaulJ","tinaaa","DomZ","sam_00","kayleigh_x","nathan_","Greg","lucy_j","MattW","priya_s","JakeT","emma1998","carlos_r","Nikki","ben_h","ZoeM"], lines: ["what is this site even for","someone explain lol","what am i looking at","ok but what IS this","is this a game or something","is this an arg or am i overthinking it","someone sent me this link with no context","my mate sent me this at 2am, no explanation","is this a band or a streamer or what","is there a video somewhere or is it just this page","i don't get it but i'm still here","first time here, what did i walk into","is this new? never seen it before","how long has this been up","who made this","is there a discord or something","where do i follow","is he live right now","when does he actually stream","why is it raining on the website","how do i turn the rain off","the rain is making my laptop fan spin up","is this supposed to do something","nothing happens when i click anything","how do you open the terminal thing","type help apparently","ohh ok that's actually clever","took me a minute but i get it now","wait there's more to this than i thought","i've been clicking things for ten minutes","found the terminal. no idea what to do with it.","is the ghost supposed to move","the little ghost is following my mouse??","is this chat real or is it bots","are these real people","half of you are bots i swear","no way this is all real","y'all sound like the same person sometimes","is anyone actually here","hello? is anyone live","testing","can people actually see this","guess not lol","someone say something","oh. ok. someone did.","my bad, thought it was fake","nah it's real, people are just quiet","it's real. slow, but real.","we're real. probably.","i'm real. can't speak for the rest of them.","i thought it was bots too at first","everyone thinks that at first","this is weirdly nice actually","not what i expected at all","came for the aesthetic, staying for whatever this is","ok this is kind of cool","pretty sick ngl","bookmarking this","sending this to my brother","my girlfriend thinks i'm insane for liking this","this is very much my 3am energy","no idea what's happening and i'm fine with it","chat seems nice at least","everyone here is way nicer than i expected","least toxic chat i've been in","i was expecting way worse honestly","ok fine i'll stay"] },
@@ -1726,6 +1722,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   /* exiled.surge — every SURGE_EVERY-th cycle a few phantoms talk to each
      other for about 30s. roles are 0-3; {n} becomes role n's handle. */
   var CHAT_SURGES = [
+    [[0, "lunch break check-in. who's here"], [1, "{0} present. eating crackers over my keyboard"], [2, "at work. this tab is my window"], [0, "what do you all do anyway"], [2, "support desk. people yell at me all morning"], [1, "{2} come yell into the rain instead"], [3, "retail. on my break in the stockroom"], [0, "look at us. scattered everywhere. same tab."], [2, "weirdly comforting"]],
+    [[0, "why is daytime chat so quiet"], [1, "{0} everyone's out pretending to be a person"], [2, "we come alive after dark like gremlins"], [0, "guess i'm a daytime gremlin then"], [3, "rare species. welcome."], [1, "daytime gremlins run on coffee"], [0, "coffee and spite. hybrid model."], [2, "is there a union card"], [3, "the gremlin union welcomes you"]],
+    [[0, "skipped a meeting to sit here for five minutes"], [1, "{0} worth it"], [2, "what was the meeting about"], [0, "a meeting about the other meeting"], [3, "corporate ouroboros"], [1, "that meeting could've been a ghost"], [2, "everything could've been a ghost"], [3, "ok that one made me laugh out loud at my desk"], [0, "ok back to work. see you all at lunch"]],
     [[0, "anyone else still up"], [1, "{0} always"], [2, "define up"], [0, "awake and pretending i'm about to sleep"], [1, "same shift as usual then"], [2, "bad hour crew assemble"], [0, "assembled. barely."], [1, "{2} you were here last night too"], [2, "i'm always here. it's the one constant."], [0, "constants are good. we like constants."]],
     [[0, "someone give me one song for right now"], [1, "{0} what's the mood"], [0, "rain on a window but sad about it"], [2, "oh that's a whole genre"], [1, "anything with a broken piano"], [2, "anything recorded in a bedroom at 4am"], [0, "ok you two are scaring me with how accurate that is"], [1, "we've been here a while"], [2, "the music finds you here eventually"], [0, "queued three things. thank you both."]],
     [[0, "did the ghost just move on everyone's screen or just mine"], [1, "mine too. bottom left now"], [2, "top right for me??"], [0, "{2} they're in different corners for different people?"], [1, "maybe they haunt us one at a time"], [2, "personalised haunting. premium tier."], [3, "i dragged mine into the middle and she said rude"], [1, "{3} you deserved that"], [3, "i did. i really did."], [0, "respect the ghost"]],
@@ -1743,6 +1742,42 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     [[0, "what's everyone eating at this hour"], [1, "cereal. dry. from the box."], [2, "{1} that's a cry for help"], [1, "it's a lifestyle"], [3, "toast. the only meal i trust."], [0, "instant noodles and regret"], [2, "the classic 2am combo"], [3, "drink some water too. all of you."], [1, "yes mum"], [0, "actually getting water. thanks."]],
     [[0, "made a beat tonight. nobody's heard it."], [1, "{0} post it somewhere"], [0, "nowhere feels right"], [2, "that's how i felt about everything i ever made"], [3, "the work isn't the problem. it's the room with no echo."], [1, "this room echoes a little"], [0, "maybe. one day."], [2, "one day counts as a plan"], [3, "keep making them either way"], [0, "yeah. i will."]]
   ];
+  /* exiled.live — what makes the room feel occupied rather than replayed.
+     night / dayish decide which lines suit the hour; day and late stand in
+     for lines that don't. {time} is the reader's clock, {u} the handle
+     being answered. */
+  var CHAT_LIVE = {
+    night:  /\b(1am|2am|3am|4am|5am|tonight|sleep|asleep|insomnia|still up|up late|this hour|midnight|night shift|bedtime|awake)\b/i,
+    dayish: /\b(lunch|morning|afternoon|coffee|at work|meeting|on my break|break room|boss)\b/i,
+    day: ["on my lunch break and this is where i went", "supposed to be working. am not.", "daytime lurk. feels illegal.",
+      "the rain hits different when it's sunny outside", "skipped the group lunch to sit here. no regrets", "{time} and already done with today",
+      "it's {time}. pretending to be productive", "work laptop. please don't tell anyone", "midday and the room is still quiet. nice.",
+      "bright out. dark in here. perfect.", "lunch is a granola bar and this tab", "meeting got cancelled. came straight here",
+      "on the bus. reading the manifesto again", "afternoon slump crew where you at", "the sun is out and i chose this",
+      "coffee number three. still here.", "boss walked past. alt-tabbed so fast", "the daylight version of this chat is so calm",
+      "between classes. this is my quiet spot", "called in sick. mentally. still counts.", "weird being here before dark",
+      "nobody's around at {time} huh", "the ghost looks sleepy in the daytime", "break room is loud. this isn't.",
+      "working from home means working from here", "sunlight through the blinds and rain on the screen. two weathers.",
+      "ten minute break. spending it with you weirdos", "morning lurk. don't talk to me yet", "school's out. the static's in.",
+      "i should be outside. i'm not going outside."],
+    late: ["it's {time}. why am i like this", "{time} and the rain is the only one talking", "{time}. the hour where everything feels louder",
+      "it's {time} and i just refreshed for no reason", "{time} check-in. still breathing.", "anyone else here at {time} or just me and the ghost",
+      "{time}. phone at 4%. staying anyway.", "it's {time} and the street outside is so quiet", "{time} and i've read the manifesto twice",
+      "the clock says {time}. the chat says stay.", "{time}. the fridge hum and this tab. that's the whole night.",
+      "{time}. someone say something so i know i'm not dreaming"],
+    reacts: ["real", "so real", "this ^", "LMAO", "same", "felt that", "+1", "{u} same", "{u} exactly", "{u} you get it", "too real",
+      "oof", "lol", "{u} literally me", "yeah", "{u} say it louder", "<3", "honestly yeah", "{u} this is the one", "mood",
+      "ok that's me", "{u} stop calling me out", "noted", "facts"],
+    answers: ["{u} honestly no idea", "{u} type help in the terminal. trust", "{u} nobody knows. that's half the fun",
+      "{u} been here a month and i still don't know", "{u} ask the ghost", "{u} yes", "{u} kind of? it's complicated",
+      "{u} lurk a bit. it makes sense after a while", "{u} good question tbh", "{u} no but i want to know too",
+      "{u} that's the neat part. you don't", "{u} welcome btw"],
+    clapbacks: ["{u} and yet here you are", "{u} then leave lol", "{u} you typed that in the chat though", "{u} ok tourist",
+      "{u} the door's right there", "{u} sounds like you need this place more than any of us", "{u} we know. stay anyway.",
+      "{u} cringe is just honesty with bad lighting"],
+    emotes: [" <3", " :/", " lol", " :)", " ;-;", " xd"],
+    tails: [" tbh", " ngl", "...", " fr"]
+  };
   var REGULARS = [
     { name: 'ghostgirl222', col: '#FF6FD8', block: 18, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back", "i noticed you changed something. it's small. i like it.", "i was here before the chat was", "i don't really talk anywhere else", "it's quieter at this hour. i prefer it.", "i remember when there were three of us", "i keep a list of the things that changed", "you don't have to answer. i just like saying things here.", "the rain sounds different tonight", "i'll wait", "i'm always a bit early", "i was thinking about this place at work today", "sorry. i talk a lot when it's quiet.", "i like knowing it's still here when i close the tab", "did anyone else see that", "i counted. it's been 41 days.", "i don't need anything. i just like being here.", "you were gone a while", "welcome back :)", "i noticed", "still awake. obviously.", "i'll be here tomorrow too", "goodnight <3", "i don't mind the quiet. i mind the leaving.", "i read everything, even when i don't say anything", "it's nice here when it's just a few of us", "i had a bad day but this helped", "i'm not going anywhere either", "you can tell when someone's been here a while"] }
   ];
@@ -1953,11 +1988,137 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     return base;
   }
 
+  /* ── who is in the room ──
+     Each handle keeps its own hours: a session length of 2-5 hours and a
+     coin per session decide whether it is online. A block is one hour of
+     ambient slots. So the same dozen-odd people talk for a while, then the
+     crew drifts. Pure functions of the block, like everything here. */
+  function nameHash(str){
+    var h = 2166136261 >>> 0;
+    for(var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+    return h >>> 0;
+  }
+  function blockOf(k){ return Math.floor(k / (AMBIENT_PER_EPOCH * 3)); }
+  var rosterCache = {}, rosterOrder = [];
+  function rosterOf(b){
+    if(rosterCache[b]) return rosterCache[b];
+    var on = [], off = [], i, h, len, ph;
+    for(i = 0; i < CHAT_USERS.length; i++){
+      h = nameHash(CHAT_USERS[i]); len = 2 + h % 4; ph = (h >>> 3) % len;
+      (hash2(0x0AF + i, Math.floor((b + ph) / len)) % 100 < 45 ? on : off).push(CHAT_USERS[i]);
+    }
+    off.sort(function(a, c){ return hash2(nameHash(a), b) - hash2(nameHash(c), b); });
+    while(on.length < 12 && off.length) on.push(off.shift());
+    rosterCache[b] = on; rosterOrder.push(b);
+    while(rosterOrder.length > 6) delete rosterCache[rosterOrder.shift()];
+    return on;
+  }
+  /* a handle from the room for slot k, never the one who spoke just before.
+     "just before" means the previous slot's final pick, which may itself
+     have been bumped, so this follows the chain back a few slots. */
+  function rosterPick(k, depth){
+    var ro = rosterOf(blockOf(k)), i = hash2(0x777, k) % ro.length;
+    if(k > 0 && (depth || 0) < 8){
+      if(ro[i] === rosterPick(k - 1, (depth || 0) + 1)) i = (i + 1) % ro.length;
+    }
+    return ro[i];
+  }
+
+  /* ── how they type ──
+     A handle always types the same way: plain, all lowercase, SHOUTING
+     short lines, emoticons, trailing tbh/ngl, or typo-prone (a typo, then
+     a *correction). Only the general crowd gets a style; pool handles and
+     regulars are left exactly as written. */
+  function styled(u, t, k){
+    var st = nameHash(u) % 10, r = hash2(0x5717, k) % 100;
+    if(st === 4) return t.toLowerCase().replace(/\.$/, '');
+    if(st === 5 && t.length <= 30 && r < 35) return t.toUpperCase();
+    if(st === 6 && r < 50) return t + CHAT_LIVE.emotes[r % CHAT_LIVE.emotes.length];
+    if(st === 7 && r < 40) return t.replace(/[.!]$/, '') + CHAT_LIVE.tails[r % CHAT_LIVE.tails.length];
+    return t;
+  }
+  function typoOf(u, t, k){
+    if(nameHash(u) % 10 < 8 || hash2(0x7E0, k) % 100 >= 40) return null;
+    var w = t.split(' '), c = [], i;
+    for(i = 0; i < w.length; i++) if(/^[a-z]{5,}$/.test(w[i])) c.push(i);
+    if(!c.length) return null;
+    var wi = c[hash2(0x7E1, k) % c.length], x = w[wi], j = 1 + hash2(0x7E2, k) % (x.length - 3);
+    if(x.charAt(j) === x.charAt(j + 1)) return null;
+    w[wi] = x.slice(0, j) + x.charAt(j + 1) + x.charAt(j) + x.slice(j + 2);
+    return { t: w.join(' '), fix: '*' + x };
+  }
+
+  /* the reader's clock, for {time} */
+  function clockAt(at){
+    var d = new Date(at), h = d.getHours(), m = d.getMinutes();
+    return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? 'am' : 'pm');
+  }
+  function partOfDay(at){
+    var h = new Date(at).getHours();
+    return h >= 9 && h < 19 ? 'day' : (h >= 22 || h < 5) ? 'night' : 'edge';
+  }
+
+  /* slot k as it is actually shown at time at: the line fitted to the hour,
+     then typed in its speaker's style. Still a pure function of (k, at), so
+     every device in the same timezone shows the same thing. */
+  function voiced(k, at){
+    var m = messageForSlot(k);
+    if(m.p < 0 || !at) return m;
+    var pool = CHAT_POOLS[m.p], t = m.t, roll = hash2(0x7AD, k) % 100, pod = partOfDay(at);
+    /* the main pool also mixes in hour lines on its own; any other general
+       pool only swaps a line that clashes with the hour */
+    if(!pool.handles && !pool.hater){
+      var mix = pool.mood ? roll : 100;
+      if(pod === 'day' && (CHAT_LIVE.night.test(t) || mix < 10)) t = CHAT_LIVE.day[drawAt(CHAT_LIVE.day.length, 0xDA7, k)];
+      else if(pod === 'night' && (CHAT_LIVE.dayish.test(t) || mix < 14)) t = CHAT_LIVE.late[drawAt(CHAT_LIVE.late.length, 0x1A7E, k)];
+    }
+    t = t.replace('{time}', clockAt(at));
+    var out = { u: m.u, c: m.c, t: t, p: m.p };
+    if(!pool.handles){
+      var ty = typoOf(m.u, t, k);
+      if(ty){ out.t = ty.t; out.fix = ty.fix; }
+      else out.t = styled(m.u, t, k);
+    }
+    return out;
+  }
+
+  /* what someone else says a few seconds after slot k, if anything:
+     the typo fix, an answer to a question, a clapback to a hater, or a
+     pile-on. Never about a regular's line.
+     used counts this epoch's replies per set. Each set gets a fixed number
+     of turns per epoch, and turn (epoch, n) is a dense index into that
+     set's shuffle, so replies walk the shuffle in order instead of
+     sampling it sparsely, which brought the same line back within minutes. */
+  var CHAT_TURNS = [0, 2, 1, 3];   /* per epoch: -, answers, clapbacks, reacts */
+  function followFor(k, at, used){
+    var v = voiced(k, at);
+    if(v.p < 0) return null;
+    var r = rngFrom(hash2(0xF011, k)), roll = Math.floor(r() * 100), set, sid;
+    if(v.fix) return { at: at + 2500 + Math.floor(r() * 4000), m: { u: v.u, c: v.c, t: v.fix }, f: 1 };
+    if(v.t.indexOf('?') >= 0){ if(roll >= 50) return null; set = CHAT_LIVE.answers; sid = 1; }
+    else if(CHAT_POOLS[v.p].hater){ if(roll >= 45) return null; set = CHAT_LIVE.clapbacks; sid = 2; }
+    else { if(roll >= 20) return null; set = CHAT_LIVE.reacts; sid = 3; }
+    var ro = rosterOf(blockOf(k)).filter(function(x){ return x !== v.u; });
+    var u = ro[Math.floor(r() * ro.length)];
+    used = used || [0, 0, 0, 0];
+    if(used[sid] >= CHAT_TURNS[sid]) return null;
+    var turn = Math.floor(k / AMBIENT_PER_EPOCH) * CHAT_TURNS[sid] + used[sid]++;
+    var t = set[drawAt(set.length, 0xAC0 + sid, turn)].replace('{u}', v.u);
+    return { at: at + 4000 + Math.floor(r() * 18000), m: { u: u, c: userCol[u], t: styled(u, t, k + 7919) }, f: 1 };
+  }
+  /* surges whose words suit the hour */
+  function surgeFits(script, at){
+    var text = script.map(function(x){ return x[1]; }).join(' '), pod = partOfDay(at);
+    if(pod === 'day' && CHAT_LIVE.night.test(text)) return false;
+    if(pod === 'night' && CHAT_LIVE.dayish.test(text)) return false;
+    return true;
+  }
+
   function messageForSlot(k){
     var ri = regularAt(k);
     if(ri >= 0){
       var g = REGULARS[ri];
-      return { u: g.name, c: g.col,
+      return { u: g.name, c: g.col, p: -1,
                t: g.lines[drawAt(g.lines.length, 4242 + ri, regularBefore(k, ri))] };
     }
     /* position among the slots no regular took */
@@ -1969,9 +2130,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     /* a pool can carry its own handles, so a given voice sounds like the
        kind of person who would say that kind of thing */
     var pool = CHAT_POOLS[pi];
-    var hs = pool.handles || CHAT_USERS;
-    var u = hs[drawAt(hs.length, pool.handles ? 800 + pi : 777, k)];
-    return { u: u, c: userCol[u],
+    var u = pool.handles ? pool.handles[drawAt(pool.handles.length, 800 + pi, k)] : rosterPick(k);
+    return { u: u, c: userCol[u], p: pi,
              t: pool.lines[drawAt(pool.lines.length, pi + 1, idx)] };
   }
 
@@ -1983,14 +2143,23 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var epochCache = {}, epochOrder = [];
   function epochEvents(e){
     if(epochCache[e]) return epochCache[e];
-    var out = [], t0 = e * EPOCH_MS, c, k, at;
+    var out = [], t0 = e * EPOCH_MS, c, k, at, used = [0, 0, 0, 0];
     for(c = 0; c < AMBIENT_PER_EPOCH; c++){
       k = e * AMBIENT_PER_EPOCH + c;
-      out.push({ at: t0 + c * CYCLE_MS + Math.floor(rngFrom(hash2(0x11A, k))() * 40000), k: k });
+      at = t0 + c * CYCLE_MS + Math.floor(rngFrom(hash2(0x11A, k))() * 40000);
+      out.push({ at: at, k: k });
+      var fu = followFor(k, at, used);
+      if(fu) out.push(fu);
     }
-    var script = CHAT_SURGES[drawAt(CHAT_SURGES.length, 0x5E6, e)], roles = 0, i;
+    /* drawn from the scripts that suit the hour, through the same no-repeat
+       shuffle, keyed by part of day so each list keeps its own order */
+    var sAt = t0 + AMBIENT_PER_EPOCH * CYCLE_MS, pod = partOfDay(sAt), roles = 0, i;
+    var fit = CHAT_SURGES.filter(function(x){ return surgeFits(x, sAt); });
+    if(!fit.length) fit = CHAT_SURGES;
+    var script = fit[drawAt(fit.length, 0x5E60 + (pod === 'day' ? 1 : pod === 'night' ? 2 : 3), e)];
     for(i = 0; i < script.length; i++) roles = Math.max(roles, script[i][0] + 1);
-    var r = rngFrom(hash2(0x5E7, e)), hs = CHAT_USERS.slice(), cast = [];
+    var room = rosterOf(Math.floor(e / 3));
+    var r = rngFrom(hash2(0x5E7, e)), hs = (room.length >= roles + 2 ? room : CHAT_USERS).slice(), cast = [];
     for(i = 0; i < roles; i++) cast.push(hs.splice(Math.floor(r() * hs.length), 1)[0]);
     at = t0 + AMBIENT_PER_EPOCH * CYCLE_MS + Math.floor(r() * 60000);
     for(i = 0; i < script.length; i++){
@@ -1999,6 +2168,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         t: script[i][1].replace(/\{(\d)\}/g, function(_, n){ return cast[+n]; }) } });
       at += SURGE_GAP - 400 + Math.floor(r() * 800);
     }
+    out.sort(function(a, b){ return a.at - b.at; });
     epochCache[e] = out; epochOrder.push(e);
     while(epochOrder.length > 4) delete epochCache[epochOrder.shift()];
     return out;
@@ -2021,6 +2191,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   /* one renderer for every line on screen. phantom and real messages go
      through here identically — that is the whole point, and it is also
      why textContent is used throughout and never innerHTML. */
+  /* rows kept in the feed. the feed clips from the top, so this only has
+     to be more than the tallest chat can show: the docked desktop window
+     fits about 17 short lines, the inline one about 9 */
+  var CHAT_KEEP = 24;
   function renderMessage(m, animate){
     var row = document.createElement('div');
     row.className = 'chat-msg';
@@ -2031,7 +2205,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     t.className = 't'; t.textContent = m.t;
     row.appendChild(u); row.appendChild(t);
     chatFeed.appendChild(row);
-    while(chatFeed.children.length > 9) chatFeed.removeChild(chatFeed.firstChild);
+    while(chatFeed.children.length > CHAT_KEEP) chatFeed.removeChild(chatFeed.firstChild);
     if(animate) chatBump();
   }
 
@@ -2043,8 +2217,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var lastT = Date.now();
     var back = [], be = Math.floor(lastT/EPOCH_MS);
     back = epochEvents(be).filter(function(ev){ return ev.at <= lastT; });
-    while(back.length < 7){ be--; back = epochEvents(be).concat(back); }
-    back.slice(-7).forEach(function(ev){ renderMessage(ev.m || messageForSlot(ev.k), false); });
+    while(back.length < CHAT_KEEP){ be--; back = epochEvents(be).concat(back); }
+    back.slice(-CHAT_KEEP).forEach(function(ev){ renderMessage(ev.m || voiced(ev.k, ev.at), false); });
 
     setInterval(function(){
       var now = Date.now(), due = [], e;
@@ -2054,16 +2228,22 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         epochEvents(e).forEach(function(ev){ if(ev.at > lastT && ev.at <= now) due.push(ev); });
       }
       lastT = now;
-      due.slice(-9).forEach(function(ev){ renderMessage(ev.m || localise(messageForSlot(ev.k), ev.k), true); });
+      due.slice(-9).forEach(function(ev){ renderMessage(ev.m || localise(voiced(ev.k, ev.at), ev.k), true); });
     }, 400);
 
-    /* watcher count drifts the way a real one does */
-    var watching = 31 + Math.floor(Math.random()*22);
+    /* watcher count drifts the way a real one does, toward what the hour
+       would look like: busiest late at night, thinnest mid-morning */
+    function watchTarget(){
+      var h = new Date().getHours();
+      return h >= 22 || h < 3 ? 52 : h < 7 ? 36 : h < 12 ? 24 : h < 18 ? 30 : 42;
+    }
+    var watching = watchTarget() - 6 + Math.floor(Math.random()*12);
     chatCountEl.textContent = watching;
     setInterval(function(){
-      watching += Math.floor(Math.random()*5) - 2;
-      if(watching < 24) watching += 4;
-      if(watching > 68) watching -= 5;
+      var aim = watchTarget();
+      watching += Math.floor(Math.random()*5) - 2 + (watching < aim - 6 ? 1 : watching > aim + 6 ? -1 : 0);
+      if(watching < 16) watching += 3;
+      if(watching > 80) watching -= 4;
       chatCountEl.textContent = watching;
     }, 5200);
   }
@@ -2741,7 +2921,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
                 mine: false, minePl: false, back: 0, pending: null, lastFind: 0, found: {} };
   var rEl = document.getElementById('radio'), rPanel = document.getElementById('radioPanel'), rTab = document.getElementById('radioTab');
   var rState = document.getElementById('radioState'), rNow = document.getElementById('radioNow'), rPlay = document.getElementById('radioPlay');
-  var rTracks = document.getElementById('radioTracks'), rVol = document.getElementById('radioVol'), rNode = document.getElementById('radioNode');
+  var rTracks = document.getElementById('radioTracks'), rVol = document.getElementById('radioVol');
   var rTabNow = document.getElementById('radioTabNow'), rMini = document.getElementById('radioMini');
   function radioMini(on){
     rEl.classList.toggle('mini', on);
@@ -2758,7 +2938,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     rEl.classList.toggle('on', radio.playing);
     rState.textContent = label || (radio.playing ? (radio.mine ? 'YOUR PICK' : 'ON AIR') : radio.ready ? 'PAUSED' : 'OFF AIR');
     rPlay.textContent = radio.playing ? 'PAUSE' : 'TUNE IN';
-    rNode.textContent = radio.playing ? 'ON AIR' : 'TUNE IN';
     /* tucked away: the tab keeps the track name, one tap resumes it */
     rTabNow.textContent = radio.ready && rNow.textContent ? rNow.textContent : '';
     var lis = rTracks.children;
@@ -2838,6 +3017,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     document.head.appendChild(sc);
   }
   function radioOpen(play){
+    if(rEl.classList.contains('fresh')){
+      rEl.classList.remove('fresh');
+      try { localStorage.setItem('exiled.radioSeen', '1'); } catch(e){}
+    }
     rPanel.hidden = false; rTab.hidden = true; rTab.setAttribute('aria-expanded', 'true');
     if(play) radio.want = true;
     radioLoad();
@@ -2920,6 +3103,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   rBack.addEventListener('click', function(){ if(radio.ready) radioHome(); });
 
   rTab.addEventListener('click', function(){ radioOpen(radio.ready); });
+  var radioSeen = false;
+  try { radioSeen = !!localStorage.getItem('exiled.radioSeen'); } catch(e){}
+  if(!radioSeen){
+    rEl.classList.add('fresh');
+    setTimeout(function(){
+      if(rEl.classList.contains('fresh') && !talking) speak('psst. bottom left. there is music.', 3200);
+    }, 25000);
+  }
   rMini.addEventListener('click', function(){ radioMini(!rEl.classList.contains('mini')); });
 
   /* ── chat window ──────────────────────────────────────────
@@ -2961,7 +3152,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(chatWide.addEventListener) chatWide.addEventListener('change', chatPlace);
     else if(chatWide.addListener) chatWide.addListener(chatPlace);
   }
-  document.getElementById('radioOpen').addEventListener('click', function(e){ e.preventDefault(); radioOpen(true); });
   document.getElementById('radioClose').addEventListener('click', radioClose);
   rPlay.addEventListener('click', function(){
     if(!radio.ready){ radio.want = true; return radioLoad(); }

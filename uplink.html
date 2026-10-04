@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXiLED // Uplink</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#05060B">
+<!-- this page talks to GitHub's API and nothing else -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com; img-src blob: data:; media-src blob:; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%2305060B'/%3E%3Crect x='7' y='2' width='2' height='9' fill='%237CFFB2'/%3E%3Crect x='5' y='4' width='6' height='1' fill='%237CFFB2'/%3E%3Crect x='4' y='12' width='8' height='2' fill='%239F8CFF'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#05060B;--deep:#0B0D1A;--violet:#2A1D5E;--lavender:#9F8CFF;--ice:#DCE3FF;--rain:#4A5068;
+  --glitch-b:#FF4FD8;--green:#7CFFB2;
+  --font-display:'Rajdhani',"Segoe UI",Arial,sans-serif;--font-mono:'Share Tech Mono',"Courier New",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--ice);font-family:var(--font-mono);min-height:100vh;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--lavender);outline-offset:3px}
+.scanlines{position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.28) 2px 3px);mix-blend-mode:multiply}
+main{position:relative;max-width:640px;margin:0 auto;padding:clamp(1.2rem,4vh,2.5rem) 16px 4rem}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(1.8rem,6vw,2.4rem);letter-spacing:.1em;line-height:1}
+h1 small{display:block;font-family:var(--font-mono);font-weight:400;font-size:.72rem;letter-spacing:.14em;color:var(--rain);margin-top:.5rem}
+h2{font-family:var(--font-display);font-weight:600;font-size:1.15rem;letter-spacing:.1em;margin:2rem 0 .8rem}
+section[hidden]{display:none}
+.panel{border:1px solid var(--violet);background:linear-gradient(180deg,rgba(42,29,94,.16),transparent 60%);padding:1rem;margin-top:1.6rem}
+label{display:block;font-size:.66rem;letter-spacing:.16em;color:var(--rain);margin:1rem 0 .35rem}
+label:first-child{margin-top:0}
+input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ice);background:rgba(5,6,11,.8);border:1px solid var(--violet);padding:.6rem .7rem;border-radius:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--lavender)}
+textarea{min-height:7rem;resize:vertical;line-height:1.6}
+input[type=file]{padding:.5rem;font-size:.8rem}
+input[type=checkbox]{width:auto;margin-right:.5rem;vertical-align:middle}
+.check{display:flex;align-items:center;font-size:.74rem;letter-spacing:.06em;color:var(--ice);margin-top:.7rem}
+.row{display:flex;gap:.6rem}
+.row > *{flex:1}
+button{font:inherit;font-size:.82rem;letter-spacing:.16em;color:var(--ice);background:rgba(42,29,94,.35);border:1px solid var(--lavender);padding:.7rem 1rem;cursor:pointer;border-radius:0}
+button:hover{background:rgba(42,29,94,.6)}
+button:disabled{opacity:.45;cursor:default}
+button.go{border-color:var(--green);color:var(--green);width:100%;margin-top:1.2rem;font-size:.95rem;padding:.85rem}
+button.small{font-size:.66rem;padding:.35rem .6rem;letter-spacing:.12em}
+button.danger{border-color:rgba(255,79,216,.6);color:var(--glitch-b);background:none}
+.hint{font-size:.7rem;line-height:1.7;color:var(--rain);margin-top:.5rem}
+.hint b{color:var(--ice);font-weight:400}
+.hint a{color:var(--lavender)}
+#log{margin-top:1rem;font-size:.74rem;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:var(--rain)}
+#log .ok{color:var(--green)}
+#log .err{color:var(--glitch-b)}
+#log a{color:var(--lavender)}
+.preview{margin-top:.8rem;max-width:100%}
+.preview img,.preview video{max-width:100%;max-height:40vh;display:block;border:1px solid var(--violet)}
+.preview audio{width:100%}
+.recent{list-style:none}
+.recent li{display:flex;gap:.6rem;align-items:center;justify-content:space-between;padding:.55rem 0;border-bottom:1px solid rgba(42,29,94,.6);font-size:.76rem}
+.recent li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent li small{color:var(--rain);margin-right:.5rem}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:1.4rem;font-size:.68rem;letter-spacing:.14em;color:var(--rain)}
+.bar button{font-size:.62rem}
+</style>
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+<main>
+  <h1>Uplink<small>databytes // post from anywhere</small></h1>
+
+  <!-- first time on this device -->
+  <section id="setup" hidden>
+    <div class="panel">
+      <label for="tokIn">GITHUB TOKEN</label>
+      <input id="tokIn" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
+      <p class="hint">A <b>fine-grained</b> token with access to <b>only ohmziee.github.io</b> and <b>Contents: read and write</b>.
+        Make one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</p>
+      <label for="newPass">PASSPHRASE FOR THIS DEVICE</label>
+      <input id="newPass" type="password" autocomplete="new-password" placeholder="at least 8 characters">
+      <p class="hint">The token is stored on this device <b>encrypted</b> with this passphrase and never leaves it except to talk to GitHub. You type the passphrase each visit.</p>
+      <button class="go" id="saveBtn" type="button">SAVE + CONNECT</button>
+    </div>
+  </section>
+
+  <!-- returning -->
+  <section id="locked" hidden>
+    <div class="panel">
+      <label for="passIn">PASSPHRASE</label>
+      <input id="passIn" type="password" autocomplete="current-password">
+      <button class="go" id="unlockBtn" type="button">UNLOCK</button>
+      <div class="bar"><span>locked</span><button class="small danger" id="forgetBtn1" type="button">forget this device</button></div>
+    </div>
+  </section>
+
+  <!-- connected -->
+  <section id="app" hidden>
+    <div class="panel">
+      <div class="row">
+        <div><label for="type">TYPE</label>
+          <select id="type">
+            <option value="still">still</option>
+            <option value="footage">footage</option>
+            <option value="audio">audio</option>
+            <option value="transmission">transmission</option>
+          </select></div>
+        <div><label for="date">DATE</label><input id="date" type="date"></div>
+      </div>
+      <label for="title">TITLE</label>
+      <input id="title" maxlength="120" placeholder="alley 03">
+      <div id="fileWrap">
+        <label for="file" id="fileLabel">FILE</label>
+        <input id="file" type="file">
+        <div class="check" id="shrinkWrap"><input type="checkbox" id="shrink" checked><label for="shrink" style="margin:0;font-size:.74rem;letter-spacing:.06em;color:var(--ice)">shrink big photos (max 2400px)</label></div>
+        <div class="preview" id="preview"></div>
+      </div>
+      <div id="posterWrap" hidden>
+        <label for="poster">POSTER (optional still shown before play)</label>
+        <input id="poster" type="file" accept="image/*">
+      </div>
+      <label for="text" id="textLabel">CAPTION (optional)</label>
+      <textarea id="text" maxlength="4000"></textarea>
+      <label for="tags">TAGS (comma separated, optional)</label>
+      <input id="tags" placeholder="night, stills" autocapitalize="off">
+      <button class="go" id="postBtn" type="button">TRANSMIT</button>
+      <div id="log" aria-live="polite"></div>
+    </div>
+
+    <h2>Recent</h2>
+    <ul class="recent" id="recent"><li><span>loading...</span></li></ul>
+
+    <div class="bar"><a href="databytes.html" style="color:var(--lavender)">open databytes &rsaquo;</a>
+      <span><button class="small" id="lockBtn" type="button">lock</button> <button class="small danger" id="forgetBtn2" type="button">forget this device</button></span></div>
+  </section>
+</main>
+<script>
+(function(){
+  var REPO = 'ohmziee/ohmziee.github.io', BRANCH = 'main', API = 'https://api.github.com/repos/' + REPO;
+  var STORE = 'exiled.uplink', MAX_BYTES = 95 * 1024 * 1024;
+  var token = null;
+  var $ = function(id){ return document.getElementById(id); };
+  var logEl = $('log');
+
+  function show(which){ ['setup', 'locked', 'app'].forEach(function(s){ $(s).hidden = s !== which; }); }
+  function log(msg, cls, keep){
+    if(!keep) logEl.textContent = '';
+    var d = document.createElement('div'); if(cls) d.className = cls; d.textContent = msg; logEl.appendChild(d); return d;
+  }
+  function stored(){ try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch(e){ return null; } }
+
+  /* ── the token at rest: PBKDF2 -> AES-GCM, same recipe as the wiki seal ── */
+  var b64 = function(buf){ var s = '', a = new Uint8Array(buf); for(var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); };
+  var unb64 = function(str){ var s = atob(str), a = new Uint8Array(s.length); for(var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
+  function keyFrom(pass, salt){
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']).then(function(k){
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: 310000, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
+  }
+  function seal(tok, pass){
+    var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    return keyFrom(pass, salt).then(function(k){ return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, new TextEncoder().encode(tok)); })
+      .then(function(ct){ return { v: 1, salt: b64(salt), iv: b64(iv), ct: b64(ct) }; });
+  }
+  function unseal(box, pass){
+    return keyFrom(pass, unb64(box.salt)).then(function(k){ return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(box.iv) }, k, unb64(box.ct)); })
+      .then(function(pt){ return new TextDecoder().decode(pt); });
+  }
+
+  /* ── GitHub ── */
+  function gh(path, opts){
+    opts = opts || {};
+    return fetch(path.indexOf('http') === 0 ? path : API + path, {
+      method: opts.method || 'GET',
+      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+                 'Content-Type': 'application/json' },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      cache: 'no-store'
+    }).then(function(r){
+      return r.text().then(function(t){
+        var j = null; try { j = t ? JSON.parse(t) : null; } catch(e){}
+        if(!r.ok){ var err = new Error((j && j.message) || ('GitHub said ' + r.status)); err.status = r.status; throw err; }
+        return j;
+      });
+    });
+  }
+  function why(e){
+    if(e.status === 401) return 'GitHub rejected the token. It may have expired: make a new one and use "forget this device".';
+    if(e.status === 403 || e.status === 404) return 'The token cannot write to ' + REPO + '. Check it has this repo and Contents: read and write.';
+    if(e.status === 409 || e.status === 422) return 'Someone else changed the repo at the same moment. Try again.';
+    return e.message || String(e);
+  }
+  /* the current tip, its tree, and databytes.json as it is right now */
+  function readState(){
+    var st = {};
+    return gh('/git/ref/heads/' + BRANCH).then(function(ref){
+      st.head = ref.object.sha;
+      return gh('/git/commits/' + st.head);
+    }).then(function(c){
+      st.tree = c.tree.sha;
+      return gh('/contents/databytes.json?ref=' + st.head);
+    }).then(function(f){
+      st.list = JSON.parse(new TextDecoder().decode(unb64(f.content.replace(/\s/g, ''))));
+      return st;
+    });
+  }
+  /* every change is one commit: new blobs, one tree, one commit, move main */
+  function commit(st, entries, message){
+    return gh('/git/trees', { method: 'POST', body: { base_tree: st.tree, tree: entries } }).then(function(t){
+      return gh('/git/commits', { method: 'POST', body: { message: message, tree: t.sha, parents: [st.head] } });
+    }).then(function(c){
+      return gh('/git/refs/heads/' + BRANCH, { method: 'PATCH', body: { sha: c.sha } });
+    });
+  }
+  function jsonEntry(list){
+    return { path: 'databytes.json', mode: '100644', type: 'blob', content: JSON.stringify(list, null, 2) + '\n' };
+  }
+  function blobOf(fileOrBlob){
+    return new Promise(function(ok, no){
+      var fr = new FileReader();
+      fr.onload = function(){ ok(String(fr.result).split(',')[1]); };
+      fr.onerror = function(){ no(new Error('could not read the file')); };
+      fr.readAsDataURL(fileOrBlob);
+    }).then(function(data){ return gh('/git/blobs', { method: 'POST', body: { content: data, encoding: 'base64' } }); });
+  }
+
+  /* ── unlock flow ── */
+  function connect(){
+    log('connecting...');
+    return gh('').then(function(){
+      logEl.textContent = '';
+      show('app'); loadRecent();
+    }).catch(function(e){ token = null; show(stored() ? 'locked' : 'setup'); log(why(e), 'err'); });
+  }
+  $('saveBtn').addEventListener('click', function(){
+    var tok = $('tokIn').value.trim(), pass = $('newPass').value;
+    if(!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(tok)) return log('that does not look like a GitHub token.', 'err');
+    if(pass.length < 8) return log('passphrase needs at least 8 characters.', 'err');
+    seal(tok, pass).then(function(box){
+      try { localStorage.setItem(STORE, JSON.stringify(box)); } catch(e){ return log('this browser will not store anything. private mode?', 'err'); }
+      $('tokIn').value = ''; $('newPass').value = '';
+      token = tok; connect();
+    });
+  });
+  function unlock(){
+    var box = stored(); if(!box) return show('setup');
+    unseal(box, $('passIn').value).then(function(tok){ $('passIn').value = ''; token = tok; connect(); })
+      .catch(function(){ log('wrong passphrase.', 'err'); });
+  }
+  $('unlockBtn').addEventListener('click', unlock);
+  $('passIn').addEventListener('keydown', function(e){ if(e.key === 'Enter') unlock(); });
+  function forget(){
+    if(!confirm('Remove the saved token from this device?')) return;
+    try { localStorage.removeItem(STORE); } catch(e){}
+    token = null; show('setup'); log('forgotten. the token itself still works until you revoke it on GitHub.', 'ok');
+  }
+  $('forgetBtn1').addEventListener('click', forget);
+  $('forgetBtn2').addEventListener('click', forget);
+  $('lockBtn').addEventListener('click', function(){ token = null; logEl.textContent = ''; show('locked'); });
+
+  /* ── the form ── */
+  var today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  $('date').value = today.toISOString().slice(0, 10);
+  var ACCEPT = { still: 'image/*', footage: 'video/*', audio: 'audio/*' };
+  function paintType(){
+    var t = $('type').value;
+    $('fileWrap').hidden = t === 'transmission';
+    $('posterWrap').hidden = t !== 'footage';
+    $('shrinkWrap').hidden = t !== 'still';
+    $('file').accept = ACCEPT[t] || '';
+    $('textLabel').textContent = t === 'transmission' ? 'TRANSMISSION' : 'CAPTION (optional)';
+  }
+  $('type').addEventListener('change', function(){ paintType(); $('file').value = ''; $('preview').textContent = ''; });
+  paintType();
+  $('file').addEventListener('change', function(){
+    var f = this.files[0], p = $('preview'); p.textContent = '';
+    if(!f) return;
+    var url = URL.createObjectURL(f), el;
+    if(/^image\//.test(f.type)) el = document.createElement('img');
+    else if(/^video\//.test(f.type)) { el = document.createElement('video'); el.controls = true; el.muted = true; }
+    else if(/^audio\//.test(f.type)) { el = document.createElement('audio'); el.controls = true; }
+    if(el){ el.src = url; p.appendChild(el); }
+    var mb = document.createElement('div'); mb.className = 'hint'; mb.textContent = f.name + ' // ' + (f.size / 1048576).toFixed(1) + ' MB';
+    p.appendChild(mb);
+  });
+
+  function slug(t){ return String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'byte'; }
+  function extOf(f){
+    var m = /\.([a-z0-9]{1,5})$/i.exec(f.name || '');
+    if(m) return m[1].toLowerCase();
+    return ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/quicktime': 'mov',
+              'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a' })[f.type] || 'bin';
+  }
+  function nextId(list){
+    var n = list.reduce(function(m, b){ var v = parseInt(b.id, 10); return isNaN(v) ? m : Math.max(m, v); }, 0) + 1;
+    return ('000' + n).slice(-Math.max(4, String(n).length));
+  }
+  /* phone photos are 4-12 MB; the page shows them a few hundred px wide.
+     anything bigger than 2400px or 2.5 MB is redrawn as a JPEG. GIFs keep
+     their animation, so they are left alone. */
+  function shrunk(f){
+    if(!$('shrink').checked || !/^image\/(jpeg|png|webp|heic|heif)$/.test(f.type)) return Promise.resolve({ blob: f, ext: extOf(f) });
+    return createImageBitmap(f).then(function(bmp){
+      var s = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+      if(s === 1 && f.size < 2.5 * 1048576) return { blob: f, ext: extOf(f) };
+      var c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      return new Promise(function(ok){ c.toBlob(function(b){ ok({ blob: b, ext: 'jpg' }); }, 'image/jpeg', .86); });
+    }).catch(function(){ return { blob: f, ext: extOf(f) }; });
+  }
+
+  var busy = false;
+  $('postBtn').addEventListener('click', function(){
+    if(busy) return;
+    var type = $('type').value, title = $('title').value.trim(), text = $('text').value.trim(), date = $('date').value;
+    var tags = $('tags').value.split(',').map(function(t){ return t.trim().toLowerCase(); }).filter(Boolean);
+    var file = $('file').files[0], poster = $('poster').files[0];
+    if(!title) return log('needs a title.', 'err');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return log('needs a date.', 'err');
+    if(type === 'transmission' && !text) return log('a transmission needs its text.', 'err');
+    if(type !== 'transmission' && !file) return log('a ' + type + ' needs a file.', 'err');
+    if(file && file.size > MAX_BYTES) return log('that file is over 95 MB, which GitHub will not take. post it to YouTube and link it in a transmission instead.', 'err');
+
+    busy = true; $('postBtn').disabled = true;
+    var st, entry, entries = [];
+    log('reading the current databytes...');
+    readState().then(function(s){
+      st = s;
+      var id = nextId(st.list), base = 'media/' + id + '-' + slug(title);
+      entry = { id: id, date: date, type: type, title: title };
+      var steps = Promise.resolve();
+      if(file && type !== 'transmission'){
+        steps = steps.then(function(){ log('preparing ' + type + '...', null, true); return type === 'still' ? shrunk(file) : { blob: file, ext: extOf(file) }; })
+          .then(function(m){
+            entry.file = base + '.' + m.ext;
+            log('uploading ' + (m.blob.size / 1048576).toFixed(1) + ' MB...', null, true);
+            return blobOf(m.blob);
+          }).then(function(b){ entries.push({ path: entry.file, mode: '100644', type: 'blob', sha: b.sha }); });
+      }
+      if(poster && type === 'footage'){
+        steps = steps.then(function(){ return shrunk(poster); }).then(function(m){
+          entry.poster = base + '-poster.' + m.ext;
+          return blobOf(m.blob);
+        }).then(function(b){ entries.push({ path: entry.poster, mode: '100644', type: 'blob', sha: b.sha }); });
+      }
+      return steps;
+    }).then(function(){
+      if(text) entry.text = text;
+      if(tags.length) entry.tags = tags;
+      entries.push(jsonEntry(st.list.concat([entry])));
+      log('committing...', null, true);
+      return commit(st, entries, 'databytes: ' + title);
+    }).then(function(){
+      log('transmitted. #' + entry.id + ' "' + title + '" goes live in about a minute.', 'ok');
+      ['title', 'text', 'tags'].forEach(function(k){ $(k).value = ''; });
+      $('file').value = ''; $('poster').value = ''; $('preview').textContent = '';
+      loadRecent();
+    }).catch(function(e){ log(why(e), 'err', true); })
+      .then(function(){ busy = false; $('postBtn').disabled = false; });
+  });
+
+  /* ── recent posts, newest first, with delete ── */
+  function loadRecent(){
+    var ul = $('recent');
+    readState().then(function(st){
+      ul.textContent = '';
+      var list = st.list.slice().sort(function(a, b){ return (b.date || '').localeCompare(a.date || '') || String(b.id).localeCompare(String(a.id)); });
+      if(!list.length){ ul.innerHTML = '<li><span>nothing posted yet.</span></li>'; return; }
+      list.slice(0, 12).forEach(function(b){
+        var li = document.createElement('li'), sp = document.createElement('span'), sm = document.createElement('small'), del = document.createElement('button');
+        sm.textContent = b.date + ' #' + b.id + ' ' + b.type; sp.appendChild(sm); sp.appendChild(document.createTextNode(b.title));
+        del.type = 'button'; del.className = 'small danger'; del.textContent = 'delete';
+        del.addEventListener('click', function(){ removeByte(b); });
+        li.appendChild(sp); li.appendChild(del); ul.appendChild(li);
+      });
+    }).catch(function(e){ ul.innerHTML = ''; var li = document.createElement('li'); li.textContent = why(e); ul.appendChild(li); });
+  }
+  function removeByte(b){
+    if(busy || !confirm('Delete #' + b.id + ' "' + b.title + '"? Its media file goes too.')) return;
+    busy = true;
+    log('deleting #' + b.id + '...');
+    var st;
+    readState().then(function(s){
+      st = s;
+      /* only files under media/ that are really there: removing a path that
+         does not exist fails the whole commit */
+      var paths = [b.file, b.poster].filter(function(p){ return p && /^media\/[\w.-]+$/.test(p); });
+      if(!paths.length) return [];
+      return gh('/contents/media?ref=' + st.head).then(function(dir){
+        var have = (dir || []).map(function(x){ return x.path; });
+        return paths.filter(function(p){ return have.indexOf(p) >= 0; });
+      }, function(){ return []; });
+    }).then(function(found){
+      var keep = st.list.filter(function(x){ return String(x.id) !== String(b.id); });
+      var entries = [jsonEntry(keep)];
+      found.forEach(function(p){ entries.push({ path: p, mode: '100644', type: 'blob', sha: null }); });
+      return commit(st, entries, 'databytes: remove ' + b.title);
+    }).then(function(){ log('deleted. gone from the page in about a minute.', 'ok'); loadRecent(); })
+      .catch(function(e){ log(why(e), 'err', true); })
+      .then(function(){ busy = false; });
+  }
+
+  show(stored() ? 'locked' : 'setup');
+})();
+</script>
+</body>
+</html>

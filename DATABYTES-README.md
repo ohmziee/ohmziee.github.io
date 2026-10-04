@@ -29,7 +29,12 @@ Every post is one object in `databytes.json`. Newest first is not required, the 
   "poster": "media/stairwell.jpg", "tags": ["footage"] }
 ```
 
-## workflow
+## posting from a phone: uplink.html
+Open `https://ohmziee.github.io/uplink.html` (not linked anywhere). Pick a type, title, file, tags, hit TRANSMIT. It uploads the media and adds the entry in one commit; live in about a minute. Recent posts can be deleted from there too, media included.
+
+First time on a device it asks for a GitHub token and a passphrase. The token is kept on that device encrypted with the passphrase. To make the token: github.com → Settings → Developer settings → Fine-grained tokens → Generate. Repository access: only `ohmziee.github.io`. Permissions: Contents → Read and write. Lost phone: revoke the token on GitHub.
+
+## workflow by hand
 1. upload the media file to the `media/` folder in the repo (phone: Add file → Upload)
 2. open `databytes.json`, add the object, commit
 3. live in ~30s
