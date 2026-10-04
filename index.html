@@ -228,6 +228,38 @@ main{position:relative;z-index:3}
   .chat-say .m{flex:1 1 100%;order:3}
 }
 
+/* chat window — on a wide screen the chat leaves the page flow and docks
+   bottom-right, above ghostie's corner, mirroring the radio on the left.
+   narrow screens keep it inline. the script moves the node between the
+   two places; this only styles it. */
+.chat-min,.chat-new{display:none}
+#chatDock{display:none}
+@media (min-width:1100px) and (min-height:640px){
+  #chatDock{
+    display:block;position:fixed;z-index:30;
+    right:clamp(.6rem,2vw,1.6rem);
+    bottom:calc(clamp(.6rem,2vh,1.4rem) + clamp(64px,9vw,110px) * 1.03 + .8rem);
+    width:clamp(300px,24vw,420px);
+  }
+  #chatDock .chat{max-width:none;margin:0;padding:0}
+  #chatDock .chat-inner{background:#0B0D1A;box-shadow:0 0 40px -12px rgba(159,140,255,.45)}
+  #chatDock .chat-feed{height:clamp(12rem,34vh,24rem);font-size:.8rem}
+  #chatDock .chat-say{flex-wrap:wrap}
+  #chatDock .chat-say .h{flex:1 1 100%}
+  #chatDock .chat-say .m{flex:1 1 auto;order:3}
+  #chatDock .chat-say button{order:4}
+  #chatDock .chat-min{
+    display:inline-block;margin-left:.2rem;padding:.15rem .35rem;cursor:pointer;
+    font:inherit;letter-spacing:.1em;color:var(--ice);background:none;border:1px solid rgba(74,80,104,.7);
+  }
+  #chatDock .chat-min:hover,#chatDock .chat-min:focus-visible{border-color:var(--lavender)}
+  #chatDock .chat.mini .chat-feed,#chatDock .chat.mini .chat-say{display:none}
+  #chatDock .chat.mini .chat-bar{border-bottom:0}
+  #chatDock .chat.mini .chat-new{display:inline;color:#7CFFB2}
+  #chatDock .chat.mini .chat-new:empty{display:none}
+  #term.open ~ #chatDock{z-index:39}
+}
+
 /* ── directory ─────────────────────────────────────── */
 .directory{
   max-width:calc(var(--text-w) + 12vw);
@@ -721,6 +753,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         <span class="live-dot" aria-hidden="true"></span>
         <span class="chat-title">LIVE CHAT</span>
         <span class="chat-count"><b id="chatCount">41</b> watching</span>
+        <span class="chat-new" id="chatNew"></span>
+        <button type="button" class="chat-min" id="chatMin" aria-expanded="true" title="minimise chat">min</button>
       </div>
       <div class="chat-feed" id="chatFeed"></div>
       <!-- hidden until LIVE.url + LIVE.anon are filled in below -->
@@ -897,6 +931,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
 <footer>EXiLED &nbsp;//&nbsp; remnant protocol &nbsp;//&nbsp; <span id="yr"></span> &nbsp;//&nbsp; <span id="clock">--:--:--</span></footer>
 </div>
+
+<!-- ═══ CHAT WINDOW ═══ the chat moves in here on wide screens -->
+<div id="chatDock"></div>
 
 <!-- ═══ RADIO ═══
      the playlist lives on youtube (RADIO_LIST in the script). edit it there;
@@ -1957,6 +1994,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     row.appendChild(u); row.appendChild(t);
     chatFeed.appendChild(row);
     while(chatFeed.children.length > 9) chatFeed.removeChild(chatFeed.firstChild);
+    if(animate) chatBump();
   }
 
   function pushMessage(animate){ renderMessage(nextMessage(), animate); }
@@ -2845,6 +2883,40 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   rTab.addEventListener('click', function(){ radioOpen(radio.ready); });
   rMini.addEventListener('click', function(){ radioMini(!rEl.classList.contains('mini')); });
+
+  /* ── chat window ──────────────────────────────────────────
+     Wide screens: the chat section is moved (not copied, so the feed and
+     composer keep their listeners) into #chatDock, outside #stage, so it
+     does not shake with the jolt and sits above ghostie. Narrow screens:
+     it goes back to its place in the page. "min" folds it to its bar;
+     lines that arrive while folded are counted on the bar. */
+  var chatSec = document.querySelector('section.chat'), chatSpot = chatSec && chatSec.nextSibling;
+  var chatDock = document.getElementById('chatDock'), chatMinB = document.getElementById('chatMin'), chatNew = document.getElementById('chatNew');
+  var chatUnread = 0, chatWide = window.matchMedia ? window.matchMedia('(min-width:1100px) and (min-height:640px)') : null;
+  function chatPlace(){
+    if(!chatSec || !chatDock || !chatWide || !chatSpot) return;
+    if(chatWide.matches){ if(chatSec.parentNode !== chatDock) chatDock.appendChild(chatSec); }
+    else if(chatSec.parentNode === chatDock) chatSpot.parentNode.insertBefore(chatSec, chatSpot);
+  }
+  function chatMini(on){
+    if(!chatSec || !chatMinB) return;
+    chatSec.classList.toggle('mini', on);
+    chatMinB.textContent = on ? 'max' : 'min'; chatMinB.setAttribute('aria-expanded', String(!on));
+    chatMinB.title = on ? 'open chat' : 'minimise chat';
+    if(!on){ chatUnread = 0; chatNew.textContent = ''; }
+    try { localStorage.setItem('exiled.chatMini', on ? '1' : ''); } catch(e){}
+  }
+  function chatBump(){
+    if(!chatSec || !chatNew || !chatSec.classList.contains('mini') || chatSec.parentNode !== chatDock) return;
+    chatUnread++; chatNew.textContent = (chatUnread > 9 ? '9+' : chatUnread) + ' new';
+  }
+  if(chatMinB) chatMinB.addEventListener('click', function(){ chatMini(!chatSec.classList.contains('mini')); });
+  try { if(localStorage.getItem('exiled.chatMini')) chatMini(true); } catch(e){}
+  chatPlace();
+  if(chatWide){
+    if(chatWide.addEventListener) chatWide.addEventListener('change', chatPlace);
+    else if(chatWide.addListener) chatWide.addListener(chatPlace);
+  }
   document.getElementById('radioOpen').addEventListener('click', function(e){ e.preventDefault(); radioOpen(true); });
   document.getElementById('radioClose').addEventListener('click', radioClose);
   rPlay.addEventListener('click', function(){
