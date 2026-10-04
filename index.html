@@ -607,7 +607,42 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
 @keyframes tabcall{0%,100%{border-color:var(--violet);box-shadow:none}50%{border-color:#7CFFB2;box-shadow:0 0 18px -4px rgba(124,255,178,.6)}}
 #radio.fresh #radioTab{animation:tabcall 2.6s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){#radio.on .r-dot{animation:none}#radio.fresh #radioTab{animation:none;border-color:#7CFFB2}}
-@media (max-width:560px){#radio{left:1rem;right:1rem}#radioPanel,#radio.mini #radioPanel{width:100%}#radioTab .r-tabnow{max-width:55vw}#radio .r-tracks{max-height:22vh}}
+/* phones: a dock bar along the bottom instead of floating boxes.
+   - the bar is the radio tab, full width but for ghostie's perch at the
+     right end (--perch), with a matching strip under her so the bar reads
+     as one piece
+   - opening the radio turns it into a full-width sheet from the bottom
+   - the page gets the bar's height as bottom padding, so nothing hides
+     under it */
+#dockStrip{display:none}
+@media (max-width:560px){
+  :root{--bar-h:calc(48px + env(safe-area-inset-bottom,0px));--perch:84px}
+  body{padding-bottom:var(--bar-h)}
+  #dockStrip{display:block;position:fixed;left:0;right:0;bottom:0;height:var(--bar-h);z-index:29;
+    background:#0B0D1A;border-top:1px solid var(--violet);pointer-events:none}
+  #radio{left:0;right:var(--perch);bottom:0}
+  #radio.open{right:0}
+  #radioTab{width:100%;height:var(--bar-h);padding:0 1rem env(safe-area-inset-bottom,0px);
+    border:0;border-top:1px solid var(--violet);background:#0B0D1A;font-size:.78rem}
+  #radioTab .r-tabnow{max-width:none;flex:1 1 auto;min-width:0;font-size:.68rem}
+  #radioTab .r-tabnow:empty{display:block}
+  #radioTab .r-tabnow:empty::before{content:'tap to tune in';color:var(--rain)}
+  #radio.fresh #radioTab{animation:none;color:#7CFFB2}
+  #radioPanel,#radio.mini #radioPanel{width:100%;border-left:0;border-right:0;border-bottom:0;
+    max-height:calc(88dvh - env(safe-area-inset-top,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+  #radio .r-tracks{max-height:22vh}
+  /* body-prefixed: the base #ghostie rule comes later in the sheet */
+  body #ghostie{z-index:31;bottom:calc(4px + env(safe-area-inset-bottom,0px) + var(--gh-lift,0px))}
+  body #term.open ~ #ghostie{z-index:41}
+  #bytes .b-main{padding-bottom:calc(var(--bar-h) + 3rem)}
+  /* socials: two to a row, name and handle only */
+  .socials .nodes{grid-template-columns:1fr 1fr;gap:.5rem}
+  .socials .node{grid-template-columns:.9rem 1fr;gap:.5rem;padding:.7rem .65rem}
+  .socials .node .state{display:none}
+  .socials .node .name{font-size:.88rem;letter-spacing:.08em}
+  .socials .node .name small{font-size:.58rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .socials .node .dot{width:.45rem;height:.45rem}
+}
 
 /* ── baby ──────────────────────────────────────────── */
 #babyPerch{position:relative;z-index:3;max-width:calc(var(--text-w) + 12vw);margin:-2rem auto 0;padding:0 6vw clamp(2rem,6vh,4rem);display:none;justify-content:flex-end}
@@ -994,6 +1029,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <!-- ═══ CHAT WINDOW ═══ the chat moves in here on wide screens -->
 <div id="chatDock"></div>
 
+<div id="dockStrip" aria-hidden="true"></div>
+
 <!-- ═══ RADIO ═══
      the playlist lives on youtube (RADIO_LIST in the script). edit it there;
      nothing here needs touching. -->
@@ -1374,7 +1411,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       /* where the corner puts her with no lift (worked out, not measured,
          since she may be mid-glide), then how far up to clear the docks.
          the base matches bottom:clamp(.6rem,2vh,1.4rem) */
-      var base = Math.min(22.4, Math.max(9.6, window.innerHeight * .02)), h = gh.offsetHeight || r.height;
+      /* phones: she perches on the dock bar, 4px up */
+      var base = onPhone() ? 4 : Math.min(22.4, Math.max(9.6, window.innerHeight * .02)), h = gh.offsetHeight || r.height;
       var y0 = window.innerHeight - base - h, y = aboveDocks(r.left, y0, r.width, h);
       gh.style.setProperty('--gh-lift', Math.max(0, Math.round(y0 - y)) + 'px');
     } else {
@@ -1390,8 +1428,12 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   window.addEventListener('scroll', function(){ clearTimeout(nudgeT); nudgeT = setTimeout(nudgeGhostie, 150); }, { passive: true });
   /* wander: drift to a random haunt every so often */
+  function onPhone(){ return !!(window.matchMedia && window.matchMedia('(max-width:560px)').matches); }
   function haunts(){
     var w = window.innerWidth, h = window.innerHeight, gw = gh.offsetWidth, ghh = gh.offsetHeight, m = 14;
+    /* phones: the text column is the whole screen, so she keeps to the top
+       corners and her perch on the dock bar */
+    if(onPhone()) return [[m, m], [w-gw-m, m], [w-gw-12, h-ghh-4], [w-gw-12, h-ghh-4]];
     return [
       [m, m], [w-gw-m, m], [m, h-ghh-m], [w-gw-m, h-ghh-m],
       [m, h*.45], [w-gw-m, h*.45], [w*.5-gw/2, h-ghh-m]
@@ -3199,7 +3241,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       rEl.classList.remove('fresh');
       try { localStorage.setItem('exiled.radioSeen', '1'); } catch(e){}
     }
-    rPanel.hidden = false; rTab.hidden = true; rTab.setAttribute('aria-expanded', 'true');
+    rPanel.hidden = false; rTab.hidden = true; rTab.setAttribute('aria-expanded', 'true'); rEl.classList.add('open');
     if(play) radio.want = true;
     radioLoad();
     if(play && radio.ready) radio.yt.playVideo();
@@ -3207,7 +3249,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function radioClose(){
     if(radio.ready) radio.yt.pauseVideo();
     radio.want = false; radio.playing = false;
-    rPanel.hidden = true; rTab.hidden = false; rTab.setAttribute('aria-expanded', 'false');
+    rPanel.hidden = true; rTab.hidden = false; rTab.setAttribute('aria-expanded', 'false'); rEl.classList.remove('open');
     radioPaint(); ghostVibe(false);
   }
   /* ── ghostie and the radio ──
