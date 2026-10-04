@@ -698,11 +698,9 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
 }
 @keyframes beckon{to{scale:1.14}}
 @media (prefers-reduced-motion:reduce){#ghostie.beckon{animation:none}}
-/* the vault's last lock: a maze you mostly cannot see */
-#term .bo{font-family:var(--font-mono);font-size:1.4em;line-height:1;letter-spacing:0;margin:.4rem 0;white-space:pre;color:var(--lavender)}
-#term .bo.flash{color:var(--ice);text-shadow:0 0 8px var(--lavender)}
-#term .bo-pad{display:flex;gap:.4rem;margin:.3rem 0 .6rem}
-#term .bo-pad button{font:inherit;font-size:.9rem;min-width:2.6rem;padding:.35rem .5rem;background:rgba(159,140,255,.12);border:1px solid rgba(159,140,255,.35);color:var(--lavender);border-radius:.3rem;cursor:pointer}
+/* the vault's last lock: a command to type before the trace lands.
+   it cannot be selected, so it cannot be copied. */
+#term .cut{color:var(--ice);letter-spacing:.06em;user-select:none;-webkit-user-select:none}
 #gsmudge{
   position:fixed;z-index:3;pointer-events:none;border-radius:50%;opacity:0;
   background:radial-gradient(circle,rgba(159,140,255,.34),rgba(255,79,216,.12) 45%,transparent 70%);
@@ -3069,107 +3067,73 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     tprint('...ghostie pulls you through.', 'ok');
     vaultGame();
   }
-  /* 4. BLACKOUT. A maze is shown for a few seconds, then the lights go
-     out: only you and the exit stay visible. Lightning lights the whole
-     thing for a blink every few seconds. Every wall you walk into costs
-     time. Reach the exit before the clock does.
-     Arrow keys or WASD; on a phone, the pad under the maze. */
-  var BO_W = 10, BO_H = 5, BO_SHOW = 3000, BO_LIMIT = 45000, BO_FLASH_EVERY = 7000, BO_FLASH_MS = 220, BO_BUMP = 3000;
+  /* 4. CUT THE TRACE. Something is following them back down the line.
+     Five commands appear one at a time; each has to be typed before its
+     bar fills. A mistyped line costs CUT_SLIP but not the game; the clock
+     running out is the start again. Phones get CUT_PHONE extra per cut.
+     Pasting is refused and the command cannot be selected, so it has to
+     be typed. Case and extra spaces do not matter.
+     Deadlines run on setTimeout (the interval only paints the bar), and
+     every timer checks gameId, so nothing fires after the game is over. */
+  var CUT_VERBS = ['sever', 'kill', 'null', 'drop', 'purge', 'mask', 'spoof', 'fork', 'burn', 'jam'];
+  var CUT_NODES = ['node-ghost', 'relay-7f', 'trace-0x3a', 'uplink-9', 'proxy-cell', 'ice-wall', 'hop-404',
+                   'mirror-2', 'socket-13', 'port-6667', 'echo-gate', 'net-saint'];
+  var CUT_MS = [12000, 11000, 10000, 9500, 9000], CUT_SLIP = 2000, CUT_PHONE = 3000;
   var gameId = 0, gameKey = null;
-  function boMaze(){
-    var gw = BO_W * 2 + 1, gh_ = BO_H * 2 + 1, g = [], x, y;
-    for(y = 0; y < gh_; y++){ g.push([]); for(x = 0; x < gw; x++) g[y].push(1); }
-    var stack = [[0, BO_H - 1]], seen = {};
-    seen[0 + ',' + (BO_H - 1)] = 1; g[(BO_H - 1) * 2 + 1][1] = 0;
-    while(stack.length){
-      var c = stack[stack.length - 1], opts = [];
-      [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
-        var nx = c[0] + d[0], ny = c[1] + d[1];
-        if(nx >= 0 && ny >= 0 && nx < BO_W && ny < BO_H && !seen[nx + ',' + ny]) opts.push([nx, ny, d]);
-      });
-      if(!opts.length){ stack.pop(); continue; }
-      var o = opts[Math.floor(Math.random() * opts.length)];
-      seen[o[0] + ',' + o[1]] = 1;
-      g[c[1] * 2 + 1 + o[2][1]][c[0] * 2 + 1 + o[2][0]] = 0;
-      g[o[1] * 2 + 1][o[0] * 2 + 1] = 0;
-      stack.push([o[0], o[1]]);
-    }
-    return g;
+  function cutBar(left, ms){
+    var n = Math.round(Math.max(0, Math.min(1, 1 - left / ms)) * 20);
+    return '[' + new Array(n + 1).join('\u2588') + new Array(21 - n).join('\u2591') + '] ' + (left / 1000).toFixed(1) + 's';
   }
   function vaultGame(){
-    var id = ++gameId, g = boMaze();
-    var me = { x: 1, y: BO_H * 2 - 1 }, exit = { x: BO_W * 2 - 1, y: 1 };
-    var lit = true, deadline = 0;
-    /* the lights go out: a clean screen, so the whole maze, the pad and the
-       clock are in view at once (the board fills after it is printed, so
-       a long scrollback used to leave most of it below the fold) */
-    tOut.innerHTML = '';
-    tprint('BLACKOUT.\nthe door is at the far end of the dark. find it before the clock does.\nlearn the way while you can.', 'dim');
-    var board = tprint('', 'bo'), clock = tprint('', 'dim');
-    tprint('<div class="bo-pad"><button type="button" data-dir="left">\u2190</button><button type="button" data-dir="up">\u2191</button><button type="button" data-dir="down">\u2193</button><button type="button" data-dir="right">\u2192</button></div>');
-    tPrompt.textContent = 'MOVE>';
-    function draw(){
-      var rows = [];
-      for(var y = 0; y < g.length; y++){
-        var row = '';
-        for(var x = 0; x < g[y].length; x++){
-          if(x === me.x && y === me.y) row += '@';
-          else if(x === exit.x && y === exit.y) row += '\u25c7';
-          else row += lit ? (g[y][x] ? '\u2593' : ' ') : ' ';
-        }
-        rows.push(row);
-      }
-      board.textContent = rows.join('\n');
-      board.className = 'bo' + (lit ? ' flash' : '');
-      if(deadline) clock.textContent = 'signal: ' + Math.max(0, (deadline - Date.now()) / 1000).toFixed(1) + 's';
-      tOut.scrollTop = tOut.scrollHeight;
+    var id = ++gameId, extra = onPhone() ? CUT_PHONE : 0, used = {};
+    tprint('TRACE INCOMING.\nsomething is following you back down the line.\ncut it before it lands. type each command exactly. no pasting.', 'dim');
+    function pick(){
+      var c;
+      do { c = CUT_VERBS[rint(0, CUT_VERBS.length - 1)] + ' ' + CUT_NODES[rint(0, CUT_NODES.length - 1)]; } while(used[c]);
+      used[c] = 1; return c;
     }
-    function move(dx, dy){
-      if(id !== gameId) return;
-      var nx = me.x + dx, ny = me.y + dy;
-      if(!g[ny] || g[ny][nx] !== 0){
-        if(deadline){ deadline -= BO_BUMP; tprint('the static bites. \u2212' + (BO_BUMP / 1000) + 's', 'err'); }
-        draw();
-        if(deadline && Date.now() >= deadline) lose();
-        return;
-      }
-      me.x = nx; me.y = ny; draw();
-      if(nx === exit.x && ny === exit.y) win();
-    }
-    var DIRS = { ArrowLeft: [-1,0], ArrowRight: [1,0], ArrowUp: [0,-1], ArrowDown: [0,1],
-                 a: [-1,0], d: [1,0], w: [0,-1], s: [0,1], left: [-1,0], right: [1,0], up: [0,-1], down: [0,1] };
-    gameKey = function(k){
-      var d = DIRS[k] || DIRS[String(k).toLowerCase()];
-      if(!d) return false;
-      move(d[0], d[1]); return true;
-    };
     function lose(){
       if(id !== gameId) return;
-      vaultReset('the dark kept you.\nyou are back where you started.');
+      gameId++;
+      vaultReset('the trace landed. they know where you are.\nyou are back where you started.');
     }
-    function win(){
-      if(id !== gameId) return;
-      gameId++; gameKey = null;
-      vaultOpen();
-    }
-    draw();
-    setTimeout(function(){
-      if(id !== gameId) return;
-      lit = false; deadline = Date.now() + BO_LIMIT; draw();
-      (function tick(){
-        if(id !== gameId) return;
+    function cut(i){
+      if(id !== gameId || vault.step !== 4) return;
+      if(i >= CUT_MS.length){
+        gameId++; termTrap = null;
+        tprint('trace lost. the line goes quiet.', 'ok');
+        return vaultOpen();
+      }
+      var cmd = pick(), ms = CUT_MS[i] + extra, deadline = Date.now() + ms, clock = 0;
+      tprint('<span class="p">CUT ' + (i + 1) + '/' + CUT_MS.length + '</span>   type:  <span class="cut">' + cmd + '</span>', 'ok');
+      var bar = tprint(cutBar(ms, ms), 'dim');
+      tPrompt.textContent = 'CUT>';
+      function arm(){
+        var c = ++clock;
+        setTimeout(function(){ if(c === clock) lose(); }, Math.max(0, deadline - Date.now()));
+      }
+      var iv = setInterval(function(){
+        if(id !== gameId || clock < 0) return clearInterval(iv);
+        bar.textContent = cutBar(Math.max(0, deadline - Date.now()), ms);
+      }, 100);
+      function attempt(line){
+        if(id !== gameId || clock < 0) return;
+        if(Date.now() >= deadline) return;              /* the timeout is about to land it */
+        if(line.trim().toLowerCase().replace(/\s+/g, ' ') === cmd){
+          clock = -1; clearInterval(iv);
+          tprint('trace cut.  ' + Math.round((i + 1) / CUT_MS.length * 100) + '%', 'ok');
+          setTimeout(function(){ cut(i + 1); }, 700);
+          return;
+        }
+        deadline -= CUT_SLIP;
+        tprint('mistyped. the trace gains.  \u2212' + (CUT_SLIP / 1000) + 's', 'err');
+        bar.textContent = cutBar(Math.max(0, deadline - Date.now()), ms);
         if(Date.now() >= deadline) return lose();
-        draw();
-        setTimeout(tick, 250);
-      })();
-      (function storm(){
-        setTimeout(function(){
-          if(id !== gameId) return;
-          lit = true; draw();
-          setTimeout(function(){ if(id !== gameId) return; lit = false; draw(); storm(); }, BO_FLASH_MS);
-        }, BO_FLASH_EVERY - 1500 + Math.floor(Math.random() * 3000));
-      })();
-    }, BO_SHOW);
+        arm(); termTrap = attempt;
+      }
+      termTrap = attempt; arm();
+    }
+    setTimeout(function(){ cut(0); }, 1200);
   }
   /* the last lock opens quietly. the key goes where the wiki can find it,
      and nothing on this page says so. */
@@ -3688,6 +3652,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     try { tIn.setSelectionRange(end, end); } catch(e){}
   }
   tIn.addEventListener('input', function(){ tabCycle = null; });
+  tIn.addEventListener('paste', function(e){
+    if(vault.step !== 4) return;
+    if(e.preventDefault) e.preventDefault();
+    tprint('no pasting. type it.', 'err');
+  });
   tIn.addEventListener('keydown', function(e){
     if(gameKey && e.key !== 'Escape' && gameKey(e.key)){ if(e.preventDefault) e.preventDefault(); tIn.value = ''; return; }
     if(e.key === 'Tab'){
