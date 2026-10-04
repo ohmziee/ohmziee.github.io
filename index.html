@@ -481,6 +481,13 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #radio .r-bar button{padding:.15rem .35rem;border:1px solid rgba(74,80,104,.7);color:var(--ice);letter-spacing:.1em}
 #radio .r-bar button:hover,#radio .r-bar button:focus-visible{border-color:var(--lavender)}
+/* mini: just the bar and the screen. the screen keeps youtube's 200px
+   minimum, so it can keep playing while it is small */
+#radio.mini #radioPanel{width:min(360px,calc(100vw - 2rem))}
+#radio.mini .r-now,#radio.mini .r-ctl,#radio.mini .r-find,#radio.mini .r-results,#radio.mini .r-back,
+#radio.mini .r-tracks,#radio.mini .r-src,#radio.mini #radioList{display:none}
+#radioTab .r-tabnow{max-width:13rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 .7rem/1 var(--font-mono);letter-spacing:.06em;color:var(--rain)}
+#radioTab .r-tabnow:empty{display:none}
 /* 200px tall at the narrowest, the minimum youtube allows */
 #radio .r-screen{position:relative;aspect-ratio:16/9;min-height:200px;background:#000;border-bottom:1px solid var(--violet);overflow:hidden}
 #radio .r-screen iframe,#radio .r-screen > div{position:absolute;inset:0;width:100%;height:100%;border:0}
@@ -503,7 +510,7 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-tracks li.dead button{color:rgba(74,80,104,.8);font-style:italic}
 #radio .r-src{display:block;padding:.5rem .75rem;font-size:.66rem;letter-spacing:.12em;color:var(--rain);border-top:1px solid rgba(42,29,94,.7);text-decoration:none}
 #radio .r-src:hover{color:var(--lavender)}
-#radioPanel{max-height:calc(100dvh - 2rem);overflow-y:auto}
+#radioPanel{max-height:calc(100dvh - 2rem);overflow-y:auto;overflow-x:hidden}
 #radio .r-find{display:flex;gap:.4rem;padding:0 .75rem .7rem}
 #radio .r-find input{flex:1 1 auto;min-width:0;font:inherit;font-size:.74rem;color:var(--ice);background:rgba(5,6,11,.7);border:1px solid var(--violet);padding:.45rem .55rem;border-radius:0}
 #radio .r-find input::placeholder{color:rgba(220,227,255,.32)}
@@ -523,7 +530,7 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #term.open ~ #radio{z-index:39}
 body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accent)}
 @media (prefers-reduced-motion:reduce){#radio.on .r-dot{animation:none}}
-@media (max-width:560px){#radio{left:1rem;right:1rem}#radioPanel{width:100%}#radio .r-tracks{max-height:22vh}}
+@media (max-width:560px){#radio{left:1rem;right:1rem}#radioPanel,#radio.mini #radioPanel{width:100%}#radioTab .r-tabnow{max-width:55vw}#radio .r-tracks{max-height:22vh}}
 
 /* ── baby ──────────────────────────────────────────── */
 #babyPerch{position:relative;z-index:3;max-width:calc(var(--text-w) + 12vw);margin:-2rem auto 0;padding:0 6vw clamp(2rem,6vh,4rem);display:none;justify-content:flex-end}
@@ -895,13 +902,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      the playlist lives on youtube (RADIO_LIST in the script). edit it there;
      nothing here needs touching. -->
 <div id="radio">
-  <button type="button" id="radioTab" aria-expanded="false" aria-controls="radioPanel"><span class="r-dot" aria-hidden="true"></span>RADIO</button>
+  <button type="button" id="radioTab" aria-expanded="false" aria-controls="radioPanel"><span class="r-dot" aria-hidden="true"></span>RADIO<span class="r-tabnow" id="radioTabNow"></span></button>
   <div id="radioPanel" role="region" aria-label="EXiLED radio" hidden>
     <div class="r-bar">
       <span class="r-dot" aria-hidden="true"></span><span class="r-title">EXiLED RADIO</span>
       <span class="r-state" id="radioState">OFF AIR</span>
       <button type="button" id="radioList" aria-expanded="true" aria-controls="radioTracks" title="track list">list</button>
-      <button type="button" id="radioClose" title="pause and close">off</button>
+      <button type="button" id="radioMini" aria-pressed="false" title="shrink to just the screen">min</button>
+      <button type="button" id="radioClose" title="pause and tuck away">off</button>
     </div>
     <div class="r-screen"><div id="radioYT"></div></div>
     <div class="r-now"><small>NOW PLAYING</small><span id="radioNow">dead air // press tune in</span></div>
@@ -2658,6 +2666,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var rEl = document.getElementById('radio'), rPanel = document.getElementById('radioPanel'), rTab = document.getElementById('radioTab');
   var rState = document.getElementById('radioState'), rNow = document.getElementById('radioNow'), rPlay = document.getElementById('radioPlay');
   var rTracks = document.getElementById('radioTracks'), rVol = document.getElementById('radioVol'), rNode = document.getElementById('radioNode');
+  var rTabNow = document.getElementById('radioTabNow'), rMini = document.getElementById('radioMini');
+  function radioMini(on){
+    rEl.classList.toggle('mini', on);
+    rMini.textContent = on ? 'max' : 'min'; rMini.setAttribute('aria-pressed', String(on));
+    rMini.title = on ? 'show the controls again' : 'shrink to just the screen';
+    try { localStorage.setItem('exiled.radioMini', on ? '1' : ''); } catch(e){}
+  }
+  try { if(localStorage.getItem('exiled.radioMini')) radioMini(true); } catch(e){}
   var rQ = document.getElementById('radioQ'), rResults = document.getElementById('radioResults'), rBack = document.getElementById('radioBack');
   document.getElementById('radioSrc').href = 'https://www.youtube.com/playlist?list=' + RADIO_LIST;
   try { var v0 = localStorage.getItem('exiled.radioVol'); if(v0 !== null && !isNaN(+v0)) rVol.value = +v0; } catch(e){}
@@ -2667,6 +2683,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     rState.textContent = label || (radio.playing ? (radio.mine ? 'YOUR PICK' : 'ON AIR') : radio.ready ? 'PAUSED' : 'OFF AIR');
     rPlay.textContent = radio.playing ? 'PAUSE' : 'TUNE IN';
     rNode.textContent = radio.playing ? 'ON AIR' : 'TUNE IN';
+    /* tucked away: the tab keeps the track name, one tap resumes it */
+    rTabNow.textContent = radio.ready && rNow.textContent ? rNow.textContent : '';
     var lis = rTracks.children;
     for(var i = 0; i < lis.length; i++) lis[i].classList.toggle('now', i === radio.idx);
   }
@@ -2825,7 +2843,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   });
   rBack.addEventListener('click', function(){ if(radio.ready) radioHome(); });
 
-  rTab.addEventListener('click', function(){ radioOpen(false); });
+  rTab.addEventListener('click', function(){ radioOpen(radio.ready); });
+  rMini.addEventListener('click', function(){ radioMini(!rEl.classList.contains('mini')); });
   document.getElementById('radioOpen').addEventListener('click', function(e){ e.preventDefault(); radioOpen(true); });
   document.getElementById('radioClose').addEventListener('click', radioClose);
   rPlay.addEventListener('click', function(){
