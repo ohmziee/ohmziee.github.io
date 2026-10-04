@@ -460,6 +460,21 @@ body.stormmax .vignette{background:radial-gradient(ellipse at center,transparent
 #bytes{position:fixed;inset:0;z-index:25;display:none;overflow-y:auto;background:var(--void);overscroll-behavior:contain}
 #bytes.open{display:block}
 #bytes.open ~ #ghostie{z-index:26}
+
+/* ── the shell's frame: every other page of the site opens in here, over
+   this one, so the radio, chat and ghostie carry on. under the docks; on a
+   wide screen it sits between them so they never cover the page. ── */
+#pageView{position:fixed;inset:0;z-index:25;display:none;background:var(--void)}
+#pageView.open{display:block}
+#pageView.open ~ #ghostie{z-index:26}
+body.page-open{overflow:hidden}
+#pageFrame{position:absolute;top:0;bottom:0;left:0;right:0;width:100%;height:100%;border:0;display:block;background:var(--void)}
+@media (min-width:1100px) and (min-height:640px){
+  /* an iframe will not stretch between left and right on its own (it
+     falls back to 300px), so its width is spelled out */
+  #pageFrame{left:calc(max(380px,clamp(300px,24vw,420px)) + 2.5rem);right:auto;width:calc(100% - 2 * (max(380px,clamp(300px,24vw,420px)) + 2.5rem))}
+}
+#ghostie.away{visibility:hidden}
 body.bytes-open{overflow:hidden}
 #bytes .b-main{max-width:960px;margin:0 auto;padding:clamp(1.2rem,4vh,2.5rem) 16px 7rem}
 @media (min-width:1100px) and (min-height:640px){
@@ -636,6 +651,7 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
   body #ghostie{z-index:31;bottom:calc(4px + env(safe-area-inset-bottom,0px) + var(--gh-lift,0px))}
   body #term.open ~ #ghostie{z-index:41}
   #bytes .b-main{padding-bottom:calc(var(--bar-h) + 3rem)}
+  #pageView{bottom:var(--bar-h)}
   /* socials: two to a row, name and handle only */
   .socials .nodes{grid-template-columns:1fr 1fr;gap:.5rem}
   .socials .node{grid-template-columns:.9rem 1fr;gap:.5rem;padding:.7rem .65rem}
@@ -1026,6 +1042,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   </div>
 </div>
 
+<!-- ═══ THE SHELL'S FRAME ═══ the wiki opens in here, so nothing else reloads -->
+<div id="pageView"><iframe id="pageFrame" title="EXiLED wiki" src="about:blank"></iframe></div>
+
 <!-- ═══ CHAT WINDOW ═══ the chat moves in here on wide screens -->
 <div id="chatDock"></div>
 
@@ -1306,16 +1325,20 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }catch(e){}
   /* the wiki tells them when you have read their page (exiled.readFile).
      they bring it up once, on a later visit, when they are free to talk */
-  try{
-    if(localStorage.getItem('exiled.readFile') === '1'){
+  /* checked on load, and again whenever the wiki frame closes, since the
+     wiki no longer means leaving this page */
+  function readFileRemark(ms){
+    try{
+      if(localStorage.getItem('exiled.readFile') !== '1') return;
       setTimeout(function(){
-        if(talking || poofed) return;               /* busy or sulking: next visit, then */
-        try{ localStorage.setItem('exiled.readFile', '2'); }catch(e){}
+        if(talking || poofed) return;               /* busy or sulking: next time, then */
+        try{ if(localStorage.getItem('exiled.readFile') !== '1') return; localStorage.setItem('exiled.readFile', '2'); }catch(e){ return; }
         speak(pick(['you read my file. rude. accurate though.', "saw you on my page. we're even now.",
                     'my page, huh? i hope you skipped the slander.']), 3400);
-      }, 7000);
-    }
-  }catch(e){}
+      }, ms);
+    }catch(e){}
+  }
+  readFileRemark(7000);
 
   /* -- drag ghostie anywhere (mouse + touch) -- */
   var gDrag = null, gMoved = false, gPlaced = false;
@@ -2729,11 +2752,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     wikiState = 2; saveWiki(); paintWiki();
     if(wikiHintTimer){ clearTimeout(wikiHintTimer); wikiHintTimer = null; }
     speak('...huh. it gave.', 2400);
-    setTimeout(function(){ location.href = WIKI_URL; }, 900);
+    setTimeout(function(){ pageOpen(WIKI_URL, true); }, 900);
   }
 
   function wikiTap(){
-    if(wikiState >= 2){ location.href = WIKI_URL; return; }
+    if(wikiState >= 2){ pageOpen(WIKI_URL, true); return; }
     if(wikiState < 1) return;                  /* sealed: nothing happens */
 
     var now = Date.now();
@@ -2756,7 +2779,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   if(wikiNode){
     paintWiki();
     wikiNode.addEventListener('click', function(e){
-      if(wikiState < 2) e.preventDefault();
+      /* an open wiki still opens in a new tab on ctrl/cmd/middle click */
+      if(wikiState >= 2 && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) return;
+      e.preventDefault();
       wikiTap();
     });
     wikiNode.addEventListener('keydown', function(e){
@@ -3614,8 +3639,73 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   });
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape' && bytesIsOpen() && !term.classList.contains('open')) bytesShut(false);
+    else if(e.key === 'Escape' && pageIsOpen() && !term.classList.contains('open')) pageClose();
   });
   if(location.hash === '#databytes') bytesOpen(false);
+
+  /* ── the shell ──────────────────────────────────────────────
+     The wiki opens inside this page, in a frame over it, so the radio, the
+     chat and ghostie keep running across the whole site. The address bar
+     names the framed page as #/wiki/x.html, so it can be shared, and a
+     direct visit to a wiki page hops back in here with that hash
+     (wiki/shell.js does the hop, and turns the wiki's links back to the
+     main page into closing the frame).
+     Back and forward walk the frame's own history; going back past where
+     it opened closes it. Only wiki pages are ever framed (pagePath), so
+     the hash cannot be used to put anything else in here. */
+  var pageView = document.getElementById('pageView'), pageFrame = document.getElementById('pageFrame');
+  var shellTitle = document.title;
+  function pagePath(p){
+    p = String(p || '').replace(/^#?\/*/, '');
+    return /^wiki\/(?:[\w-]+\.html)?(?:#[\w-]*)?$/.test(p) ? p : null;
+  }
+  function pageIsOpen(){ return pageView.classList.contains('open'); }
+  function pageOpen(p, push){
+    p = pagePath(p);
+    if(!p) return false;
+    if(bytesIsOpen()) bytesShut(true);
+    pageView.classList.add('open'); document.body.classList.add('page-open');
+    if(pageFrame.getAttribute('data-path') !== p){
+      pageFrame.setAttribute('data-path', p);
+      try { pageFrame.contentWindow.location.replace(p); } catch(e){ pageFrame.src = p; }
+    }
+    if(push){ try { history.pushState({ page: 1 }, '', '#/' + p); } catch(e){} }
+    return true;
+  }
+  function pageClose(){
+    if(!pageIsOpen()) return;
+    pageView.classList.remove('open'); document.body.classList.remove('page-open');
+    gh.classList.remove('away');
+    document.title = shellTitle;
+    try { pageFrame.contentWindow.location.replace('about:blank'); } catch(e){}
+    pageFrame.removeAttribute('data-path');
+    if(/^#\//.test(location.hash)){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} }
+    readFileRemark(2500);
+  }
+  pageFrame.addEventListener('load', function(){
+    if(!pageIsOpen()) return;
+    var w = pageFrame.contentWindow, path, d;
+    try { path = w.location.pathname.replace(/^\/+/, '') + w.location.hash; d = w.document; } catch(e){ return; }
+    if(!pagePath(path)) return;                    /* about:blank, or somewhere it should not be */
+    pageFrame.setAttribute('data-path', path);
+    try { history.replaceState({ page: 1 }, '', '#/' + path); } catch(e){}
+    if(d && d.title) document.title = d.title;
+    /* ghostie's own page has her as its cameo: no need for two of her */
+    gh.classList.toggle('away', !!(d && d.getElementById('cameo')));
+    /* touches inside the frame count as the first touch for the radio */
+    if(d){ d.addEventListener('pointerdown', radioFirstTouch, true); d.addEventListener('keydown', radioFirstTouch, true); }
+  });
+  window.addEventListener('popstate', function(){
+    var p = pagePath(location.hash);
+    if(p){ if(!pageIsOpen()) pageOpen(p, false); }   /* while open, the frame walks its own history */
+    else if(pageIsOpen()) pageClose();
+  });
+  window.exiledShell = {
+    close: pageClose,
+    bytes: function(){ pageClose(); bytesOpen(true); },
+    open: function(p){ return pageOpen(p, true); }
+  };
+  if(pagePath(location.hash)) pageOpen(location.hash, false);
 
   document.getElementById('termOpen').addEventListener('click', function(e){ e.preventDefault(); openTerm(); });
   document.getElementById('termClose').addEventListener('click', closeTerm);

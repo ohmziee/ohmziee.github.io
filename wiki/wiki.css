@@ -151,6 +151,9 @@ a.entry:hover{border-color:rgba(159,140,255,.4);background:rgba(159,140,255,.05)
   position:sticky;top:1.5rem;
 }
 @media (max-width:820px){.infobox{position:static}}
+/* one column (a phone, or the frame between the docks): the portrait keeps a
+   portrait size instead of stretching across the whole column */
+@media (max-width:820px){.infobox .portrait img{max-width:20rem;margin:0 auto}}
 
 .portrait{margin:0;border-bottom:1px solid rgba(159,140,255,.18)}
 .portrait img{display:block;width:100%;height:auto}
