@@ -229,7 +229,7 @@ main{position:relative;z-index:3}
 }
 
 /* chat window — on a wide screen the chat leaves the page flow and docks
-   bottom-right, above ghostie's corner, mirroring the radio on the left.
+   bottom-right, mirroring the radio on the left. ghostie moves for it.
    narrow screens keep it inline. the script moves the node between the
    two places; this only styles it. */
 .chat-min,.chat-new{display:none}
@@ -237,8 +237,7 @@ main{position:relative;z-index:3}
 @media (min-width:1100px) and (min-height:640px){
   #chatDock{
     display:block;position:fixed;z-index:30;
-    right:clamp(.6rem,2vw,1.6rem);
-    bottom:calc(clamp(.6rem,2vh,1.4rem) + clamp(64px,9vw,110px) * 1.03 + .8rem);
+    right:clamp(.6rem,2vw,1.6rem);bottom:clamp(.6rem,2vh,1.4rem);
     width:clamp(300px,24vw,420px);
   }
   #chatDock .chat{max-width:none;margin:0;padding:0}
@@ -581,9 +580,9 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
 
 /* ── ghostie ───────────────────────────────────────── */
 #ghostie{
-  position:fixed;left:auto;top:auto;right:clamp(.6rem,2vw,1.6rem);bottom:clamp(.6rem,2vh,1.4rem);
+  position:fixed;left:auto;top:auto;right:clamp(.6rem,2vw,1.6rem);bottom:calc(clamp(.6rem,2vh,1.4rem) + var(--gh-lift,0px));
   z-index:4;width:clamp(64px,9vw,110px);
-  transition:opacity 1.2s ease 1.6s,left 3.8s cubic-bezier(.45,.05,.3,1),top 3.8s cubic-bezier(.45,.05,.3,1);
+  transition:opacity 1.2s ease 1.6s,left 3.8s cubic-bezier(.45,.05,.3,1),top 3.8s cubic-bezier(.45,.05,.3,1),bottom .6s cubic-bezier(.45,.05,.3,1);
   cursor:pointer;user-select:none;-webkit-user-select:none;
   filter:drop-shadow(0 0 14px rgba(159,140,255,.45));
   animation:bob 4.2s ease-in-out infinite;
@@ -1278,6 +1277,44 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var b = baby.getBoundingClientRect(), pad = 24;
     return x < b.right + pad && x + w > b.left - pad && y < b.bottom + pad && y + h > b.top - pad;
   }
+  /* the docks (radio, chat window) are furniture. ghostie never sits on
+     them: her corner rises above whatever is docked under it, haunts that
+     would land on one are moved up, and when a dock opens, grows, folds or
+     closes she drifts clear or settles back down. */
+  function dockRects(){
+    var out = [];
+    ['radio', 'chatDock'].forEach(function(id){
+      var el = document.getElementById(id), r = el && el.getBoundingClientRect && el.getBoundingClientRect();
+      if(r && r.width && r.height) out.push(r);
+    });
+    return out;
+  }
+  function aboveDocks(x, y, w, h){
+    var rs = dockRects(), moved = true, guard = 0;
+    while(moved && guard++ < 4){
+      moved = false;
+      rs.forEach(function(r){
+        if(x < r.right && x + w > r.left && y < r.bottom && y + h > r.top){ y = r.top - h - 8; moved = true; }
+      });
+    }
+    return Math.max(4, y);
+  }
+  function dodgeDocks(){
+    if(gDrag || !gh.getBoundingClientRect) return;
+    var r = gh.getBoundingClientRect();
+    var home = !gh.style.top || gh.style.top === 'auto';
+    if(home){
+      /* where the corner puts her with no lift (worked out, not measured,
+         since she may be mid-glide), then how far up to clear the docks.
+         the base matches bottom:clamp(.6rem,2vh,1.4rem) */
+      var base = Math.min(22.4, Math.max(9.6, window.innerHeight * .02)), h = gh.offsetHeight || r.height;
+      var y0 = window.innerHeight - base - h, y = aboveDocks(r.left, y0, r.width, h);
+      gh.style.setProperty('--gh-lift', Math.max(0, Math.round(y0 - y)) + 'px');
+    } else {
+      var y1 = aboveDocks(r.left, r.top, r.width, r.height);
+      if(y1 !== r.top) gh.style.top = y1 + 'px';
+    }
+  }
   var nudgeT;
   function nudgeGhostie(){
     if(gPlaced || gDrag) return;              /* you put her there. she stays. */
@@ -1298,6 +1335,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var w = window.innerWidth, gw = gh.offsetWidth, ghh = gh.offsetHeight, spots = haunts();
     var p, tries = 0;
     do { p = spots[Math.floor(Math.random()*spots.length)]; tries++; } while(tries < 12 && hitsBaby(p[0], p[1], gw, ghh));
+    p = [p[0], aboveDocks(p[0], p[1], gw, ghh)];
     gh.style.right = 'auto'; gh.style.bottom = 'auto';
     gh.style.left = p[0] + 'px'; gh.style.top = p[1] + 'px';
     gh.classList.toggle('flip', p[0] < w/2);
@@ -2913,6 +2951,12 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   if(chatMinB) chatMinB.addEventListener('click', function(){ chatMini(!chatSec.classList.contains('mini')); });
   try { if(localStorage.getItem('exiled.chatMini')) chatMini(true); } catch(e){}
   chatPlace();
+  if(window.ResizeObserver){
+    var dockWatch = new ResizeObserver(function(){ dodgeDocks(); });
+    ['radio', 'chatDock'].forEach(function(id){ var el = document.getElementById(id); if(el) dockWatch.observe(el); });
+  }
+  window.addEventListener('resize', function(){ setTimeout(dodgeDocks, 50); });
+  setTimeout(dodgeDocks, 0);
   if(chatWide){
     if(chatWide.addEventListener) chatWide.addEventListener('change', chatPlace);
     else if(chatWide.addListener) chatWide.addListener(chatPlace);
