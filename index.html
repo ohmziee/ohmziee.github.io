@@ -57,6 +57,7 @@ a{color:inherit;text-decoration:none}
 :focus-visible{outline:2px solid var(--glitch-a);outline-offset:4px}
 
 /* ── atmosphere layers ─────────────────────────────── */
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 #rain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.55}
 .scanlines{
   position:fixed;inset:0;z-index:2;pointer-events:none;
@@ -798,6 +799,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 </head>
 <body>
 
+<canvas id="sky" aria-hidden="true"></canvas>
 <canvas id="rain" aria-hidden="true"></canvas>
 <canvas id="bolt" aria-hidden="true"></canvas>
 <div id="flash" aria-hidden="true"></div>
@@ -1584,6 +1586,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     intensity = Math.max(0, Math.min(100, +v));
     try{ localStorage.setItem('exiled.rain', intensity); }catch(e){}
     build();
+    if(reduce && skx) skyDraw(0);
     if(intensity >= 100 && was < 100){
       setTimeout(stormEvent, 400);
       if(!mainframeOpen) setTimeout(function(){ speak('the storm is loud enough now. say the name.', 3400); }, 1600);
@@ -1626,6 +1629,102 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var bolts = [];
   /* modest machines get fewer forks and a lower ceiling. nothing here grows over time. */
   var LOWPOWER = (navigator.hardwareConcurrency || 4) <= 4 || window.innerWidth < 560;
+  /* ── the sky ────────────────────────────────────────────────
+     Stars behind the rain, following the rain slider all the way:
+       0    plain white stars
+       ~50  a green aurora has risen over the top of the page
+       100  the stars take colour and the aurora runs every colour
+     Continuous, not three states, so dragging the slider walks the sky
+     through it. The aurora is drawn small and scaled up, which is what
+     makes it soft. ~24fps (15 on low power), nothing while the tab is
+     hidden, and a single still frame with reduced motion. */
+  var sky = document.getElementById('sky'), skx = sky && sky.getContext ? sky.getContext('2d') : null;
+  var skyAur = document.createElement('canvas'), ska = skyAur.getContext ? skyAur.getContext('2d') : null;
+  var skyStars = [], skyRays = [], skyDpr = Math.min(1.5, window.devicePixelRatio || 1);
+  function skyEase(a, b, x){ var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+  function skyBuild(){
+    if(!skx) return;
+    sky.width = Math.round(window.innerWidth * skyDpr); sky.height = Math.round(window.innerHeight * skyDpr);
+    skyAur.width = Math.max(1, Math.round(sky.width / 4)); skyAur.height = Math.max(1, Math.round(sky.height / 4));
+    /* ray strength per column: random, then smoothed, so streaks come in
+       irregular clusters rather than a regular comb */
+    var raw = [], j;
+    for(j = 0; j < skyAur.width * 2; j++) raw.push(Math.random());
+    skyRays = raw.map(function(v, i){ return (v + (raw[i - 1] || v) + (raw[i + 1] || v)) / 3; });
+    var n = Math.round(window.innerWidth * window.innerHeight / (LOWPOWER ? 5200 : 3000));
+    skyStars = [];
+    for(var i = 0; i < n; i++) skyStars.push({ x: Math.random(), y: Math.pow(Math.random(), 1.2), r: .7 + Math.random() * 1.5, big: Math.random() < .05,
+      ph: Math.random() * 6.283, sp: .4 + Math.random() * 1.4, hue: Math.random() * 360, a: .45 + Math.random() * .5 });
+  }
+  function skyDraw(t){
+    var w = sky.width, h = sky.height, k = intensity / 100, i, b, x;
+    var aur = skyEase(.15, .5, k), col = skyEase(.55, 1, k);
+    skx.clearRect(0, 0, w, h);
+    if(aur > .01 && ska){
+      var aw = skyAur.width, ah = skyAur.height;
+      ska.clearRect(0, 0, aw, ah);
+      ska.globalCompositeOperation = 'lighter';
+      for(b = 0; b < 3; b++){
+        /* a curtain: a wavy top edge, hanging down, fading as it falls */
+        var g = ska.createLinearGradient(0, 0, aw, 0);
+        for(i = 0; i <= 4; i++){
+          var hue = 150 + b * 18 + i * 6 + col * ((i * 70 + b * 110 + t * .012) % 360);
+          g.addColorStop(i / 4, 'hsla(' + hue.toFixed(0) + ',85%,' + (55 + col * 8) + '%,1)');
+        }
+        var step = Math.max(2, Math.round(aw / 90));
+        for(var layer = 0; layer < 6; layer++){
+          ska.beginPath();
+          for(x = 0; x <= aw + step; x += step){
+            var top = ah * (.12 + b * .07) + Math.sin(x / aw * 7 + t * .00035 * (1 + b * .4) + b) * ah * .05
+                    + Math.sin(x / aw * 17 + t * .0006) * ah * .018;
+            var len = ah * (.16 + .14 * (.5 + .5 * Math.sin(x / aw * 9 + t * .0005 + b * 2)));
+            var y = top + len * layer / 6;
+            if(x === 0) ska.moveTo(x, y); else ska.lineTo(x, y);
+          }
+          for(x = aw + step; x >= 0; x -= step){
+            var top2 = ah * (.12 + b * .07) + Math.sin(x / aw * 7 + t * .00035 * (1 + b * .4) + b) * ah * .05
+                     + Math.sin(x / aw * 17 + t * .0006) * ah * .018;
+            var len2 = ah * (.16 + .14 * (.5 + .5 * Math.sin(x / aw * 9 + t * .0005 + b * 2)));
+            ska.lineTo(x, top2 + len2 * (layer + 1) / 6);
+          }
+          ska.closePath();
+          ska.globalAlpha = .3 * (1 - layer / 6);
+          ska.fillStyle = g; ska.fill();
+        }
+      }
+      /* rays: thin vertical streaks cut into the curtains, drifting slowly,
+         so it hangs like an aurora instead of lying flat like a ribbon */
+      ska.globalCompositeOperation = 'destination-out';
+      var drift = Math.floor(t * .002);
+      for(x = 0; x < aw; x++){
+        var ray = skyRays[(x + drift) % skyRays.length] || 0;
+        ska.globalAlpha = Math.max(0, ray - .45) * 1.3;
+        ska.fillRect(x, 0, 1, ah);
+      }
+      ska.globalAlpha = 1; ska.globalCompositeOperation = 'source-over';
+      skx.globalAlpha = Math.min(1, aur * (.72 + col * .03));
+      skx.imageSmoothingEnabled = true;
+      skx.drawImage(skyAur, 0, 0, w, h);
+      skx.globalAlpha = 1;
+    }
+    for(i = 0; i < skyStars.length; i++){
+      var st = skyStars[i], tw = .6 + .4 * Math.sin(t * .001 * st.sp + st.ph), r = st.r * skyDpr;
+      skx.fillStyle = col > .02 ? 'hsla(' + st.hue.toFixed(0) + ',' + (col * 95).toFixed(0) + '%,' + (88 - col * 18).toFixed(0) + '%,' + (st.a * tw).toFixed(3) + ')'
+                                : 'rgba(220,227,255,' + (st.a * tw).toFixed(3) + ')';
+      skx.fillRect(st.x * w - r / 2, st.y * h - r / 2, r, r);
+      /* a few bright ones get a soft halo */
+      if(st.big){ skx.globalAlpha = .25; skx.fillRect(st.x * w - r * 1.5, st.y * h - r * 1.5, r * 3, r * 3); skx.globalAlpha = 1; }
+    }
+  }
+  if(skx){
+    skyBuild();
+    window.addEventListener('resize', function(){ skyBuild(); if(reduce) skyDraw(0); });
+    if(reduce) skyDraw(0);
+    else (function skyLoop(){
+      if(!document.hidden) skyDraw(Date.now() % 1e9);
+      setTimeout(function(){ requestAnimationFrame(skyLoop); }, LOWPOWER ? 66 : 41);
+    })();
+  }
   if(LOWPOWER && document.body) document.body.classList.add('lowpower');
   var BOLT_CAP = LOWPOWER ? 8 : 20;
   var GLOW = LOWPOWER ? 10 : 22;
@@ -3142,10 +3241,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var rState = document.getElementById('radioState'), rNow = document.getElementById('radioNow'), rPlay = document.getElementById('radioPlay');
   var rTracks = document.getElementById('radioTracks'), rVol = document.getElementById('radioVol');
   var rTabNow = document.getElementById('radioTabNow'), rMini = document.getElementById('radioMini');
-  function radioMini(on){
+  function radioMini(on, justNow){
     rEl.classList.toggle('mini', on);
     rMini.textContent = on ? 'max' : 'min'; rMini.setAttribute('aria-pressed', String(on));
     rMini.title = on ? 'show the controls again' : 'shrink to just the screen';
+    if(justNow) return;
     try { localStorage.setItem('exiled.radioMini', on ? '1' : ''); } catch(e){}
   }
   try { if(localStorage.getItem('exiled.radioMini')) radioMini(true); } catch(e){}
@@ -3195,6 +3295,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function radioState(e){
     var st = e.data;
     radio.playing = st === 1;
+    if(st === 1){ radioRemember('on'); if(radio.fade){ radio.fade = false; radioFadeIn(); } }
+    if(st === 2) radioRemember('off');
     /* a single pick finished: back to the station where it left off */
     if(st === 0 && radio.mine && !radio.minePl) return radioHome();
     radio.idx = radio.mine ? -1 : radio.yt.getPlaylistIndex ? radio.yt.getPlaylistIndex() : -1;
@@ -3212,7 +3314,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       events: {
         onReady: function(){
           radio.ready = true;
-          radio.yt.setLoop(true); radio.yt.setVolume(+rVol.value);
+          radio.yt.setLoop(true); radio.yt.setVolume(radio.fade ? 0 : +rVol.value);
           radioList(); radioPaint();
           if(radio.pending){ var p = radio.pending; radio.pending = null; radioMine(p); }
           else if(radio.want) radio.yt.playVideo();
@@ -3252,6 +3354,44 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     rPanel.hidden = true; rTab.hidden = false; rTab.setAttribute('aria-expanded', 'false'); rEl.classList.remove('open');
     radioPaint(); ghostVibe(false);
   }
+  /* ── tune in on first touch ──
+     Browsers hold back sound until the visitor has interacted with the
+     page, so the radio cannot start the instant the page loads. It starts
+     on the first click, tap or key anywhere instead: opened small (mini,
+     for this visit only) with the volume easing up over a few seconds.
+     Nothing is fetched from YouTube before that touch.
+     exiled.radioPref remembers what happened last: someone who paused or
+     switched the radio off keeps it off on later visits until they turn it
+     back on themselves. A first touch on the radio itself is left alone,
+     since it is already doing what they asked. */
+  var radioPref = '';
+  try { radioPref = localStorage.getItem('exiled.radioPref') || ''; } catch(e){}
+  function radioRemember(v){
+    if(radioPref === v) return;
+    radioPref = v;
+    try { localStorage.setItem('exiled.radioPref', v); } catch(e){}
+  }
+  function radioFadeIn(){
+    var target = +rVol.value, v = 0, iv = setInterval(function(){
+      if(!radio.ready){ return clearInterval(iv); }
+      v = Math.min(target, v + Math.max(1, Math.round(target / 20)));
+      radio.yt.setVolume(v);
+      if(v >= target) clearInterval(iv);
+    }, 150);
+  }
+  function radioFirstTouch(e){
+    document.removeEventListener('pointerdown', radioFirstTouch, true);
+    document.removeEventListener('keydown', radioFirstTouch, true);
+    var t = e && e.target;
+    if(radioPref === 'off' || radio.yt || radio.loading) return;
+    if(t && t.closest && t.closest('#radio')) return;
+    radio.fade = true;
+    if(!rEl.classList.contains('mini')) radioMini(true, true);
+    radioOpen(true);
+  }
+  document.addEventListener('pointerdown', radioFirstTouch, true);
+  document.addEventListener('keydown', radioFirstTouch, true);
+
   /* ── ghostie and the radio ──
      On air: headphones on, swaying, notes drifting up, and now and then a
      remark about what's playing (the first track always gets one, after
