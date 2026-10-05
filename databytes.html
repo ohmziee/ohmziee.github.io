@@ -8,12 +8,20 @@
 <title>EXiLED // Databytes</title>
 <meta name="description" content="Recovered fragments. Case files, stills, footage, transmissions.">
 <meta name="theme-color" content="#05060B">
+<link rel="canonical" href="https://ohmziee.github.io/databytes.html">
+<meta property="og:site_name" content="EXiLED">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Databytes // EXiLED">
+<meta property="og:description" content="Recovered fragments. Case files, stills, footage, transmissions.">
+<meta property="og:url" content="https://ohmziee.github.io/databytes.html">
+<meta property="og:image" content="https://ohmziee.github.io/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%2305060B'/%3E%3Crect x='2' y='7' width='12' height='1' fill='%239F8CFF'/%3E%3Crect x='3' y='6' width='10' height='1' fill='%239F8CFF'/%3E%3Crect x='4' y='5' width='8' height='1' fill='%237CF5FF'/%3E%3Crect x='2' y='8' width='12' height='1' fill='%239F8CFF'/%3E%3Crect x='4' y='9' width='8' height='1' fill='%237CF5FF'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23DCE3FF'/%3E%3Crect x='7' y='7' width='2' height='2' fill='%2305060B'/%3E%3Crect x='9' y='6' width='1' height='1' fill='%23FF4FD8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root{
-  --void:#05060B;--deep:#0B0D1A;--violet:#2A1D5E;--lavender:#9F8CFF;--ice:#DCE3FF;--rain:#4A5068;
+  --void:#05060B;--deep:#0B0D1A;--violet:#2A1D5E;--lavender:#9F8CFF;--ice:#DCE3FF;--rain:#7A82A0;
   --glitch-a:#7CF5FF;--glitch-b:#FF4FD8;--green:#7CFFB2;
   --font-display:'Rajdhani',"Segoe UI",Arial,sans-serif;--font-mono:'Share Tech Mono',"Courier New",monospace;
 }
@@ -37,7 +45,7 @@ h1 small{display:block;font-family:var(--font-mono);font-weight:400;font-size:.7
 .byte.wide{grid-column:1/-1}
 .byte .meta{display:flex;justify-content:space-between;gap:.8rem;padding:.7rem .9rem 0;font-size:.66rem;letter-spacing:.14em;color:var(--rain)}
 .byte .meta b{font-weight:400;color:var(--lavender)}
-.byte h3{font-family:var(--font-display);font-weight:600;font-size:1.15rem;letter-spacing:.08em;padding:.35rem .9rem .6rem}
+.byte h2{font-family:var(--font-display);font-weight:600;font-size:1.15rem;letter-spacing:.08em;padding:.35rem .9rem .6rem}
 .byte img,.byte video{width:100%;display:block;max-height:70vh;object-fit:cover;background:var(--deep)}
 .byte audio{width:100%;display:block;filter:invert(1) hue-rotate(180deg) saturate(.6);padding:.6rem .9rem}
 .byte p{padding:.8rem .9rem;font-size:.86rem;line-height:1.7;color:var(--ice);flex:1}
@@ -79,7 +87,7 @@ footer{position:relative;z-index:3;text-align:center;padding:2rem 5vw 3rem;color
     var tags = (b.tags||[]).map(function(t){ return '<span>' + esc(t) + '</span>'; }).join('');
     return '<article class="' + cls + '" style="animation-delay:' + (i*60) + 'ms">' +
       '<div class="meta"><b>' + (labels[b.type]||esc(b.type).toUpperCase()) + '</b><span>' + esc(b.date) + ' // #' + esc(b.id) + '</span></div>' +
-      '<h3>' + esc(b.title) + '</h3>' + media +
+      '<h2>' + esc(b.title) + '</h2>' + media +
       (b.text ? '<p>' + esc(b.text) + '</p>' : '') +
       (tags ? '<div class="tags">' + tags + '</div>' : '') + '</article>';
   }

@@ -7,7 +7,9 @@
   --violet:#2A1D5E;
   --lavender:#9F8CFF;
   --ice:#DCE3FF;
-  --rain:#4A5068;
+  /* dim text grey: the dimmest that still reads at 4.5:1 (WCAG AA) on every
+     dark surface here. it was #4A5068, 2.5:1 */
+  --rain:#7A82A0;
   --glitch-a:#7CF5FF;
   --glitch-b:#FF4FD8;
   --font-display:'Rajdhani',"Segoe UI",Arial,sans-serif;
@@ -119,7 +121,7 @@ a.entry:hover{border-color:rgba(159,140,255,.4);background:rgba(159,140,255,.05)
 .entry .s{color:var(--glitch-a);font-size:.64rem;letter-spacing:.16em;opacity:.75}
 .entry.dead{cursor:default}
 .entry.dead .n{color:var(--rain)}
-.entry.dead .s{color:var(--rain);opacity:.6}
+.entry.dead .s{color:var(--rain);opacity:1}
 
 /* ── footer ──────────────────────────────────────────────── */
 .wfoot{
@@ -208,7 +210,7 @@ ul.bul li{margin:.2rem 0;font-size:.85rem;line-height:1.6}
   aspect-ratio:1;display:grid;place-items:center;
   background:repeating-linear-gradient(0deg,rgba(220,227,255,.03) 0 2px,transparent 2px 4px),#000;
 }
-.portrait.void span{color:var(--rain);font-size:.66rem;letter-spacing:.24em;opacity:.7}
+.portrait.void span{color:var(--rain);font-size:.66rem;letter-spacing:.24em}
 .entry.sealed .s{color:var(--glitch-b);opacity:.85}
 
 /* ── cameo: a character floating on their own page ───────── */
