@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-n/Ilj7oj4qLu7GX5jfZY5CZV+ryo6Z1j9v0sPBoJneQ=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -1122,6 +1123,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
 <script>
 (function(){
+
+  /* clickjacking: a <meta> policy cannot forbid framing, so the page refuses
+     it itself. inside another site's frame it shows only a link out. this
+     site's own frame (the wiki in the shell) is the same origin and fine. */
+  (function(){
+    var foreign = false;
+    try { foreign = window.top !== window.self && !window.top.location.host; } catch(e){ foreign = true; }
+    if(!foreign) return;
+    document.documentElement.innerHTML = '<body style="background:#05060B;color:#DCE3FF;font:16px monospace;padding:2rem">' +
+      '<a href="https://ohmziee.github.io/" target="_blank" rel="noopener" style="color:#9F8CFF">open EXiLED in its own tab</a></body>';
+    throw new Error('framed by another site');
+  })();
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   document.getElementById('yr').textContent = new Date().getFullYear();
 
