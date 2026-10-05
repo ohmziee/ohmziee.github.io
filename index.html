@@ -795,7 +795,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .wanted .creed{font-size:.72rem}
   #babyPerch{margin-top:-1rem}
   #ghostie{width:clamp(56px,17vw,86px)}
-  #ghostie .say{font-size:.64rem;white-space:normal;max-width:46vw;text-align:right}
+  /* width:max-content, or the bubble shrinks to ghostie's own width and
+     wraps a word per line */
+  #ghostie .say{font-size:.64rem;white-space:normal;width:max-content;max-width:46vw;text-align:right}
   #ghostie.flip .say{text-align:left}
   #baby .purr{font-size:.64rem;white-space:normal;max-width:38vw}
   footer{font-size:.62rem;letter-spacing:.12em;padding:1.6rem 5vw calc(2rem + env(safe-area-inset-bottom,0px))}
@@ -3695,9 +3697,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     /* touches inside the frame count as the first touch for the radio */
     if(d){ d.addEventListener('pointerdown', radioFirstTouch, true); d.addEventListener('keydown', radioFirstTouch, true); }
   });
-  window.addEventListener('popstate', function(){
+  /* entries the shell made carry state {page:1}: going back or forward to
+     one is the frame walking its own history, which it does by itself. a
+     fresh #/wiki/... (a pasted or clicked link) has no state, and loads. */
+  window.addEventListener('popstate', function(e){
     var p = pagePath(location.hash);
-    if(p){ if(!pageIsOpen()) pageOpen(p, false); }   /* while open, the frame walks its own history */
+    if(p){
+      if(!pageIsOpen()) pageOpen(p, false);
+      else if(!(e.state && e.state.page) && pageFrame.getAttribute('data-path') !== p){
+        pageFrame.setAttribute('data-path', p);
+        try { pageFrame.contentWindow.location.replace(p); } catch(err){ pageFrame.src = p; }
+      }
+    }
     else if(pageIsOpen()) pageClose();
   });
   window.exiledShell = {
