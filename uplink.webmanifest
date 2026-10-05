@@ -1,0 +1,16 @@
+{
+  "id": "/uplink.html",
+  "name": "EXiLED Uplink",
+  "short_name": "Uplink",
+  "description": "post to databytes from anywhere",
+  "start_url": "/uplink.html",
+  "scope": "/uplink.html",
+  "display": "standalone",
+  "background_color": "#05060B",
+  "theme_color": "#05060B",
+  "icons": [
+    { "src": "/img/uplink-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/img/uplink-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/img/uplink-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
