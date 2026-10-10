@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-n/Ilj7oj4qLu7GX5jfZY5CZV+ryo6Z1j9v0sPBoJneQ=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-MvtOpywwELzviC52NwwDnalYvGmewzSxelGQwisXb7w=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -2588,8 +2588,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
     var lastId = 0, seen = {}, greeted = {}, echoes = [];
 
+    /* regulars keep their own colour when they speak live */
+    var regs = {};
+    REGULARS.forEach(function(r){ regs[r.name.toLowerCase()] = r; });
+
     /* stable colour for a handle we have never seen before */
     function handleCol(h){
+      var reg = regs[String(h).toLowerCase()];
+      if(reg) return reg.col;
       if(userCol[h]) return userCol[h];
       var n = 0;
       for(var i = 0; i < h.length; i++) n = (n*31 + h.charCodeAt(i)) >>> 0;
@@ -2650,6 +2656,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     function receive(handle, body, id){
       renderMessage({ u: handle, c: handleCol(handle), t: body }, true);
       var key = handle.toLowerCase();
+      /* a regular is not new here. nobody welcomes them */
+      if(regs[key]) return;
       var heavy = DISTRESS_HINT.test(body);
       /* a heavy line always gets answered, first message or not */
       if(heavy || !greeted[key]){ greeted[key] = 1; swarm(handle, heavy, id); }
@@ -2718,10 +2726,12 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     /* harvest: real messages older than a day become ambient filler,
        spoken by phantom handles. the pool grows itself over time. */
     var cutoff = new Date(Date.now() - 86400000).toISOString();
-    api('messages?select=body&status=eq.approved&created_at=lt.' + cutoff +
+    api('messages?select=handle,body&status=eq.approved&created_at=lt.' + cutoff +
         '&order=id.desc&limit=60').then(function(rows){
       if(!rows) return;
-      var lines = rows.map(function(r){ return r.body; }).filter(function(b){
+      /* a regular's words stay in their own mouth */
+      var lines = rows.filter(function(r){ return !regs[String(r.handle).toLowerCase()]; })
+        .map(function(r){ return r.body; }).filter(function(b){
         return b && b.length > 2 && b.length < 120;
       });
       if(lines.length >= 6){
