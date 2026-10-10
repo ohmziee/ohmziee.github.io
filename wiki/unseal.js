@@ -5,26 +5,41 @@
   var isIndex = !slug && document.body.getAttribute('data-wiki-index') !== null;
   function done(){ root.classList.remove('unsealing'); }
   setTimeout(done, 2500);
-  var k = null; try{ k = localStorage.getItem('exiled.vault'); }catch(e){}
+  /* the keys this browser holds: the vault's on its own, characters met
+     in the mainframe in a map by name */
+  var held = {};
+  try{ var v = localStorage.getItem('exiled.vault'); if(v) held.vault = v; }catch(e){}
+  try{
+    var ks = JSON.parse(localStorage.getItem('exiled.keys') || '{}') || {};
+    for(var n in ks) if(n !== 'vault' && typeof ks[n] === 'string') held[n] = ks[n];
+  }catch(e){}
   var S = window.EXILED_SEAL, ent = slug && S && S.entries && S.entries[slug];
-  if(!k || !S || !window.crypto || !crypto.subtle || (!ent && !isIndex)) return done();
+  if(!S || !window.crypto || !crypto.subtle || (!ent && !isIndex)) return done();
   function bytes(s){ return Uint8Array.from(atob(s), function(c){ return c.charCodeAt(0); }); }
-  var keyP = crypto.subtle.importKey('raw', bytes(k), 'AES-GCM', false, ['decrypt']);
+  function keyOf(name){
+    return held[name] ? crypto.subtle.importKey('raw', bytes(held[name]), 'AES-GCM', false, ['decrypt'])
+                      : Promise.reject(new Error('not held'));
+  }
+  function checkOf(name){ return name === 'vault' ? S.check : (S.keys && S.keys[name] && S.keys[name].check); }
 
-  /* the index: a key that opens the check blob opens every sealed entry,
-     so their rows stop saying SEALED */
+  /* the index: each sealed row stops saying SEALED once this browser holds
+     a key that opens that row's own check blob */
   if(isIndex){
-    keyP.then(function(key){ return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(S.check.iv) }, key, bytes(S.check.ct)); })
-      .then(function(){
-        [].forEach.call(document.querySelectorAll('a.entry.sealed'), function(a){
+    [].forEach.call(document.querySelectorAll('a.entry.sealed'), function(a){
+      var s = (a.getAttribute('href') || '').replace(/\.html$/, ''), e = S.entries && S.entries[s];
+      var name = (e && e.key) || 'vault', c = checkOf(name);
+      if(!c || !held[name]) return;
+      keyOf(name).then(function(key){ return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(c.iv) }, key, bytes(c.ct)); })
+        .then(function(){
           a.classList.remove('sealed');
           var st = a.querySelector('.s'); if(st) st.textContent = 'RECOVERED';
-        });
-      }, function(){});
+        }, function(){});
+    });
     return done();
   }
 
-  keyP.then(function(key){
+  if(!held[ent.key || 'vault']) return done();
+  keyOf(ent.key || 'vault').then(function(key){
     return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(ent.iv) }, key, bytes(ent.ct)).then(function(buf){
       var t = document.createElement('template');
       t.innerHTML = new TextDecoder().decode(buf);
