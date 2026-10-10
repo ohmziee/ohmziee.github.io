@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-wkKsWyiLjKK7qD20azSHiUOcNzN18+GoZ9yH6IUZyDY=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-RDldZMraInkw8ttT1BS7sbwNVqdbXkg2N9uEj6OH+CA=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -656,6 +656,12 @@ body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #radio #ambTab{b
 #radio #ambTab:hover,#radio #ambTab:focus-visible{border-color:var(--lavender);background:rgba(42,29,94,.5);color:var(--ice)}
 #radio #ambTab svg{width:1.05rem;height:1.05rem;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #radio #ambTab .a-wave{display:none}
+#radio #ambTab{overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#radio #ambTab .a-fill{position:absolute;left:0;top:0;bottom:0;width:50%;pointer-events:none;
+  background:rgba(159,140,255,.14);border-right:1px solid rgba(159,140,255,.45);transition:width .12s,background .2s}
+#radio #ambTab.on .a-fill{background:rgba(124,255,178,.16);border-right-color:rgba(124,255,178,.55)}
+#radio #ambTab.dragging .a-fill{transition:none}
+#radio #ambTab svg,#radio #ambTab .a-label{position:relative}
 #radio #ambTab.on{color:#7CFFB2}
 #radio #ambTab.on .a-wave{display:inline}
 #radio #ambTab.on .a-x{display:none}
@@ -1104,7 +1110,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      nothing here needs touching. -->
 <div id="radio">
   <button type="button" id="radioTab" aria-expanded="false" aria-controls="radioPanel"><span class="r-dot" aria-hidden="true"></span>RADIO<span class="r-tabnow" id="radioTabNow"></span></button>
-  <button type="button" id="ambTab" aria-pressed="false" aria-label="rain sounds" title="rain sounds: off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="a-wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/><path class="a-x" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg><span class="a-label">RAIN</span></button>
+  <button type="button" id="ambTab" aria-pressed="false" aria-label="rain sounds" title="rain sounds: off"><span class="a-fill" id="ambFill" aria-hidden="true"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="a-wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/><path class="a-x" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg><span class="a-label">RAIN</span></button>
   <div id="radioPanel" role="region" aria-label="EXiLED radio" hidden>
     <div class="r-bar">
       <span class="r-dot" aria-hidden="true"></span><span class="r-title">EXiLED RADIO</span>
@@ -1935,15 +1941,21 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   /* ── the storm, heard ───────────────────────────────────────
      On by default, but browsers hold sound back until the visitor's first
-     tap or key, so it starts then. The speaker by the radio switches it off. Nothing is downloaded: the rain is filtered
-     noise and the thunder a low rumble, both made here, so there are no
-     files and nothing to license. It follows the rain slider but never drops
-     below a drizzle once switched on, rumbles far off now and then on its
-     own, and answers each lightning strike a beat late, nearer strikes
-     sooner. It sits lower while the radio plays and keeps going in a
-     background tab. */
-  var amb = { ac: null, on: false, master: null, duck: null, body: null, hiss: null, hissF: null, thunder: null, rumble: null, white: null, lastBoom: 0 };
-  var ambBtn = document.getElementById('ambTab'), ambOffT;
+     tap or key, so it starts then. Nothing is downloaded: the rain is
+     filtered noise and the thunder a low rumble, both made here, so there
+     are no files and nothing to license.
+     How hard it storms follows the rain level exactly (the slider, or
+     `rain N` in the terminal): 0 is silence, low numbers a soft drizzle with
+     the odd far-off roll, 100 a downpour with thunder close and often. Each
+     lightning strike is answered a beat late, nearer strikes sooner.
+     The speaker by the radio is also its volume bar: click to mute, drag
+     across it (or scroll, or arrow keys) to set the level. 50% to start,
+     remembered after that. It sits lower while the radio plays and keeps
+     going in a background tab. */
+  var amb = { ac: null, on: false, vol: .5, master: null, out: null, body: null, bodyF: null, hiss: null, hissF: null,
+              thunder: null, rumble: null, white: null, lastBoom: 0 };
+  var ambBtn = document.getElementById('ambTab'), ambFill = document.getElementById('ambFill'), ambOffT;
+  try { var vs = localStorage.getItem('exiled.ambVol'); if(vs !== null && vs !== '' && !isNaN(+vs)) amb.vol = Math.max(0, Math.min(1, +vs)); } catch(e){}
   function ambNoise(ac, secs, brown){
     var len = Math.floor(ac.sampleRate * secs), buf = ac.createBuffer(2, len, ac.sampleRate);
     for(var ch = 0; ch < 2; ch++){
@@ -1955,6 +1967,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     return buf;
   }
+  /* the volume bar is linear to the eye, so the gain under it is curved:
+     half the bar is the old fixed level, the full bar about 2.6x that */
+  function ambGain(){ return amb.vol <= 0 ? 0 : .38 * Math.pow(2 * amb.vol, 1.4); }
   function ambBuild(ac){
     amb.ac = ac;
     /* white noise loops seamlessly (it has no shape to break); the rumble
@@ -1962,13 +1977,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     amb.white = ambNoise(ac, 4, false);
     amb.rumble = ambNoise(ac, 12, true);
     amb.master = ac.createGain(); amb.master.gain.value = 0;
-    amb.duck = ac.createGain(); amb.duck.gain.value = .38;
-    amb.master.connect(amb.duck); amb.duck.connect(ac.destination);
-    /* body: the wash of rain on everything */
+    amb.out = ac.createGain(); amb.out.gain.value = ambGain();
+    amb.master.connect(amb.out); amb.out.connect(ac.destination);
+    /* body: the wash of rain on everything, darker when it's light */
     var s1 = ac.createBufferSource(); s1.buffer = amb.white; s1.loop = true;
-    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 950; lp.Q.value = .3;
+    amb.bodyF = ac.createBiquadFilter(); amb.bodyF.type = 'lowpass'; amb.bodyF.frequency.value = 950; amb.bodyF.Q.value = .3;
     amb.body = ac.createGain(); amb.body.gain.value = 0;
-    s1.connect(lp); lp.connect(amb.body); amb.body.connect(amb.master);
+    s1.connect(amb.bodyF); amb.bodyF.connect(amb.body); amb.body.connect(amb.master);
     /* hiss: the close patter, brighter as the rain gets heavier */
     var s2 = ac.createBufferSource(); s2.buffer = amb.white; s2.loop = true;
     var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400;
@@ -1978,20 +1993,23 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     amb.thunder = ac.createGain(); amb.thunder.gain.value = 1.3; amb.thunder.connect(amb.master);
     s1.start(0); s2.start(0, 1.7);
   }
-  /* levels, with a little gusting so the rain never sits perfectly still */
+  /* levels, with gusting so the rain never sits still; heavier rain gusts harder */
   function ambTick(){
     if(!amb || !amb.ac) return;
-    var t = amb.ac.currentTime, k = Math.max(intensity, 30) / 100, gust = .8 + Math.random() * .4;
+    var t = amb.ac.currentTime, k = intensity / 100, gust = 1 + (Math.random() - .5) * (.15 + k * .35);
     var radioOn = !!document.querySelector('#radio.on');
     amb.master.gain.setTargetAtTime(amb.on ? (radioOn ? .5 : 1) : 0, t, amb.on ? .9 : .35);
-    amb.body.gain.setTargetAtTime((.22 + k * .5) * gust, t, 1.4);
-    amb.hiss.gain.setTargetAtTime((.03 + k * .14) * (.85 + Math.random() * .3), t, 1.1);
-    amb.hissF.frequency.setTargetAtTime(3800 + k * 4200, t, 2);
+    amb.out.gain.setTargetAtTime(ambGain(), t, .05);
+    amb.body.gain.setTargetAtTime(k ? (.06 + k * .62) * gust : 0, t, 1.4);
+    amb.bodyF.frequency.setTargetAtTime(500 + k * 900, t, 2);
+    amb.hiss.gain.setTargetAtTime(k ? (.008 + k * k * .2) * gust : 0, t, 1.1);
+    amb.hissF.frequency.setTargetAtTime(2600 + k * 6000, t, 2);
+    amb.thunder.gain.setTargetAtTime(.8 + k * .7, t, 1);
   }
   setInterval(function(){ if(amb.on) ambTick(); }, 1800);
   /* power 0..1: 0 is far over the river, 1 is right overhead */
   function ambThunder(power, delay){
-    if(!amb || !amb.on || !amb.ac) return;
+    if(!amb || !amb.on || !amb.ac || !intensity) return;
     var ac = amb.ac, now = ac.currentTime;
     if(now - amb.lastBoom < 1.1) return;
     amb.lastBoom = now;
@@ -2022,13 +2040,22 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       cs.start(t, Math.random() * 3); cs.stop(t + 1);
     }
   }
-  /* the slight thunder: distant rolls on their own, more often in heavier rain */
+  /* thunder of its own, between the strikes: none in a drizzle, rare and
+     far in light rain, every ~15s and much nearer at 100 */
   (function far(){
+    var k = intensity / 100;
     setTimeout(function(){
-      if(amb.on && !document.hidden) ambThunder(.08 + Math.random() * .3);
+      var k2 = intensity / 100;
+      if(amb.on && !document.hidden && k2 >= .2) ambThunder(Math.min(.9, .05 + k2 * .45 + Math.random() * .25 * k2));
       far();
-    }, (62 - Math.max(intensity, 30) / 100 * 38) * (.6 + Math.random() * .8) * 1000);
+    }, (70 - k * 55) * (.6 + Math.random() * .8) * 1000);
   })();
+  function ambPaint(){
+    var pct = Math.round(amb.vol * 100), on = ambBtn.getAttribute('aria-pressed') === 'true';
+    ambFill.style.width = pct + '%';
+    ambBtn.setAttribute('aria-label', 'rain sounds ' + (on ? 'on' : 'off') + ', volume ' + pct + ' percent');
+    ambBtn.title = 'rain sounds: ' + (on ? 'on' : 'off') + ' · ' + pct + '%  (click to mute, drag or scroll for volume)';
+  }
   function ambSet(on, save){
     if(on && !amb.ac){
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2037,7 +2064,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     amb.on = on;
     ambBtn.classList.toggle('on', on); ambBtn.setAttribute('aria-pressed', String(on));
-    ambBtn.title = 'rain sounds: ' + (on ? 'on' : 'off');
+    ambPaint();
     clearTimeout(ambOffT);
     if(amb.ac){
       if(on && amb.ac.state === 'suspended') amb.ac.resume();
@@ -2047,14 +2074,58 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     if(save){ try { localStorage.setItem('exiled.ambience', on ? '1' : '0'); } catch(e){} }
   }
-  ambBtn.addEventListener('click', function(){ ambSet(ambBtn.getAttribute('aria-pressed') !== 'true', true); });
+  function ambVol(v, save){
+    amb.vol = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+    if(amb.vol < .02) amb.vol = 0;
+    /* reaching for the volume means wanting to hear it */
+    if(amb.vol > 0 && !amb.on) ambSet(true, true);
+    else { ambPaint(); ambTick(); }
+    if(save){ try { localStorage.setItem('exiled.ambVol', String(amb.vol)); } catch(e){} }
+  }
+  /* a tap mutes; a drag of more than a few pixels sets the volume instead */
+  var ambDrag = null, ambDragged = false;
+  function ambAt(e){ var r = ambBtn.getBoundingClientRect(); return (e.clientX - r.left) / r.width; }
+  ambBtn.addEventListener('pointerdown', function(e){
+    if(e.button !== 0) return;
+    ambDrag = { x: e.clientX, moved: false };
+    try { ambBtn.setPointerCapture(e.pointerId); } catch(err){}
+  });
+  ambBtn.addEventListener('pointermove', function(e){
+    if(!ambDrag) return;
+    if(!ambDrag.moved && Math.abs(e.clientX - ambDrag.x) < 5) return;
+    ambDrag.moved = true;
+    ambBtn.classList.add('dragging');
+    ambVol(ambAt(e), false);
+  });
+  function ambDragEnd(){
+    if(!ambDrag) return;
+    if(ambDrag.moved){ ambDragged = true; ambVol(amb.vol, true); }
+    ambDrag = null; ambBtn.classList.remove('dragging');
+  }
+  ambBtn.addEventListener('pointerup', ambDragEnd);
+  ambBtn.addEventListener('pointercancel', ambDragEnd);
+  ambBtn.addEventListener('click', function(){
+    if(ambDragged){ ambDragged = false; return; }
+    ambSet(ambBtn.getAttribute('aria-pressed') !== 'true', true);
+  });
+  ambBtn.addEventListener('wheel', function(e){
+    e.preventDefault();
+    ambVol(amb.vol + (e.deltaY < 0 ? .05 : -.05), true);
+  }, { passive: false });
+  ambBtn.addEventListener('keydown', function(e){
+    var d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? .05 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -.05 : 0;
+    if(!d) return;
+    e.preventDefault();
+    ambVol(amb.vol + d, true);
+  });
+  ambPaint();
   try {
     /* on by default; only a visitor who switched it off stays off */
     var ambPref = localStorage.getItem('exiled.ambience');
     if(ambPref === null || ambPref === '1'){
       /* shown as on straight away; the sound itself starts at the first tap
          that isn't on the speaker (that one would only switch it off again) */
-      ambBtn.classList.add('on'); ambBtn.setAttribute('aria-pressed', 'true'); ambBtn.title = 'rain sounds: on';
+      ambBtn.classList.add('on'); ambBtn.setAttribute('aria-pressed', 'true'); ambPaint();
       var ambArm = function(e){
         if(ambBtn.contains(e.target)) return;
         document.removeEventListener('pointerdown', ambArm, true);
