@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-JFvAOA7ryynS24oQ62X2CJxkDAjZyTB/CF2E5ao2WAw=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-wkKsWyiLjKK7qD20azSHiUOcNzN18+GoZ9yH6IUZyDY=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -648,17 +648,17 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-back{display:block;width:100%;text-align:left;padding:.5rem .75rem;font-size:.7rem;letter-spacing:.12em;color:#7CFFB2;border-top:1px solid rgba(42,29,94,.7)}
 #radio .r-back[hidden]{display:none}
 #term.open ~ #radio{z-index:39}
-body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #ambTab{border-color:var(--storm-accent)}
+body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #radio #ambTab{border-color:var(--storm-accent)}
 /* rain sounds: a speaker beside the radio tab, same height, off until pressed */
-#ambTab{position:absolute;left:calc(100% + .4rem);bottom:0;display:flex;align-items:center;cursor:pointer;
+#radio #ambTab{position:absolute;left:calc(100% + .4rem);bottom:0;display:flex;align-items:center;gap:.5rem;cursor:pointer;font:700 .82rem/1 var(--font-display);letter-spacing:.2em;
   height:calc(2.02rem + 2px);padding:0 .65rem;border:1px solid var(--violet);background:rgba(11,13,26,.86);color:var(--rain);
   transition:border-color .2s,background .2s,color .2s}
-#ambTab:hover,#ambTab:focus-visible{border-color:var(--lavender);background:rgba(42,29,94,.5);color:var(--ice)}
-#ambTab svg{width:1.05rem;height:1.05rem;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#ambTab .a-wave{display:none}
-#ambTab.on{color:#7CFFB2}
-#ambTab.on .a-wave{display:inline}
-#ambTab.on .a-x{display:none}
+#radio #ambTab:hover,#radio #ambTab:focus-visible{border-color:var(--lavender);background:rgba(42,29,94,.5);color:var(--ice)}
+#radio #ambTab svg{width:1.05rem;height:1.05rem;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#radio #ambTab .a-wave{display:none}
+#radio #ambTab.on{color:#7CFFB2}
+#radio #ambTab.on .a-wave{display:inline}
+#radio #ambTab.on .a-x{display:none}
 /* first visit only: the tab breathes until someone opens it */
 @keyframes tabcall{0%,100%{border-color:var(--violet);box-shadow:none}50%{border-color:#7CFFB2;box-shadow:0 0 18px -4px rgba(124,255,178,.6)}}
 #radio.fresh #radioTab{animation:tabcall 2.6s ease-in-out infinite}
@@ -686,9 +686,10 @@ body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #ambTab{border-c
   #radio.fresh #radioTab{animation:none;color:#7CFFB2}
   /* the speaker takes the right end of the bar; the open sheet covers it */
   #radioTab{padding-right:3.6rem}
-  #ambTab{left:auto;right:0;height:var(--bar-h);padding:0 1rem env(safe-area-inset-bottom,0px);
+  #radio #ambTab{left:auto;right:0;height:var(--bar-h);padding:0 1rem env(safe-area-inset-bottom,0px);
     border:0;border-top:1px solid var(--violet);border-left:1px solid rgba(42,29,94,.7);background:#0B0D1A}
   #radio.open #ambTab{display:none}
+  #radio #ambTab .a-label{display:none}
   #radioPanel,#radio.mini #radioPanel{width:100%;border-left:0;border-right:0;border-bottom:0;
     max-height:calc(88dvh - env(safe-area-inset-top,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
   #radio .r-tracks{max-height:22vh}
@@ -1103,7 +1104,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      nothing here needs touching. -->
 <div id="radio">
   <button type="button" id="radioTab" aria-expanded="false" aria-controls="radioPanel"><span class="r-dot" aria-hidden="true"></span>RADIO<span class="r-tabnow" id="radioTabNow"></span></button>
-  <button type="button" id="ambTab" aria-pressed="false" aria-label="rain sounds" title="rain sounds: off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="a-wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/><path class="a-x" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg></button>
+  <button type="button" id="ambTab" aria-pressed="false" aria-label="rain sounds" title="rain sounds: off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="a-wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/><path class="a-x" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg><span class="a-label">RAIN</span></button>
   <div id="radioPanel" role="region" aria-label="EXiLED radio" hidden>
     <div class="r-bar">
       <span class="r-dot" aria-hidden="true"></span><span class="r-title">EXiLED RADIO</span>
@@ -1933,14 +1934,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   setInterval(function(){ if(intensity >= 100 && Math.random() < .45) strike(); }, 1900);
 
   /* ── the storm, heard ───────────────────────────────────────
-     Off until someone presses the speaker by the radio; browsers hold sound
-     back until a tap anyway. Nothing is downloaded: the rain is filtered
+     On by default, but browsers hold sound back until the visitor's first
+     tap or key, so it starts then. The speaker by the radio switches it off. Nothing is downloaded: the rain is filtered
      noise and the thunder a low rumble, both made here, so there are no
      files and nothing to license. It follows the rain slider but never drops
      below a drizzle once switched on, rumbles far off now and then on its
      own, and answers each lightning strike a beat late, nearer strikes
      sooner. It sits lower while the radio plays and keeps going in a
-     background tab. A remembered "on" waits for the visitor's first tap. */
+     background tab. */
   var amb = { ac: null, on: false, master: null, duck: null, body: null, hiss: null, hissF: null, thunder: null, rumble: null, white: null, lastBoom: 0 };
   var ambBtn = document.getElementById('ambTab'), ambOffT;
   function ambNoise(ac, secs, brown){
@@ -2044,11 +2045,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       /* faded out: let the audio thread rest */
       if(!on) ambOffT = setTimeout(function(){ if(!amb.on) amb.ac.suspend(); }, 2000);
     }
-    if(save){ try { localStorage.setItem('exiled.ambience', on ? '1' : ''); } catch(e){} }
+    if(save){ try { localStorage.setItem('exiled.ambience', on ? '1' : '0'); } catch(e){} }
   }
   ambBtn.addEventListener('click', function(){ ambSet(ambBtn.getAttribute('aria-pressed') !== 'true', true); });
   try {
-    if(localStorage.getItem('exiled.ambience')){
+    /* on by default; only a visitor who switched it off stays off */
+    var ambPref = localStorage.getItem('exiled.ambience');
+    if(ambPref === null || ambPref === '1'){
       /* shown as on straight away; the sound itself starts at the first tap
          that isn't on the speaker (that one would only switch it off again) */
       ambBtn.classList.add('on'); ambBtn.setAttribute('aria-pressed', 'true'); ambBtn.title = 'rain sounds: on';
