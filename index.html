@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-J1mINo5SZo7ila+uOwx9rT6ljDfGDWlZ4nxSV5HaOWU=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-JDn610KCHKGSgp13OUImP6As8M5ysA2D78iJRGdWt38=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -2528,15 +2528,16 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       var h = new Date().getHours();
       return h >= 22 || h < 3 ? 52 : h < 7 ? 36 : h < 12 ? 24 : h < 18 ? 30 : 42;
     }
-    var watching = watchTarget() - 6 + Math.floor(Math.random()*12);
-    chatCountEl.textContent = watching;
-    setInterval(function(){
-      var aim = watchTarget();
-      watching += Math.floor(Math.random()*5) - 2 + (watching < aim - 6 ? 1 : watching > aim + 6 ? -1 : 0);
-      if(watching < 16) watching += 3;
-      if(watching > 80) watching -= 4;
-      chatCountEl.textContent = watching;
-    }, 5200);
+    /* every device shows the same number: the hour sets the level, and a
+       wobble keyed to 20s blocks of the clock moves it, eased between
+       blocks so it drifts instead of jumping */
+    function watchAt(t){
+      var b = Math.floor(t/20000), f = (t % 20000)/20000;
+      var w0 = hash2(0x3A7, b) % 13 - 6, w1 = hash2(0x3A7, b + 1) % 13 - 6;
+      return Math.max(16, watchTarget() + Math.round(w0 + (w1 - w0)*f));
+    }
+    chatCountEl.textContent = watchAt(Date.now());
+    setInterval(function(){ chatCountEl.textContent = watchAt(Date.now()); }, 5200);
   }
 
   /* ── live chat bridge ─────────────────────────────────────────
@@ -2611,7 +2612,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
     try{ var saved = localStorage.getItem('exiled.handle'); if(saved) hEl.value = saved; }catch(e){}
 
-    var lastId = 0, seen = {}, greeted = {}, echoes = [];
+    var lastId = 0, seen = {}, echoes = [];
 
     /* regulars keep their own colour when they speak live */
     var regs = {};
@@ -2673,15 +2674,35 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       setTimeout(function(){ renderMessage({ u: u, c: userCol[u], t: t }, true); }, 1400 + rnd()*2600);
     }
 
+    /* The room's answer to a line is a function of the line itself, so the
+       sender and every other device see the same faces say the same thing.
+       A blocked line never reaches another device, so there is nothing to
+       compare it against and the shadow-drop holds. */
+    function lineSeed(h, b){ return nameHash(String(h).toLowerCase() + '|' + b) || 1; }
+
+    /* new here = no earlier approved line under this handle. Asked of the
+       server, not this tab's memory, so every device agrees. */
+    function isNew(h, beforeId){
+      return api('messages?select=id&status=eq.approved&handle=eq.' + encodeURIComponent(h) +
+                 (beforeId ? '&id=lt.' + beforeId : '') + '&limit=1')
+        .then(function(rows){ return !(rows && rows.length); });
+    }
+
+    function respond(h, b, beforeId){
+      var seed = lineSeed(h, b);
+      /* a heavy line always gets answered, first message or not */
+      if(DISTRESS_HINT.test(b)){ swarm(h, true, seed); return Promise.resolve(); }
+      return isNew(h, beforeId).then(function(fresh){
+        if(fresh) swarm(h, false, seed);
+        else if(rngFrom(hash2(0x3EB, seed))() < 0.35) react(seed);
+      });
+    }
+
     function receive(handle, body, id){
       renderMessage({ u: handle, c: handleCol(handle), t: body }, true);
-      var key = handle.toLowerCase();
       /* a regular is not new here. nobody welcomes them */
-      if(regs[key]) return;
-      var heavy = DISTRESS_HINT.test(body);
-      /* a heavy line always gets answered, first message or not */
-      if(heavy || !greeted[key]){ greeted[key] = 1; swarm(handle, heavy, id); }
-      else if(rngFrom(hash2(0x3EB, id))() < 0.35) react(id);
+      if(regs[handle.toLowerCase()]) return;
+      respond(handle, body, id);
     }
 
     function poll(){
@@ -2719,12 +2740,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
          identical to an accepted one from where the sender is sitting. */
       renderMessage({ u: h, c: handleCol(h), t: b }, true);
       echoes.push({ h: h.toLowerCase(), b: b, at: Date.now() });
-      var key = h.toLowerCase();
-      var heavy = DISTRESS_HINT.test(b);
-      if(heavy || !greeted[key]){ greeted[key] = 1; swarm(h, heavy); }
-      else if(Math.random() < 0.3) react();
-
-      fetch(LIVE.url + '/functions/v1/' + LIVE.fn, {
+      /* ask "am i new" before the post lands, or the answer is always no */
+      respond(h, b, 0).then(function(){ return fetch(LIVE.url + '/functions/v1/' + LIVE.fn, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2732,7 +2749,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           Authorization: 'Bearer ' + LIVE.anon
         },
         body: JSON.stringify({ handle: h, body: b })
-      }).catch(function(){ /* offline: the sender still saw their line */ });
+      }); }).catch(function(){ /* offline: the sender still saw their line */ });
     }
     say.addEventListener('submit', send);
 
@@ -2769,12 +2786,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       rows = rows || [];
       if(rows.length) lastId = rows[0].id;
       rows.forEach(function(r){ seen[r.id] = 1; });
-      var kept = refill(rows.map(function(r){
+      refill(rows.map(function(r){
         return { at: Date.parse(r.created_at) || 0, h: String(r.handle),
                  m: { u: r.handle, c: handleCol(r.handle), t: r.body } };
       }));
-      /* anyone still on screen has already been welcomed */
-      kept.forEach(function(x){ greeted[x.h.toLowerCase()] = 1; });
       setInterval(poll, LIVE.pollMs);
     });
 
