@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-cL37048anuhSs5oUYIhMWg2sFv2KIoHqZQPWcEdJqik=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8NScllGZx48jAdhPxAKeVyTBq5ZHZBMl//n5wiKk/9M=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -136,6 +136,18 @@ main{position:relative;z-index:3}
   opacity:0;pointer-events:none;
   mask-image:var(--signal-mask);
   -webkit-mask-image:var(--signal-mask);
+}
+/* Past its cap the banner stops short of the window, and the oval fade
+   above leaves its left and right edges as hard vertical lines. Fade the
+   sides into the room as well. Kicks in where 92vw stops being the
+   binding width: wide windows, and short wide ones where 168vh binds. */
+@media (min-width:1196px), (min-aspect-ratio:183/100){
+  .signal img, .signal .ghost{
+    mask-image:var(--signal-mask),linear-gradient(90deg,transparent,#000 16%,#000 84%,transparent);
+    -webkit-mask-image:var(--signal-mask),linear-gradient(90deg,transparent,#000 16%,#000 84%,transparent);
+    mask-composite:intersect;
+    -webkit-mask-composite:source-in;
+  }
 }
 .signal.tear .ghost.a{opacity:.7;transform:translateX(-7px);clip-path:polygon(0 18%,100% 18%,100% 34%,0 34%);filter:hue-rotate(160deg)}
 .signal.tear .ghost.b{opacity:.7;transform:translateX(9px);clip-path:polygon(0 61%,100% 61%,100% 71%,0 71%);filter:hue-rotate(-60deg)}
@@ -2674,6 +2686,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       return [{ after: 1400 + rnd()*2600, m: { u: u, c: userCol[u], t: t } }];
     }
 
+    /* Supabase stamps microseconds ("...58.078744+00:00"). Some Safari
+       versions refuse anything past milliseconds and return NaN, which
+       loses the line's place in time. Trim to what every browser reads. */
+    function stamp(s){
+      return Date.parse(String(s || '').replace(/(\.\d{3})\d+/, '$1').replace(/\+00:?00$/, 'Z'));
+    }
+
     function lineSeed(h, b){ return nameHash(String(h).toLowerCase() + '|' + b) || 1; }
 
     function planFor(h, b, fresh){
@@ -2728,7 +2747,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
               echoes.splice(i, 1); mine = true; break;
             }
           }
-          if(!mine) receive(r.handle, r.body, r.id, Math.min(Date.parse(r.created_at) || now, now));
+          if(!mine) receive(r.handle, r.body, r.id, Math.min(stamp(r.created_at) || now, now));
         });
       });
     }
@@ -2807,7 +2826,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       })).then(function(){
         var now = Date.now(), extra = [], later = [];
         rows.forEach(function(r){
-          var at = Math.min(Date.parse(r.created_at) || 0, now);
+          var at = Math.min(stamp(r.created_at) || 0, now);
           extra.push({ at: at, m: { u: r.handle, c: handleCol(r.handle), t: r.body } });
           if(!(r.handle in firsts)) return;
           planFor(r.handle, r.body, !firsts[r.handle] || firsts[r.handle] >= r.id).forEach(function(p){
