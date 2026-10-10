@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-peXU7XURM+jfyXkvxpg1bxrrTSIZHiLzzzXu5HKwiCI=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-J1mINo5SZo7ila+uOwx9rT6ljDfGDWlZ4nxSV5HaOWU=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -1983,7 +1983,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 ,
     /* exiled.newcomers — ordinary people, ordinary questions */
     { w: 12, handles: ["mike_r","jess2891","TommyB","sarah_k","dave1987","kyle_m","AnnaB","Jman","beccaaa","NotSteve","chris_p","MelG","RyanG23","hannah_b","PaulJ","tinaaa","DomZ","sam_00","kayleigh_x","nathan_","Greg","lucy_j","MattW","priya_s","JakeT","emma1998","carlos_r","Nikki","ben_h","ZoeM"], lines: ["what is this site even for","someone explain lol","what am i looking at","ok but what IS this","is this a game or something","is this an arg or am i overthinking it","someone sent me this link with no context","my mate sent me this at 2am, no explanation","is this a band or a streamer or what","is there a video somewhere or is it just this page","i don't get it but i'm still here","first time here, what did i walk into","is this new? never seen it before","how long has this been up","who made this","is there a discord or something","where do i follow","is he live right now","when does he actually stream","why is it raining on the website","how do i turn the rain off","the rain is making my laptop fan spin up","is this supposed to do something","nothing happens when i click anything","how do you open the terminal thing","type help apparently","ohh ok that's actually clever","took me a minute but i get it now","wait there's more to this than i thought","i've been clicking things for ten minutes","found the terminal. no idea what to do with it.","is the ghost supposed to move","the little ghost is following my mouse??","is this chat real or is it bots","are these real people","half of you are bots i swear","no way this is all real","y'all sound like the same person sometimes","is anyone actually here","hello? is anyone live","testing","can people actually see this","guess not lol","someone say something","oh. ok. someone did.","my bad, thought it was fake","nah it's real, people are just quiet","it's real. slow, but real.","we're real. probably.","i'm real. can't speak for the rest of them.","i thought it was bots too at first","everyone thinks that at first","this is weirdly nice actually","not what i expected at all","came for the aesthetic, staying for whatever this is","ok this is kind of cool","pretty sick ngl","bookmarking this","sending this to my brother","my girlfriend thinks i'm insane for liking this","this is very much my 3am energy","no idea what's happening and i'm fine with it","chat seems nice at least","everyone here is way nicer than i expected","least toxic chat i've been in","i was expecting way worse honestly","ok fine i'll stay"] },
-    { storm: true, stormW: 22, w: 0, lines: ["what is HAPPENING to the sky", "it's going off. everything is going off.", "the whole site is glowing", "i turned it to 100 and now i'm scared", "lightning just went THROUGH the page??", "ok this is a full event", "my monitor is a nightclub right now", "the colours. THE COLOURS.", "ghostie does not like this at all", "she's hiding. she is actually hiding.", "is it supposed to shake like that", "turn it down turn it down turn it DOWN", "never turning it down", "storm crew reporting in", "worth the frame drops honestly", "i can feel this through the screen", "the sky just broke", "everything is purple", "my eyes hurt and i don't care", "turn it off turn it off (don't)", "this is the best thing i've ever done to my laptop", "full storm gang", "i can't look away"] }
+    { storm: true, stormW: 22, w: 0, lines: ["what is HAPPENING to the sky", "it's going off. everything is going off.", "the whole site is glowing", "i turned it to 100 and now i'm scared", "lightning just went THROUGH the page??", "ok this is a full event", "my monitor is a nightclub right now", "the colours. THE COLOURS.", "ghostie does not like this at all", "she's hiding. she is actually hiding.", "is it supposed to shake like that", "turn it down turn it down turn it DOWN", "never turning it down", "storm crew reporting in", "worth the frame drops honestly", "i can feel this through the screen", "the sky just broke", "everything is purple", "my eyes hurt and i don't care", "turn it off turn it off (don't)", "this is the best thing i've ever done to my laptop", "full storm gang", "i can't look away"] },
+    /* exiled.harvest — real lines from before yesterday (UTC), filled in by
+       liveChat. Always in the deck so the shuffle never changes shape when
+       it lands; until it does, its slots speak from the first pool. */
+    { w: 8, recycled: true, lines: [] }
   ];
   /* exiled.surge — every SURGE_EVERY-th cycle a few phantoms talk to each
      other for about 30s. roles are 0-3; {n} becomes role n's handle. */
@@ -2126,9 +2130,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   /* One deck holds each pool exactly w times, so its size IS the sum of
      the weights. Hardcoding 100 meant adding a pool silently broke the
      index maths unless you remembered to rebalance the others. */
+  /* a pool too small to shuffle (the harvest before it lands) sits out */
+  function inDeck(p){ return !p.storm && p.lines.length >= 6; }
   var DECK = 0;
   for(var dsum = 0; dsum < CHAT_POOLS.length; dsum++){
-    if(!CHAT_POOLS[dsum].storm) DECK += CHAT_POOLS[dsum].w;
+    if(inDeck(CHAT_POOLS[dsum])) DECK += CHAT_POOLS[dsum].w;
   }
 
   /* mulberry32 — tiny, fast, and bit-identical across browsers, which is
@@ -2242,7 +2248,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(deckCache[d]) return deckCache[d];
     var base = [], i, j, t;
     for(i = 0; i < CHAT_POOLS.length; i++){
-      if(CHAT_POOLS[i].storm) continue;
+      if(!inDeck(CHAT_POOLS[i])) continue;
       for(j = 0; j < CHAT_POOLS[i].w; j++) base.push(i);
     }
     var r = rngFrom(hash2(0xDEC, d));
@@ -2648,28 +2654,23 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         picked.splice(1 + Math.floor(rnd()*2), 0,
           { reg: true, line: regSrc[Math.floor(rnd()*regSrc.length)] });
       }
-      var delay = 1200 + rnd()*1500;
+      var delay = 1200 + rnd()*1500, crowd = CHAT_USERS.slice();
       picked.forEach(function(p){
         var text = p.line.split('{h}').join(handle);
         var at = delay;
-        setTimeout(function(){
-          if(p.reg){
-            renderMessage({ u: REGULARS[0].name, c: REGULARS[0].col, t: text }, true);
-          } else {
-            var u = draw(userBag);
-            renderMessage({ u: u, c: userCol[u], t: text }, true);
-          }
-        }, at);
-        delay += 900 + Math.random()*2500;
+        var u = p.reg ? REGULARS[0].name : crowd.splice(Math.floor(rnd()*crowd.length), 1)[0];
+        var c = p.reg ? REGULARS[0].col : userCol[u];
+        setTimeout(function(){ renderMessage({ u: u, c: c, t: text }, true); }, at);
+        delay += 900 + rnd()*2500;
       });
     }
 
     /* a lighter touch for someone who is already known here */
-    function react(){
-      setTimeout(function(){
-        var u = draw(userBag);
-        renderMessage({ u: u, c: userCol[u], t: REACT[Math.floor(Math.random()*REACT.length)] }, true);
-      }, 1400 + Math.random()*2600);
+    function react(seed){
+      var rnd = seed ? rngFrom(hash2(0x3EA, seed)) : Math.random;
+      var u = CHAT_USERS[Math.floor(rnd()*CHAT_USERS.length)];
+      var t = REACT[Math.floor(rnd()*REACT.length)];
+      setTimeout(function(){ renderMessage({ u: u, c: userCol[u], t: t }, true); }, 1400 + rnd()*2600);
     }
 
     function receive(handle, body, id){
@@ -2680,7 +2681,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       var heavy = DISTRESS_HINT.test(body);
       /* a heavy line always gets answered, first message or not */
       if(heavy || !greeted[key]){ greeted[key] = 1; swarm(handle, heavy, id); }
-      else if(Math.random() < 0.35) react();
+      else if(rngFrom(hash2(0x3EB, id))() < 0.35) react(id);
     }
 
     function poll(){
@@ -2735,10 +2736,36 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     say.addEventListener('submit', send);
 
+    /* harvest: real lines from before yesterday (UTC) become ambient
+       filler, spoken by phantom handles. The cutoff is a day boundary, not
+       "24h before this device loaded", so every device fetches the same
+       rows. Refetched just after each boundary so long-open tabs keep up. */
+    var dayMs = 86400000;
+    function harvest(){
+      var dayStart = Math.floor(Date.now()/dayMs)*dayMs;
+      setTimeout(harvest, dayStart + dayMs + 5000 - Date.now());
+      return api('messages?select=handle,body&status=eq.approved&handle=neq.smoketest' +
+                 '&created_at=lt.' + new Date(dayStart - dayMs).toISOString() +
+                 '&order=id.desc&limit=60').then(function(rows){
+        /* a regular's words stay in their own mouth */
+        var lines = (rows || []).filter(function(r){ return !regs[String(r.handle).toLowerCase()]; })
+          .map(function(r){ return r.body; })
+          .filter(function(b){ return b && b.length > 2 && b.length < 120; });
+        var i, was = DECK;
+        for(i = 0; i < CHAT_POOLS.length; i++) if(CHAT_POOLS[i].recycled) CHAT_POOLS[i].lines = lines;
+        /* every device lands the same rows, so they all reshape the deck
+           the same way. drop anything built from the old shape */
+        DECK = 0;
+        for(i = 0; i < CHAT_POOLS.length; i++) if(inDeck(CHAT_POOLS[i])) DECK += CHAT_POOLS[i].w;
+        if(DECK !== was){ deckCache = {}; deckOrder = []; epochCache = {}; epochOrder = []; }
+      });
+    }
+
     /* start from the current high-water mark, and weave the most recent
-       real lines into the backfill so a refresh does not erase them */
-    api('messages?select=id,handle,body,created_at&status=eq.approved&handle=neq.smoketest' +
-        '&order=id.desc&limit=' + CHAT_KEEP).then(function(rows){
+       real lines into the backfill so a refresh does not erase them.
+       After the harvest, so the rebuilt backfill already includes it. */
+    harvest().then(function(){ return api('messages?select=id,handle,body,created_at&status=eq.approved&handle=neq.smoketest' +
+        '&order=id.desc&limit=' + CHAT_KEEP); }).then(function(rows){
       rows = rows || [];
       if(rows.length) lastId = rows[0].id;
       rows.forEach(function(r){ seen[r.id] = 1; });
@@ -2751,23 +2778,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       setInterval(poll, LIVE.pollMs);
     });
 
-    /* harvest: real messages older than a day become ambient filler,
-       spoken by phantom handles. the pool grows itself over time. */
-    var cutoff = new Date(Date.now() - 86400000).toISOString();
-    api('messages?select=handle,body&status=eq.approved&created_at=lt.' + cutoff +
-        '&order=id.desc&limit=60').then(function(rows){
-      if(!rows) return;
-      /* a regular's words stay in their own mouth */
-      var lines = rows.filter(function(r){ return !regs[String(r.handle).toLowerCase()]; })
-        .map(function(r){ return r.body; }).filter(function(b){
-        return b && b.length > 2 && b.length < 120;
-      });
-      if(lines.length >= 6){
-        var pool = { w: 8, lines: lines };
-        pool.bag = bagOf(lines);
-        CHAT_POOLS.push(pool);
-      }
-    });
   }
 
   /* called down here, not up in the feed block: LIVE is a var, so it is
