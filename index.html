@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-MvtOpywwELzviC52NwwDnalYvGmewzSxelGQwisXb7w=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-peXU7XURM+jfyXkvxpg1bxrrTSIZHiLzzzXu5HKwiCI=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -2477,6 +2477,25 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   function pushMessage(animate){ renderMessage(nextMessage(), animate); }
 
+  /* Rebuild the panel with real lines woven into the phantom backfill by
+     time. The phantom side is the same arithmetic as the boot backfill, so
+     it still matches every other device; a refresh shows what a tab left
+     open would be showing. Returns the real lines that made the cut. */
+  function refill(extra){
+    var now = Date.now(), be = Math.floor(now/EPOCH_MS);
+    var evs = epochEvents(be).filter(function(ev){ return ev.at <= now; });
+    while(evs.length < CHAT_KEEP){ be--; evs = epochEvents(be).concat(evs); }
+    evs = evs.slice(-CHAT_KEEP).concat(extra.map(function(x){
+      return { at: Math.min(x.at, now), m: x.m, real: x };
+    }));
+    evs.sort(function(a, b){ return a.at - b.at; });
+    evs = evs.slice(-CHAT_KEEP);
+    while(chatFeed.firstChild) chatFeed.removeChild(chatFeed.firstChild);
+    evs.forEach(function(ev){ renderMessage(ev.m || voiced(ev.k, ev.at), false); });
+    lastT = now;
+    return evs.filter(function(ev){ return ev.real; }).map(function(ev){ return ev.real; });
+  }
+
   if(chatFeed){
     /* Backfill the panel from the slots that already happened, so a device
        opening now shows the same recent history as one left open. */
@@ -2665,7 +2684,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
 
     function poll(){
-      api('messages?select=id,handle,body&status=eq.approved&id=gt.' + lastId +
+      api('messages?select=id,handle,body&status=eq.approved&handle=neq.smoketest&id=gt.' + lastId +
           '&order=id.asc&limit=20').then(function(rows){
         if(!rows || !rows.length) return;
         rows.forEach(function(r){
@@ -2716,10 +2735,19 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     say.addEventListener('submit', send);
 
-    /* start from the current high-water mark so the panel does not replay
-       the archive on load — the phantom seed already filled it */
-    api('messages?select=id&status=eq.approved&order=id.desc&limit=1').then(function(rows){
-      if(rows && rows.length) lastId = rows[0].id;
+    /* start from the current high-water mark, and weave the most recent
+       real lines into the backfill so a refresh does not erase them */
+    api('messages?select=id,handle,body,created_at&status=eq.approved&handle=neq.smoketest' +
+        '&order=id.desc&limit=' + CHAT_KEEP).then(function(rows){
+      rows = rows || [];
+      if(rows.length) lastId = rows[0].id;
+      rows.forEach(function(r){ seen[r.id] = 1; });
+      var kept = refill(rows.map(function(r){
+        return { at: Date.parse(r.created_at) || 0, h: String(r.handle),
+                 m: { u: r.handle, c: handleCol(r.handle), t: r.body } };
+      }));
+      /* anyone still on screen has already been welcomed */
+      kept.forEach(function(x){ greeted[x.h.toLowerCase()] = 1; });
       setInterval(poll, LIVE.pollMs);
     });
 
