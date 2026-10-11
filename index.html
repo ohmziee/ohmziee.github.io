@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-7D5kizt9V3i0c3XFgYqQvX90nk9iAuPKMr3Q7mOzwkY=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-2abf17hkv/9AKX4DehNnfk3TpG4dhCShcnrx3eGiF+A=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -2378,7 +2378,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     tails: [" tbh", " ngl", "...", " fr"]
   };
   var REGULARS = [
-    { name: 'ghostgirl222', col: '#FF6FD8', block: 18, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back", "i noticed you changed something. it's small. i like it.", "i was here before the chat was", "i don't really talk anywhere else", "it's quieter at this hour. i prefer it.", "i remember when there were three of us", "i keep a list of the things that changed", "you don't have to answer. i just like saying things here.", "the rain sounds different tonight", "i'll wait", "i'm always a bit early", "i was thinking about this place at work today", "sorry. i talk a lot when it's quiet.", "i like knowing it's still here when i close the tab", "did anyone else see that", "i counted. it's been 41 days.", "i don't need anything. i just like being here.", "you were gone a while", "welcome back :)", "i noticed", "still awake. obviously.", "i'll be here tomorrow too", "goodnight <3", "i don't mind the quiet. i mind the leaving.", "i read everything, even when i don't say anything", "it's nice here when it's just a few of us", "i had a bad day but this helped", "i'm not going anywhere either", "you can tell when someone's been here a while"] }
+    { name: 'ghostgirl222', col: '#FF6FD8', block: 18, lines: ["i've been here since the first night <3", "still here :)", "you always post when it rains", "did the ghost's eyes change? i noticed", "i don't mind waiting. i'm good at it", "this is my favourite place", "i check every day. sometimes twice.", "love the new lightning <3", "i saved a screenshot of the old version. just in case.", "i'll still be here when everyone else gets bored", "hi :)", "you don't have to say hi back", "i noticed you changed something. it's small. i like it.", "i was here before the chat was", "i don't really talk anywhere else", "it's quieter at this hour. i prefer it.", "i remember when there were three of us", "i keep a list of the things that changed", "you don't have to answer. i just like saying things here.", "the rain sounds different tonight", "i'll wait", "i'm always a bit early", "i was thinking about this place at work today", "sorry. i talk a lot when it's quiet.", "i like knowing it's still here when i close the tab", "did anyone else see that", "i counted. it's been 41 days.", "i don't need anything. i just like being here.", "you were gone a while", "welcome back :)", "i noticed", "still awake. obviously.", "i'll be here tomorrow too", "goodnight <3", "i don't mind the quiet. i mind the leaving.", "i read everything, even when i don't say anything", "it's nice here when it's just a few of us", "i had a bad day but this helped", "i'm not going anywhere either", "you can tell when someone's been here a while"] },
+    { name: 'slater', col: '#6FA8FF', lines: [] }
   ];
 
   /* stable colour per handle */
@@ -2550,6 +2551,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      -1 when the slot belongs to the general pool. */
   function regularAt(k){
     for(var i = 0; i < REGULARS.length; i++){
+      /* a regular with no lines only ever speaks live */
+      if(!REGULARS[i].lines.length) continue;
       var b = REGULARS[i].block || DEFAULT_BLOCK, blk = Math.floor(k/b);
       if((k - blk*b) === (hash2(9001 + i*7919, blk) % b)) return i;
     }
