@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-HKVqv3mKFIkKci+46pnLwy73p6lvnmMyro6TxcV//70=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nyJ/2wd4cAAH0QtBUWtfhXCe8c7MpekGeqe2SljkzTI=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -1035,6 +1035,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           <span class="dot" aria-hidden="true"></span>
           <span class="name">WIKI<small>the lore vault // characters, places, the world</small></span>
           <span class="state" id="wikiTag">NO SIGNAL</span>
+        </a>
+      </li>
+      <li>
+        <a class="node live" href="teknoa2d/" id="t2dOpen">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="name">TEKNOA 2D<small>nova city, from above // walk it, meet who lives there</small></span>
+          <span class="state">OPEN</span>
         </a>
       </li>
       <li>
@@ -3456,7 +3463,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     '.omran':          { body: 'he was asked once what he did for work.\nhe said it was erulqj.\n\nhe always left a room the same way:\nthree steps back, eyes on the door.\n\nunlock omran' },
     'yalda.txt':       { body: 'shab-e yalda. the longest night of the year.\nshe always stayed up for it, and she always kept a candle going.', play: yaldaPlay },
     'remnant_protocol.md': { locked: true, body: '# remnant protocol\n1. nothing is deleted. only exiled.\n2. the machine keeps its ghosts.\n3. do not name what you cannot unname.' },
-    '.mindscape':      { locked: true, body: 'the door is built now.\nchippin\' in: /mindscape/' }
+    '.mindscape':      { locked: true, body: 'the door is open.\nthere is nothing behind it yet. it is being built.' }
   };
 
   function tprint(html, cls){ var d = document.createElement('div'); if(cls) d.className = cls; d.innerHTML = html; tOut.appendChild(d); tOut.scrollTop = tOut.scrollHeight; return d; }
@@ -4703,7 +4710,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   function pagePath(p){
     p = String(p || '').replace(/^#?\/*/, '');
-    return /^(?:wiki\/(?:[\w-]+\.html)?|mindscape\/(?:index\.html)?)(?:#[\w-]*)?$/.test(p) ? p : null;
+    return /^(?:wiki\/(?:[\w-]+\.html)?|(?:mindscape|teknoa2d)\/(?:index\.html)?)(?:#[\w-]*)?$/.test(p) ? p : null;
   }
   function pageIsOpen(){ return pageView.classList.contains('open'); }
   var pageReturn = null;
@@ -4773,6 +4780,11 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   red.addEventListener('click', function(e){
     if(!red.getAttribute('href') || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault(); pageOpen('mindscape/', true);
+  });
+  /* teknoa 2d, the same way: open to everyone, in the frame */
+  document.getElementById('t2dOpen').addEventListener('click', function(e){
+    if(e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault(); pageOpen('teknoa2d/', true);
   });
 
   document.getElementById('termOpen').addEventListener('click', function(e){ e.preventDefault(); openTerm(); });

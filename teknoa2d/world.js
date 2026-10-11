@@ -1,4 +1,4 @@
-/* EXiLED mindscape — Nova City, as a tile map. No DOM in here: it builds the
+/* EXiLED teknoa 2d — Nova City, as a tile map. No DOM in here: it builds the
    map from a description and answers questions about it; overworld.js draws
    it and walks the player around. Runs under node for the tests.
 

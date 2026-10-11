@@ -1,4 +1,4 @@
-/* EXiLED mindscape — walking around Nova City. world.js builds the map; this
+/* EXiLED teknoa 2d — walking around Nova City. world.js builds the map; this
    draws it, moves the player a tile at a time, and hands a conversation to
    ui.js when they talk to someone with a scene.
 
@@ -208,6 +208,40 @@
     medic:   { H: '#1a1a1a', S: '#e0b48a', C: '#e6e8f0', P: '#8ad0b0', k: '#111' },
     merc:    { H: '#3a1218', S: '#b07a5a', C: '#3a1218', P: '#1a080c', k: '#111' }
   };
+  /* the Chippin' In parts, at walking size: hair shape, what they wear, the
+     extra. dir is down, up or left (right is left mirrored) */
+  function styled(rows, dir, look) {
+    var g = rows.map(function (r) { return r.split(''); });
+    function put(y, x, ch) { if (g[y] && x >= 0 && x < TS) g[y][x] = ch; }
+    function swap(y, from, to, x0, x1) { for (var x = x0 || 0; x <= (x1 === undefined ? TS - 1 : x1); x++) if (g[y][x] === from) g[y][x] = to; }
+    var y, x, side = dir === 'left';
+    switch (look.hair) {
+      case 'buzz': for (x = 0; x < TS; x++) g[1][x] = '.'; break;
+      case 'long':
+        for (y = 4; y <= 10; y++) { if (dir === 'down') { put(y, 3, 'H'); put(y, 12, 'H'); } else if (side) { put(y, 10, 'H'); put(y, 11, 'H'); } else swap(y, 'S', 'H', 4, 11); }
+        break;
+      case 'bob':
+        for (y = 4; y <= 7; y++) { if (dir === 'down') { put(y, 3, 'H'); put(y, 12, 'H'); } else if (side) { put(y, 10, 'H'); put(y, 11, 'H'); } }
+        break;
+      case 'mohawk':
+        for (y = 1; y <= 3; y++) swap(y, 'H', 'S');
+        if (dir === 'up') for (y = 4; y <= 7; y++) swap(y, 'H', 'S');
+        for (y = 0; y <= 6; y++) { if (side) { put(y, 7, 'H'); put(y, 8, 'H'); } else if (y <= 3 || dir === 'up') { put(y, 7, 'H'); put(y, 8, 'H'); } }
+        break;
+      case 'spiky': [5, 7, 9, 11].forEach(function (sx) { put(0, side ? sx - 1 : sx, 'H'); }); break;
+      case 'undercut': if (dir === 'down') { put(4, 4, 'S'); put(4, 11, 'S'); } break;
+    }
+    if (look.top === 'coat') for (y = 13; y <= 14; y++) { put(y, side ? 5 : 4, 'C'); put(y, side ? 9 : 11, 'C'); }
+    if (look.top === 'jacket' && dir === 'down') for (y = 9; y <= 12; y++) { put(y, 7, 'k'); put(y, 8, 'k'); }
+    if (look.top === 'hoodie' && dir !== 'down') for (x = 5; x <= 10; x++) put(8, side ? x - 1 : x, 'c');
+    if (dir === 'down') {
+      if (look.acc === 'glasses') { put(5, 4, 'A'); put(5, 7, 'A'); put(5, 8, 'A'); put(5, 11, 'A'); }
+      if (look.acc === 'mask') for (x = 5; x <= 10; x++) put(7, x, 'A');
+      if (look.acc === 'choker') for (x = 6; x <= 9; x++) put(8, x, 'A');
+      if (look.acc === 'earring' || look.acc === 'studs') { put(6, 3, 'A'); put(6, 12, 'A'); }
+    } else if (side && look.acc === 'glasses') { put(5, 4, 'A'); put(5, 6, 'A'); }
+    return g.map(function (r) { return r.join(''); });
+  }
   var spriteCache = {};
   function sprite(look, dir, step) {
     var key = JSON.stringify(look) + dir + step;
@@ -215,7 +249,9 @@
     var c = document.createElement('canvas'); c.width = c.height = TS;
     var g = c.getContext('2d'), flip = dir === 'right', rows = BODY[flip ? 'left' : dir].slice();
     if (step) { var st = STEP[flip ? 'left' : dir]; rows[13] = st[0]; rows[14] = st[1]; rows[15] = st[2]; }
-    var colours = { H: look.H, h: look.h || look.H, S: look.S, E: '#0b0d1a', m: '#7a3a3a', C: look.C, P: look.P || '#2a2f4a', k: look.k || '#111' };
+    rows = styled(rows, flip ? 'left' : dir, look);
+    var colours = { H: look.H, h: look.h || look.H, S: look.S, E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C,
+                    A: look.A || '#d8dce8', P: look.P || '#2a2f4a', k: look.k || '#111' };
     rows.forEach(function (r, y) {
       for (var x = 0; x < TS; x++) {
         var ch = r.charAt(x); if (ch === '.') continue;
@@ -227,10 +263,17 @@
     return (spriteCache[key] = c);
   }
   /* the player looks like their Chippin' In face */
-  function playerLook() {
-    var l = A ? A.normalize(s.player.look) : {};
-    return { H: l.hairC || '#3a2a20', S: l.skin || '#c88a64', C: l.topC || '#9f8cff', P: '#22263a', k: '#0b0b10' };
+  function shade(hex, f) {
+    var n = parseInt(String(hex).slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    function c(v) { return ('0' + Math.round(v * f).toString(16)).slice(-2); }
+    return '#' + c(r) + c(g) + c(b);
   }
+  function lookOf(raw) {
+    var l = A ? A.normalize(raw) : {};
+    return { H: l.hairC || '#3a2a20', S: l.skin || '#c88a64', C: l.topC || '#9f8cff', c: shade(l.topC || '#9f8cff', 0.7),
+             A: l.accC, P: '#22263a', k: '#0b0b10', hair: l.hair, top: l.top, acc: l.acc };
+  }
+  function playerLook() { return lookOf(s.player.look); }
 
   /* ── state ─────────────────────────────────────────────────── */
   var me = { x: 0, y: 0, dir: 'down', moving: false, fx: 0, fy: 0, t: 0, step: 0 };
@@ -438,5 +481,11 @@
     active = false; cancelAnimationFrame(raf); held = {};
     $('world').hidden = true;
   }
-  window.MFWorld = { show: show, hide: hide, get active() { return active; } };
+  /* Chippin' In shows the walking sprite as it is built */
+  function preview(look, dir, step) {
+    var big = document.createElement('canvas'); big.width = big.height = TS;
+    var g = big.getContext('2d'); g.drawImage(sprite(lookOf(look), dir, step), 0, 0);
+    return big;
+  }
+  window.MFWorld = { show: show, hide: hide, preview: preview, get active() { return active; } };
 })();

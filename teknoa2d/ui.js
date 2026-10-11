@@ -1,15 +1,12 @@
-/* EXiLED mindscape — the screen. engine.js decides what happens; this
+/* EXiLED teknoa 2d — the screen. engine.js decides what happens; this
    draws it and turns clicks and keys into engine calls. */
 (function () {
   var MF = window.MF, D = window.MF_DATA, A = window.MFAvatar, store = null;
   try { store = window.localStorage; } catch (e) {}
   var $ = function (id) { return document.getElementById(id); };
 
-  /* the mindscape has to have been opened on the main page first */
-  var open = false;
-  /* exiled.mainframe: the old name, from before the rename */
-  try { open = !!(store.getItem('exiled.mindscape') || store.getItem('exiled.mainframe')); } catch (e) {}
-  if (!open || !MF || !D || !A) return;
+  /* open to everyone. #locked only stays up if the game files did not load */
+  if (!MF || !D || !A) return;
   $('locked').hidden = true;
 
   var S = D.scenes;
@@ -34,7 +31,19 @@
     $('chipMsg').textContent = '';
     drawSlots(); drawOrigins(); drawFace();
   }
-  function drawFace() { $('avBig').innerHTML = A.render(look); }
+  function drawFace() { $('avBig').innerHTML = A.render(look); drawWalk(); }
+  /* the same look, walking: the sprite nova city will see */
+  var walkStep = 0, walkTimer = 0;
+  function drawWalk() {
+    var box = $('avWalk');
+    if (!box || !window.MFWorld || !window.MFWorld.preview) return;
+    box.innerHTML = '';
+    ['down', 'left', 'up', 'right'].forEach(function (d) { box.appendChild(window.MFWorld.preview(look, d, walkStep)); });
+    if (!walkTimer) walkTimer = setInterval(function () {
+      if ($('chip').hidden) { clearInterval(walkTimer); walkTimer = 0; return; }
+      walkStep ^= 1; drawWalk();
+    }, 420);
+  }
   function drawSlots() {
     var box = $('slots'); box.innerHTML = '';
     A.SLOTS.forEach(function (sl) {

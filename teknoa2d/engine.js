@@ -1,8 +1,8 @@
-/* EXiLED mindscape — the rules. No DOM in here: ui.js draws, this decides.
+/* EXiLED teknoa 2d — the rules. No DOM in here: ui.js draws, this decides.
    The same file runs in the browser and under node for the tests.
 
    State is one plain object, saved whole. Scenes come from scenes.js,
-   compiled from mindscape/content/*.scene by mindscape/build.mjs.
+   compiled from teknoa2d/content/*.scene by teknoa2d/build.mjs.
 
    A scene: { id, beats: [...], choices: [...], ask, go }
      ask     { seal, ok, no }      a typed answer checked against a wiki seal
@@ -133,7 +133,7 @@
   function b64d(t) { return typeof atob === 'function' ? decodeURIComponent(escape(atob(t))) : Buffer.from(t, 'base64').toString('utf8'); }
   function clean(o) {
     var s = newState();
-    if (!o || typeof o !== 'object' || o.v !== VERSION) throw new Error('not a mindscape save');
+    if (!o || typeof o !== 'object' || o.v !== VERSION) throw new Error('not a teknoa 2d save');
     for (var k in s) if (k !== 'scene' && o[k] !== undefined && o[k] !== null && typeof o[k] === typeof s[k]) s[k] = o[k];
     if (typeof o.scene === 'string') s.scene = o.scene;     /* a string, or null once a run has ended */
     var p = s.player;

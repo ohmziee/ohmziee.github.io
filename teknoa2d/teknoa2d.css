@@ -1,4 +1,4 @@
-/* EXiLED mindscape — same tokens as the wiki. The wiki is a readout;
+/* EXiLED teknoa 2d — same tokens as the wiki. The wiki is a readout;
    this is a line someone is on. */
 
 :root{
@@ -207,3 +207,7 @@ a{color:var(--lavender)}
 .ab{display:flex;gap:.9rem;align-items:center}
 .ab button{width:3.7rem;height:3.7rem;border-radius:50%;font:700 1.15rem var(--font-display)}
 .ab [data-k=a]{margin-bottom:1.6rem;border-color:var(--live);color:var(--live)}
+
+/* Chippin' In: the walking sprite, all four ways */
+.walkers{display:flex;gap:.45rem;justify-content:center}
+.walkers canvas{width:3rem;height:3rem;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--violet);background:var(--deep)}
