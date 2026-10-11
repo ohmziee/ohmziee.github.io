@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+YfqVtoiYHj63pbk/zc9Obiqyiz60ll896mM1aOhqV8=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-sC+8gCJ1kyilQDvHWos4sto6pBTH17/8afNXHM5WJss=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -2170,14 +2170,21 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       /* shown as on straight away; the sound itself starts at the first tap
          that isn't on the speaker (that one would only switch it off again) */
       ambBtn.classList.add('on'); ambBtn.setAttribute('aria-pressed', 'true'); ambPaint();
+      /* a touch's pointerdown doesn't count as permission to play sound on
+         phones (its pointerup/touchend/click does), so listen for all of them
+         and keep listening until the browser actually lets the sound run */
+      var ambGestures = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
+      var ambDisarm = function(){
+        ambGestures.forEach(function(g){ document.removeEventListener(g, ambArm, true); });
+      };
       var ambArm = function(e){
         if(ambBtn.contains(e.target)) return;
-        document.removeEventListener('pointerdown', ambArm, true);
-        document.removeEventListener('keydown', ambArm, true);
-        if(ambBtn.getAttribute('aria-pressed') === 'true') ambSet(true);
+        if(ambBtn.getAttribute('aria-pressed') !== 'true') return ambDisarm();
+        if(amb.ac && amb.ac.state === 'running') return ambDisarm();
+        ambSet(true);
+        if(amb.ac && amb.ac.state === 'running') ambDisarm();
       };
-      document.addEventListener('pointerdown', ambArm, true);
-      document.addEventListener('keydown', ambArm, true);
+      ambGestures.forEach(function(g){ document.addEventListener(g, ambArm, true); });
     }
   } catch(e){}
 
@@ -3965,18 +3972,33 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       if(v >= target) clearInterval(iv);
     }, 150);
   }
+  /* on phones a touch's pointerdown isn't permission to play (its
+     pointerup/touchend/click is), and a refused play() fails silently, so
+     the radio listens to all of them and retries until it is really playing */
+  var radioGestures = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
+  function radioListen(d){
+    radioGestures.forEach(function(g){ d.addEventListener(g, radioFirstTouch, true); });
+  }
+  function radioDisarm(){
+    radioGestures.forEach(function(g){ document.removeEventListener(g, radioFirstTouch, true); });
+    radio.armed = false;
+  }
   function radioFirstTouch(e){
-    document.removeEventListener('pointerdown', radioFirstTouch, true);
-    document.removeEventListener('keydown', radioFirstTouch, true);
+    if(radio.armed === false) return;
     var t = e && e.target;
-    if(radioPref === 'off' || radio.yt || radio.loading || juke.started) return;
-    if(t && t.closest && t.closest('#radio')) return;
+    if(radioPref === 'off' || radio.yt || radio.loading) return radioDisarm();
+    if(juke.started){
+      /* an earlier try was refused: try again, unless it is playing now or
+         the visitor has paused it since */
+      if(!radio.want || (juke.el && !juke.el.paused)) return radioDisarm();
+      return jukePlay();
+    }
+    if(t && t.closest && t.closest('#radio')) return radioDisarm();
     radio.fade = true;
     if(!rEl.classList.contains('mini')) radioMini(true, true);
     radioOpen(true);
   }
-  document.addEventListener('pointerdown', radioFirstTouch, true);
-  document.addEventListener('keydown', radioFirstTouch, true);
+  radioListen(document);
 
   /* ── ghostie and the radio ──
      On air: headphones on, swaying, notes drifting up, and now and then a
@@ -4312,7 +4334,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     /* ghostie's own page has her as its cameo: no need for two of her */
     gh.classList.toggle('away', !!(d && d.getElementById('cameo')));
     /* touches inside the frame count as the first touch for the radio */
-    if(d){ d.addEventListener('pointerdown', radioFirstTouch, true); d.addEventListener('keydown', radioFirstTouch, true); }
+    if(d && radio.armed !== false) radioListen(d);
   });
   /* entries the shell made carry state {page:1}: going back or forward to
      one is the frame walking its own history, which it does by itself. a
