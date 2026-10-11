@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nyJ/2wd4cAAH0QtBUWtfhXCe8c7MpekGeqe2SljkzTI=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-CK/FRToFHCvryvEupkvMwz3s67nu4seP4D6x91LVXOo=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -510,6 +510,8 @@ body.stormmax .vignette{background:radial-gradient(ellipse at center,transparent
 #termOut .dim{color:var(--rain)}
 #termOut .dump{color:var(--rain);letter-spacing:.04em}
 #termOut .pw{color:var(--ice);cursor:pointer;border-bottom:1px dotted rgba(159,140,255,.6)}
+#termOut .code{word-break:break-all;color:var(--ice);user-select:all;-webkit-user-select:all}
+#termOut .act{color:#7CFFB2;cursor:pointer;border-bottom:1px dotted #7CFFB2;margin-right:1.2em}
 #termOut .pw:hover{color:#7CFFB2;border-bottom-color:#7CFFB2}
 #termOut .pw.used{color:var(--glitch-b);text-decoration:line-through;border-bottom:0;cursor:default}
 #termLine{display:flex;gap:.5rem;align-items:center;margin-top:.6rem;font-size:clamp(.78rem,1.4vw,.92rem)}
@@ -3479,7 +3481,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   function prompt(){ return (mindscapeOpen ? 'root@mindscape' : whoAmI() + '@exiled') + ':~$'; }
 
   var CMDS = {
-    help: function(){ tprint('commands:\n  help      this\n  ls        list files\n  cat FILE  read a file\n  whoami    identify\n  rain N    set rain 0-100 (75+ lightning, 100 storm)\n  ghostie   she answers  //  ghostie reset  send her home\n  radio     tune in  //  radio next, radio off\n  summon X  ...\n  unlock    ...\n  clear     wipe\n  exit      leave', 'dim'); },
+    help: function(){ tprint('commands:\n  help      this\n  ls        list files\n  cat FILE  read a file\n  whoami    identify\n  rain N    set rain 0-100 (75+ lightning, 100 storm)\n  ghostie   she answers  //  ghostie reset  send her home\n  radio     tune in  //  radio next, radio off\n  summon X  ...\n  unlock    ...\n  backup    keep a copy of what you earned\n  restore   bring a copy back\n  clear     wipe\n  exit      leave', 'dim'); },
     ls: function(a){ var all = /^-\w*a/.test(a || ''); tprint(Object.keys(FILES).filter(function(f){ return f[0] !== '.' || mindscapeOpen || all; }).map(function(f){ return (FILES[f].locked && !mindscapeOpen ? '<span class="err">-r--------</span>  ' : '<span class="ok">-rw-r--r--</span>  ') + f; }).join('\n')); },
     cat: function(a){
       if(!a) return tprint('cat: what file?', 'err');
@@ -3548,6 +3550,46 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         radioSkip(1); return tprint('skipping.', 'ok');
       }
       radioOpen(true); tprint('tuning in... EXiLED RADIO, bottom left.\n(radio next skips. radio off ends it.)', 'ok');
+    },
+    /* backup / restore: everything this browser has earned, as one code or
+       file (teknoa2d/backup.js). restore checks every key against its seal */
+    backup: function(){
+      var B = window.EXBackup;
+      if(!B) return tprint('backup: no signal. try again in a moment.', 'err');
+      var code = B.pack(localStorage);
+      try{ localStorage.setItem('exiled.backupAt', String(Date.now())); }catch(e){}
+      tprint('your backup. it holds your teknoa 2d run, your wiki keys and the doors you opened.\nit opens what you earned, so keep it to yourself.', 'dim');
+      tprint(esc(code), 'code');
+      var acts = tprint('<span class="act" data-act="copy">[ copy ]</span><span class="act" data-act="file">[ save as a file ]</span>');
+      acts.addEventListener('click', function(e){
+        var a = e.target && e.target.getAttribute && e.target.getAttribute('data-act');
+        if(a === 'file'){ B.download(code, whoAmI()); tprint('saved to your downloads.', 'ok'); }
+        if(a === 'copy' && navigator.clipboard) navigator.clipboard.writeText(code).then(function(){ tprint('copied.', 'ok'); }, function(){ tprint('select it and copy by hand.', 'err'); });
+      });
+    },
+    restore: function(){
+      var B = window.EXBackup;
+      if(!B) return tprint('restore: no signal. try again in a moment.', 'err');
+      function apply(text){
+        tPrompt.textContent = prompt();
+        tprint('...checking every key against its lock.', 'dim');
+        B.restore(text, localStorage, window.EXILED_SEAL, window.crypto && window.crypto.subtle).then(function(r){
+          tprint('RESTORED.' + (r.keys.length ? ' ' + r.keys.length + ' key(s) back.' : '') + (r.run ? ' teknoa 2d run back.' : '') +
+            (r.dropped.length ? '\n' + r.dropped.length + ' key(s) did not fit their locks and were left out.' : '') + '\nreconnecting...', 'ok');
+          setTimeout(function(){ location.reload(); }, 1800);
+        }, function(e){ tprint('restore: ' + esc(e.message) + '.', 'err'); });
+      }
+      tprint('paste your backup code, or <span class="act" data-act="file">[ load a file ]</span>', 'dim').addEventListener('click', function(e){
+        if(!(e.target && e.target.getAttribute && e.target.getAttribute('data-act') === 'file')) return;
+        var f = document.createElement('input'); f.type = 'file'; f.accept = '.save,.txt,text/plain';
+        f.addEventListener('change', function(){
+          var file = f.files && f.files[0]; if(!file) return;
+          termTrap = null; file.text().then(apply);
+        });
+        f.click();
+      });
+      tPrompt.textContent = '?>';
+      termTrap = function(line){ apply(line); };
     },
     sudo: function(){ tprint('sudo: you are not on the list. nobody is.', 'err'); },
     clear: function(){ tOut.innerHTML = ''; },
@@ -4794,7 +4836,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      lists, so the hidden ones stay hidden, and summon / unlock targets are
      never offered. After cat: the files ls would show. During the password
      crack: the words in the dump on screen. */
-  var tabCmds = ['help', 'ls', 'cat', 'whoami', 'rain', 'ghostie', 'summon', 'unlock', 'radio', 'clear', 'exit'];
+  var tabCmds = ['help', 'ls', 'cat', 'whoami', 'rain', 'ghostie', 'summon', 'unlock', 'radio', 'backup', 'restore', 'clear', 'exit'];
   var tabArgs = { ghostie: ['reset'], radio: ['next', 'off'] }, tabCycle = null, breachWords = null;
   function tabOptions(line){
     if(termTrap) return vault.step === 2 && breachWords && /^\S*$/.test(line) ? { head: '', word: line, list: breachWords } : null;
@@ -4866,6 +4908,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 </script>
 <!-- the vault's check blob and salt. ciphertext only — built by wiki/build.mjs -->
 <script src="wiki/seal.js" defer></script>
+<script src="teknoa2d/backup.js" defer></script>
 <!-- ═══ ANALYTICS SLOT ═══
      when you make a GoatCounter account, paste its script tag here and delete this comment.
      until then: GitHub repo → Insights → Traffic shows visits for the last 14 days. -->

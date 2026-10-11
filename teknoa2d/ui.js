@@ -290,28 +290,61 @@
     });
   });
 
-  var wipeArmed = 0;
+  /* the backup: the whole site's progress (backup.js), not just this run.
+     Old game-only MF1 codes still load. */
+  var wipeArmed = 0, B = window.EXBackup;
   function msg(t, bad) { $('sysMsg').textContent = t; $('sysMsg').classList.toggle('err', !!bad); }
+  function code() { if (store) MF.save(s, store); return B && store ? B.pack(store) : MF.exportCode(s); }
+  function backedUp() { try { store.setItem('exiled.backupAt', String(Date.now())); } catch (e) {} }
   $('sysBtn').addEventListener('click', function () {
-    toggle('sys', function () { $('code').value = MF.exportCode(s); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; });
+    toggle('sys', function () { $('code').value = code(); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; });
   });
   $('copyBtn').addEventListener('click', function () {
     var t = $('code').value;
-    function fallback() { $('code').select(); try { document.execCommand('copy'); msg('copied.'); } catch (e) { msg('select it and copy by hand.', true); } }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { msg('copied.'); }, fallback);
+    function fallback() { $('code').select(); try { document.execCommand('copy'); backedUp(); msg('copied.'); } catch (e) { msg('select it and copy by hand.', true); } }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { backedUp(); msg('copied.'); }, fallback);
     else fallback();
   });
-  $('loadBtn').addEventListener('click', function () {
+  if ($('dlBtn')) $('dlBtn').addEventListener('click', function () {
+    if (!B) return;
+    B.download($('code').value, s.player.handle); backedUp(); msg('saved to your downloads.');
+  });
+  /* after a restore, pick up wherever the run now is */
+  function resume() {
+    if (!MF.chippedIn(s)) return showChip();
+    if (window.MFWorld && (!s.scene || MF.view(s, S).kind === 'end')) return showWorld();
+    if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start);
+    showStage(); render();
+  }
+  function restoreFrom(text) {
+    text = String(text || '').trim();
+    if (B && /^EXB1\./.test(text)) {
+      msg('checking keys...');
+      return B.restore(text, store, window.EXILED_SEAL, window.crypto && window.crypto.subtle).then(function (r) {
+        var back = MF.load(store);
+        if (back) { if (back.scene && !S[back.scene]) MF.enter(back, S, D.start); s = back; }
+        resume(); $('code').value = code();
+        msg('restored.' + (r.keys.length ? ' wiki keys: ' + r.keys.length + '.' : '') + (r.dropped.length ? ' ' + r.dropped.length + ' key(s) did not fit and were left out.' : ''));
+      }, function (e) { msg(e.message + '.', true); });
+    }
     try {
-      var loaded = MF.importCode($('paste').value);
+      var loaded = MF.importCode(text);
       if (loaded.scene && !S[loaded.scene]) MF.enter(loaded, S, D.start);
-      s = loaded;
-      if (!MF.chippedIn(s)) return showChip();
-      if (!s.scene && !Object.keys(s.seen).length && !window.MFWorld) MF.enter(s, S, D.start);
-      showStage(); render(); $('code').value = MF.exportCode(s);
+      s = loaded; if (store) MF.save(s, store);
+      resume(); $('code').value = code();
       msg('run loaded.');
     } catch (e) { msg(e.message + '.', true); }
-  });
+  }
+  $('loadBtn').addEventListener('click', function () { restoreFrom($('paste').value); });
+  if ($('fileBtn')) {
+    $('fileBtn').addEventListener('click', function () { $('fileIn').click(); });
+    $('fileIn').addEventListener('change', function () {
+      var f = $('fileIn').files && $('fileIn').files[0];
+      if (!f) return;
+      f.text().then(function (t) { $('paste').value = t.trim(); restoreFrom(t); });
+      $('fileIn').value = '';
+    });
+  }
   /* two presses, no dialog: the first arms it, the second wipes */
   $('wipeBtn').addEventListener('click', function () {
     if (Date.now() - wipeArmed > 4000) { wipeArmed = Date.now(); $('wipeBtn').textContent = 'PRESS AGAIN TO WIPE'; return; }

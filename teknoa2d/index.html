@@ -18,6 +18,7 @@
 <script src="engine.js" defer></script>
 <script src="avatar.js" defer></script>
 <script src="world.js" defer></script>
+<script src="backup.js" defer></script>
 <script src="overworld.js" defer></script>
 <script src="scenes.js" defer></script>
 <script src="../wiki/seal.js" defer></script>
@@ -101,13 +102,16 @@
   </aside>
 
   <aside class="panel" id="sys" hidden aria-label="system">
-    <h2>SAVE CODE</h2>
-    <p class="dim">your run lives in this browser. copy the code to carry it to another device.</p>
-    <textarea id="code" rows="4" readonly spellcheck="false" aria-label="your save code"></textarea>
+    <h2>BACKUP</h2>
+    <p class="dim">your run, your wiki keys and the doors you opened live in this browser only. clearing site data erases them. keep a copy somewhere.</p>
+    <textarea id="code" rows="4" readonly spellcheck="false" aria-label="your backup code"></textarea>
     <button type="button" id="copyBtn">COPY</button>
-    <h2>LOAD A CODE</h2>
-    <textarea id="paste" rows="4" spellcheck="false" aria-label="paste a save code"></textarea>
-    <button type="button" id="loadBtn">LOAD</button>
+    <button type="button" id="dlBtn">DOWNLOAD FILE</button>
+    <h2>RESTORE</h2>
+    <textarea id="paste" rows="4" spellcheck="false" aria-label="paste a backup code"></textarea>
+    <button type="button" id="loadBtn">RESTORE</button>
+    <button type="button" id="fileBtn">LOAD A FILE</button>
+    <input type="file" id="fileIn" accept=".save,.txt,text/plain" hidden>
     <p class="msg" id="sysMsg" role="status"></p>
     <h2>WIPE</h2>
     <button type="button" id="wipeBtn" class="danger">WIPE THIS RUN</button>

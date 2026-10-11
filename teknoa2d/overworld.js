@@ -474,8 +474,23 @@
     s.world = { x: me.x, y: me.y, d: me.dir };
     $('world').hidden = false;
     district = -2; enterDistrict(world.dist[me.y * world.W + me.x]);
+    nudge();
     if (!active) { active = true; last = 0; raf = requestAnimationFrame(loop); }
     try { $('world').focus(); } catch (e) {}
+  }
+  /* once there is something to lose, remind them it only lives here: after
+     meeting hex if they never backed up, then if the last backup is a week old */
+  var nudged = false;
+  function nudge() {
+    if (nudged || !s.met.hex) return;
+    var at = 0;
+    try { at = +(localStorage.getItem('exiled.backupAt') || 0); } catch (e) { return; }
+    if (at && Date.now() - at < 7 * 86400000) return;
+    nudged = true;
+    setTimeout(function () {
+      if (!active || talkBox) return;
+      say(['your run only lives in this browser. clear the site data and it is gone.\nback it up: SYS, top right.']);
+    }, 3200);
   }
   function hide() {
     active = false; cancelAnimationFrame(raf); held = {};
