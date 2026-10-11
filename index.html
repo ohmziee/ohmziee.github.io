@@ -670,6 +670,10 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-srcs button:hover,#radio .r-srcs button:focus-visible{color:var(--ice);background:rgba(42,29,94,.3)}
 #radio .r-srcs button[aria-selected="true"]{color:#7CFFB2;background:rgba(42,29,94,.45);box-shadow:inset 0 -2px #7CFFB2}
 #radio.mini .r-srcs,#radio.mini .j-note{display:none}
+/* mini on the jukebox: the record, and what it is playing underneath */
+#radio.mini.src-juke .r-now{display:block;min-height:0;padding:.45rem .75rem .55rem;text-align:center;font-size:.72rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#05060B}
+#radio.mini.src-juke .r-now small{display:none}
 /* the jukebox screen: a record that turns while it plays */
 #radio .r-screen.r-juke{aspect-ratio:auto;min-height:0;height:9.5rem;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(ellipse at 50% 120%,rgba(159,140,255,.22),transparent 65%),#05060B}
