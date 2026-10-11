@@ -80,6 +80,8 @@
     var h = MF.cleanHandle($('handle').value);
     if (!h) { $('chipMsg').textContent = 'the line needs a handle.'; return; }
     if (!origin) { $('chipMsg').textContent = 'pick where you come from.'; return; }
+    /* every arrival chips in with a little on the chip */
+    if (!MF.chippedIn(s)) MF.earn(s, MF.START_JOULES);
     s.player = { handle: h, origin: origin, look: A.normalize(look) };
     /* with nova city loaded they land in the street; the story starts
        when they talk to someone */
@@ -282,6 +284,7 @@
       $('avSmall').innerHTML = A.render(s.player.look);
       $('opHandle').textContent = s.player.handle;
       $('opOrigin').textContent = o ? o.title : '';
+      $('opJ').textContent = MF.fmtJ(MF.joules(s));
       inv.innerHTML = ''; met.innerHTML = '';
       Object.keys(s.items).forEach(function (k) { inv.appendChild(li(k + (s.items[k] > 1 ? ' x' + s.items[k] : ''), D.items[k])); });
       if (!inv.children.length) inv.appendChild(empty('nothing yet.'));

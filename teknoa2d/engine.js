@@ -11,8 +11,10 @@
      choice  { text, to, when: [...], fx: [...] }
      go      the scene to run when the beats end and there are no choices
 
-   conditions  flag:x  item:x  trait:x  origin:x  met:x  aff:hex>=3   (! in front negates)
-   effects     flag x  unflag x  give x  take x  trait x  aff hex +2  meet hex */
+   conditions  flag:x  item:x  trait:x  origin:x  met:x  aff:hex>=3  joules>=50   (! in front negates)
+   effects     flag x  unflag x  give x  take x  trait x  aff hex +2  meet hex  pay 25  charge 25
+
+   Money is the Teknoan Joule, the official currency of Teknoa, written ⚡. */
 (function (root) {
   var VERSION = 1;
   var SAVE_KEY = 'exiled.mf.save';
@@ -20,16 +22,30 @@
   function newState() {
     return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {} },
              flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {},
-             world: { x: -1, y: -1, d: 'down' } };          /* where they stand in nova city */
+             world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city */
+             joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
+  /* ── joules ──────────────────────────────────────────────── */
+  var START_JOULES = 100, MAX_JOULES = 999999;
+  function joules(s) { var n = Math.floor(+s.joules || 0); return n > 0 ? Math.min(n, MAX_JOULES) : 0; }
+  function earn(s, n) { s.joules = Math.min(MAX_JOULES, joules(s) + Math.max(0, Math.floor(+n || 0))); return s.joules; }
+  /* all or nothing: false, and nothing taken, if they cannot cover it */
+  function spend(s, n) {
+    n = Math.max(0, Math.floor(+n || 0));
+    if (joules(s) < n) return false;
+    s.joules = joules(s) - n; return true;
+  }
+  function fmtJ(n) { return '⚡' + String(Math.floor(+n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
   /* ── conditions ─────────────────────────────────────────── */
-  var AFF = /^aff:([a-z0-9-]+)(>=|<=|>|<|=)(-?\d+)$/;
+  var AFF = /^aff:([a-z0-9-]+)(>=|<=|>|<|=)(-?\d+)$/, JOU = /^joules(>=|<=|>|<|=)(\d+)$/;
   function test(s, cond) {
     var neg = cond.charAt(0) === '!', c = neg ? cond.slice(1) : cond, ok;
-    var m = AFF.exec(c);
+    var m = AFF.exec(c), j = JOU.exec(c);
+    if (j) m = [c, '', j[1], j[2]];
     if (m) {
-      var v = s.aff[m[1]] || 0, n = +m[3];
+      var v = j ? joules(s) : s.aff[m[1]] || 0, n = +m[3];
       ok = m[2] === '>=' ? v >= n : m[2] === '<=' ? v <= n : m[2] === '>' ? v > n : m[2] === '<' ? v < n : v === n;
     } else {
       var i = c.indexOf(':'), kind = c.slice(0, i), name = c.slice(i + 1);
@@ -58,6 +74,10 @@
     else if (op === 'aff') s.aff[name] = Math.max(-10, Math.min(10, (s.aff[name] || 0) + (+p[2] || 0)));
     /* meeting someone is the hook the wiki's per-character seal hangs on
        (phase 4): the date is what the entry's stamp will show */
+    else if (op === 'pay') earn(s, p[1]);
+    /* a choice that charges should be gated on joules>=N; if it is not, it
+       takes what they have rather than going negative */
+    else if (op === 'charge') { if (!spend(s, p[1])) s.joules = 0; }
     else if (op === 'meet') { if (!s.met[name]) s.met[name] = new Date(now || Date.now()).toISOString().slice(0, 10); }
     else throw new Error('unknown effect: ' + fx);
   }
@@ -136,6 +156,10 @@
     if (!o || typeof o !== 'object' || o.v !== VERSION) throw new Error('not a teknoa 2d save');
     for (var k in s) if (k !== 'scene' && o[k] !== undefined && o[k] !== null && typeof o[k] === typeof s[k]) s[k] = o[k];
     if (typeof o.scene === 'string') s.scene = o.scene;     /* a string, or null once a run has ended */
+    s.joules = joules(s);
+    /* a run from before money existed gets the purse a new arrival gets */
+    if (o.joules === undefined && o.player && o.player.handle && o.player.origin) s.joules = START_JOULES;
+    if (!s.found || typeof s.found.day !== 'string' || !s.found.got || typeof s.found.got !== 'object') s.found = { day: '', got: {} };
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
                  look: p.look && typeof p.look === 'object' ? p.look : {} };
@@ -156,6 +180,7 @@
   function wipe(store) { try { store.removeItem(SAVE_KEY); } catch (e) {} }
 
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
+              START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
               cleanHandle: cleanHandle, chippedIn: chippedIn, answer: answer, normalAnswer: normalAnswer,
               enter: enter, view: view, next: next, choose: choose,
               exportCode: exportCode, importCode: importCode, save: save, load: load, wipe: wipe };

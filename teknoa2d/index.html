@@ -83,6 +83,7 @@
   <main id="world" class="world" hidden tabindex="-1" aria-label="nova city">
     <div class="wscreen">
       <canvas id="wCanvas" aria-label="nova city, seen from above"></canvas>
+      <div class="wj" aria-label="teknoan joules"><span id="wJ">⚡0</span><span class="gain" id="wJGain" aria-live="polite"></span></div>
       <div class="wcard" id="wCard" hidden><img id="wCardImg" alt="" decoding="async"><div class="wcard-t"><b id="wCardName"></b><span id="wCardSub"></span></div></div>
       <div class="wtalk" id="wTalk" hidden><b id="wWho"></b><p id="wLine"></p><span class="more" aria-hidden="true">&#9660;</span></div>
     </div>
@@ -95,6 +96,7 @@
 
   <aside class="panel" id="inv" hidden aria-label="inventory">
     <div class="op"><div class="avatar" id="avSmall"></div><p><b id="opHandle"></b><span id="opOrigin" class="d"></span></p></div>
+    <p class="purse"><span>TEKNOAN JOULES</span><b id="opJ"></b></p>
     <h2>INVENTORY</h2>
     <ul id="invList"></ul>
     <h2>CONTACTS</h2>

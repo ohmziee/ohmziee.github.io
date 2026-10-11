@@ -278,6 +278,7 @@
   /* ── state ─────────────────────────────────────────────────── */
   var me = { x: 0, y: 0, dir: 'down', moving: false, fx: 0, fy: 0, t: 0, step: 0 };
   var npcs = [], held = {}, pressedA = false, talkBox = null, district = -2, card = { until: 0 };
+  var loose = [], toastT = 0;
 
   function occupied(x, y) {
     if (M.solid(world, x, y)) return true;
@@ -331,6 +332,46 @@
     }
   }
 
+  /* ── joules ──────────────────────────────────────────────────
+     today's loose ones come from world.js; s.found remembers which were
+     picked up, and starts over when the day does */
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function looseNow() {
+    var day = today();
+    if (!s.found || s.found.day !== day) s.found = { day: day, got: {} };
+    if (!loose.day || loose.day !== day) { loose = M.loose(world, day); loose.day = day; }
+    return loose.filter(function (j) { return !s.found.got[j.id]; });
+  }
+  function pickUp() {
+    var left = looseNow();
+    for (var i = 0; i < left.length; i++) {
+      if (left[i].x !== me.x || left[i].y !== me.y) continue;
+      s.found.got[left[i].id] = 1; window.MF.earn(s, left[i].n);
+      wallet('+' + window.MF.fmtJ(left[i].n));
+      if (api && api.save) api.save();
+      return;
+    }
+  }
+  function wallet(gain) {
+    $('wJ').textContent = window.MF.fmtJ(window.MF.joules(s));
+    if (!gain) return;
+    var t = $('wJGain'); t.textContent = gain;
+    t.classList.remove('on'); void t.offsetWidth; t.classList.add('on');
+  }
+  /* a dropped joule: a little bolt that winks */
+  var BOLT = ['..YY', '.YY.', 'YYYY', '.YY.', 'YY..'];
+  function drawLoose(cx, cy, now) {
+    looseNow().forEach(function (j) {
+      var sx = j.x * TS - cx, sy = j.y * TS - cy;
+      if (sx < -TS || sy < -TS || sx > VW * TS || sy > VH * TS) return;
+      var bob = Math.floor(now / 300 + j.x) % 2, lit = Math.floor(now / 150 + j.y) % 8 === 0;
+      px(ctx, 'rgba(0,0,0,.35)', sx + 5, sy + 12, 6, 1);
+      BOLT.forEach(function (r, y) {
+        for (var x = 0; x < 4; x++) if (r.charAt(x) === 'Y') px(ctx, lit ? '#ffffff' : '#ffe97c', sx + 6 + x, sy + 5 + y - bob);
+      });
+    });
+  }
+
   /* ── district cards ──────────────────────────────────────── */
   function enterDistrict(di) {
     if (di < 0 || di === district) return;
@@ -357,6 +398,7 @@
         me.moving = false; me.t = 0;
         enterDistrict(world.dist[me.y * world.W + me.x]);
         s.world = { x: me.x, y: me.y, d: me.dir };
+        pickUp();
       }
     }
     if (!me.moving) {
@@ -403,6 +445,7 @@
       if (sx < -TS || sy < -TS || sx > VW * TS || sy > VH * TS) return;
       px(ctx, '#3a2a20', sx + 7, sy + 8, 2, 7); px(ctx, '#c8a878', sx + 3, sy + 3, 10, 6); px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1);
     });
+    drawLoose(cx, cy, now);
     /* people, back to front */
     var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1 });
@@ -474,6 +517,7 @@
     s.world = { x: me.x, y: me.y, d: me.dir };
     $('world').hidden = false;
     district = -2; enterDistrict(world.dist[me.y * world.W + me.x]);
+    wallet();
     nudge();
     if (!active) { active = true; last = 0; raf = requestAnimationFrame(loop); }
     try { $('world').focus(); } catch (e) {}

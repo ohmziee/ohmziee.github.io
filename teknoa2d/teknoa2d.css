@@ -211,3 +211,12 @@ a{color:var(--lavender)}
 /* Chippin' In: the walking sprite, all four ways */
 .walkers{display:flex;gap:.45rem;justify-content:center}
 .walkers canvas{width:3rem;height:3rem;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--violet);background:var(--deep)}
+
+/* the wallet: top right of the street, a gain floats up out of it */
+.wj{position:absolute;top:.5rem;right:.5rem;padding:.2rem .55rem;border:1px solid var(--violet);background:rgba(11,13,26,.85);color:#ffe97c;font:600 clamp(.7rem,1.6vw,.95rem)/1.2 var(--font-mono);letter-spacing:.06em;pointer-events:none}
+.wj .gain{position:absolute;right:.4rem;top:100%;color:#ffe97c;opacity:0;white-space:nowrap;text-shadow:0 0 6px rgba(255,233,124,.6)}
+.wj .gain.on{animation:jgain 1.4s ease-out forwards}
+@keyframes jgain{0%{opacity:0;transform:translateY(.6rem)}15%{opacity:1}100%{opacity:0;transform:translateY(-.4rem)}}
+@media (prefers-reduced-motion:reduce){.wj .gain.on{animation:none;opacity:1}}
+.purse{display:flex;justify-content:space-between;align-items:baseline;margin:.8rem 0 0;padding:.45rem .6rem;border:1px solid var(--violet);font-size:.8rem;letter-spacing:.12em;color:var(--rain)}
+.purse b{color:#ffe97c;font:600 1.05rem var(--font-mono);letter-spacing:.04em}

@@ -228,5 +228,33 @@
     return seen;
   }
 
-  root.MFWorldMap = { W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, solid: solid, reach: reach };
+  /* loose joules: a few dropped ⚡ per district, somewhere new every day.
+     Picked from open ground the player can actually reach, never on a
+     sign or where someone stands, so they survive the map changing. The
+     same day gives the same spots on every device. */
+  var LOOSE_PER = 2;
+  function loose(world, day) {
+    if (!world.open) {
+      var r = reach(world, world.spawn.x, world.spawn.y), busy = {};
+      world.signs.concat(world.npcs).forEach(function (o) { busy[o.y * world.W + o.x] = 1; });
+      world.open = DISTRICTS.map(function () { return []; });
+      for (var k = 0; k < world.W * world.H; k++) {
+        var t = world.tile[k], d = world.dist[k];
+        if (r[k] && !busy[k] && d >= 0 && (t === T.GROUND || t === T.ROAD || t === T.GRASS || t === T.SAND)) world.open[d].push(k);
+      }
+    }
+    var seed = 0, i, out = [];
+    for (i = 0; i < day.length; i++) seed = (seed * 31 + day.charCodeAt(i)) | 0;
+    world.open.forEach(function (cells, d) {
+      for (var n = 0; n < LOOSE_PER && cells.length; n++) {
+        var k = cells[Math.floor(hash(seed + d * 101, n * 7919) * cells.length)];
+        var x = k % world.W, y = (k / world.W) | 0;
+        if (out.some(function (o) { return o.x === x && o.y === y; })) continue;
+        out.push({ id: x + ',' + y, x: x, y: y, n: 5 + 5 * Math.floor(hash(seed + n, d * 31 + 3) * 5) });
+      }
+    });
+    return out;
+  }
+
+  root.MFWorldMap = { W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, solid: solid, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);
