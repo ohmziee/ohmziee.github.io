@@ -638,6 +638,8 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 /* the jukebox screen: a record that turns while it plays */
 #radio .r-screen.r-juke{aspect-ratio:auto;min-height:0;height:9.5rem;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(ellipse at 50% 120%,rgba(159,140,255,.22),transparent 65%),#05060B}
+/* the display:flex above outranks the tab rule, so restate it here */
+#radio.src-yt .r-screen.r-juke{display:none}
 #radio .r-juke > .j-disc{position:relative;inset:auto;width:7.6rem;height:7.6rem;border-radius:50%;display:flex;align-items:center;justify-content:center;
   background:conic-gradient(from 30deg,rgba(255,255,255,.07),transparent 18%,transparent 50%,rgba(255,255,255,.06) 62%,transparent 80%),
     repeating-radial-gradient(circle,#0c0e1a 0 2px,#161929 2px 3px);
