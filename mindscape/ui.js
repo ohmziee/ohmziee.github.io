@@ -24,6 +24,7 @@
   var look = null, origin = '';
   function showChip() {
     closePanels();
+    if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
     $('stage').hidden = true; document.querySelector('.tools').hidden = true; $('chip').hidden = false;
     look = Object.keys(s.player.look).length ? A.normalize(s.player.look) : A.random();
     origin = D.origins[s.player.origin] ? s.player.origin : '';
@@ -71,11 +72,26 @@
     if (!h) { $('chipMsg').textContent = 'the line needs a handle.'; return; }
     if (!origin) { $('chipMsg').textContent = 'pick where you come from.'; return; }
     s.player = { handle: h, origin: origin, look: A.normalize(look) };
+    /* with nova city loaded they land in the street; the story starts
+       when they talk to someone */
+    if (window.MFWorld) { s.scene = null; if (store) MF.save(s, store); return showWorld(); }
     if (!s.scene) MF.enter(s, S, D.start);
     showStage(); render();
   });
   function showStage() {
+    if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
     $('chip').hidden = true; $('stage').hidden = false; document.querySelector('.tools').hidden = false;
+  }
+  /* ── nova city ──────────────────────────────────────────────
+     overworld.js walks them around; talking to someone with a scene comes
+     back here, and the end of a scene goes back out to the street. */
+  function showWorld() {
+    closePanels();
+    $('chip').hidden = true; $('stage').hidden = true; document.querySelector('.tools').hidden = false;
+    window.MFWorld.show(s, {
+      save: function () { if (store) MF.save(s, store); },
+      talk: function () { MF.enter(s, S, D.start); showStage(); render(); }
+    });
   }
 
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -160,6 +176,7 @@
       });
       return;
     }
+    if (window.MFWorld) { s.scene = null; if (store) MF.save(s, store); setWho('', ''); return showWorld(); }
     speaker.textContent = ''; line.classList.add('narr');
     $('whoCard').classList.remove('on');
     type('[ the line goes quiet. end of signal. ]');
@@ -224,6 +241,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
     if (e.key === 'Escape') return closePanels();
+    if ($('stage').hidden) return;               /* out in the street, the keys are the world's */
     if (!$('inv').hidden || !$('sys').hidden) return;
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); return; }
     if (current && current.kind === 'choose' && /^[1-9]$/.test(e.key)) {
@@ -280,8 +298,8 @@
       if (loaded.scene && !S[loaded.scene]) MF.enter(loaded, S, D.start);
       s = loaded;
       if (!MF.chippedIn(s)) return showChip();
-      if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start);
-      render(); $('code').value = MF.exportCode(s);
+      if (!s.scene && !Object.keys(s.seen).length && !window.MFWorld) MF.enter(s, S, D.start);
+      showStage(); render(); $('code').value = MF.exportCode(s);
       msg('run loaded.');
     } catch (e) { msg(e.message + '.', true); }
   });
@@ -292,6 +310,8 @@
     s = MF.newState(); showChip();
   });
 
-  if (MF.chippedIn(s)) { if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start); showStage(); render(); }
-  else showChip();
+  /* mid-conversation: back to it. otherwise: back to the street */
+  if (!MF.chippedIn(s)) showChip();
+  else if (window.MFWorld && (!s.scene || MF.view(s, S).kind === 'end')) showWorld();
+  else { if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start); showStage(); render(); }
 })();

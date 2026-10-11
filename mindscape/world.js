@@ -1,0 +1,232 @@
+/* EXiLED mindscape — Nova City, as a tile map. No DOM in here: it builds the
+   map from a description and answers questions about it; overworld.js draws
+   it and walks the player around. Runs under node for the tests.
+
+   FIRST DRAFT, from the vault: six islands in the Nova Sea, bridged, with the
+   Vistadelsol mainland across the water to the north. Each island's size is
+   its real area (km²) and its place is its compass point, packed so the
+   gaps are a short bridge, not a voyage. Change a number here and the city
+   is rebuilt; nothing is hand-painted yet.
+
+   Tiles:  0 deep water  1 shallow  2 sand  3 ground  4 road  5 building
+           6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall */
+(function (root) {
+  var W = 170, H = 128;
+  var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
+            GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11 };
+  var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = 1;
+
+  /* r is in tiles: sqrt(area) scaled, so the islands keep their real
+     proportions. style picks how the streets are laid. Redrum sits out on
+     its own causeway so Noorborj is the city's northernmost point. */
+  var DISTRICTS = [
+    { id: 'worldwood', name: 'WORLDWOOD', sub: 'district 1 // the neon heart', km: 132, at: [0, 0], style: 'grid', block: 5, seed: 11, wobble: 0.10 },
+    { id: 'yucayeque', name: 'YUCAYEQUE', sub: 'district 2 // markets and old songs', km: 222, at: [1, -0.3], style: 'village', block: 4, seed: 23, wobble: 0.16 },
+    { id: 'naturia', name: 'NATURIA', sub: 'district 3 // the glowing wild', km: 139, at: [-1, -0.3], style: 'wild', block: 6, seed: 37, wobble: 0.18 },
+    { id: 'haven', name: 'HAVEN', sub: 'district 4 // where the council sits', km: 88, at: [1, 1], style: 'civic', block: 7, seed: 41, wobble: 0.04 },
+    { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, at: [-1, 1], style: 'grid', block: 4, seed: 53, wobble: 0.12 },
+    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 10 }
+  ];
+  var CENTRE = [80, 78], GAP = 4, SCALE = 1.55;
+
+  /* deterministic noise: the same city every load, on every device */
+  function hash(a, b) {
+    var h = (a * 374761393 + b * 668265263) | 0;
+    h = (h ^ (h >>> 13)) * 1274126177 | 0;
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+
+  function build() {
+    var tile = new Uint8Array(W * H), dist = new Int8Array(W * H).fill(-1);
+    var marks = [], signs = [], npcs = [];
+    var at = function (x, y) { return y * W + x; };
+    var inside = function (x, y) { return x >= 0 && y >= 0 && x < W && y < H; };
+    function set(x, y, t, d) { if (!inside(x, y)) return; tile[at(x, y)] = t; if (d !== undefined) dist[at(x, y)] = d; }
+    function get(x, y) { return inside(x, y) ? tile[at(x, y)] : T.DEEP; }
+
+    /* place: Worldwood in the middle, the rest one gap off its shore */
+    DISTRICTS.forEach(function (d, i) {
+      d.index = i; d.r = Math.sqrt(d.km) * SCALE;
+      if (!d.at[0] && !d.at[1]) { d.cx = CENTRE[0]; d.cy = CENTRE[1]; return; }
+      var len = Math.sqrt(d.at[0] * d.at[0] + d.at[1] * d.at[1]), w0 = DISTRICTS[0], rw = Math.sqrt(w0.km) * SCALE;
+      var far = rw + d.r + (d.gap || GAP);
+      d.cx = Math.round(CENTRE[0] + d.at[0] / len * far);
+      d.cy = Math.round(CENTRE[1] + d.at[1] / len * far);
+    });
+
+    /* the mainland: Vistadelsol's south shore, across the strait */
+    for (var x = 0; x < W; x++) {
+      var shore = 9 + Math.round(2 * Math.sin(x / 9) + 1.5 * Math.sin(x / 4 + 1));
+      for (var y = 0; y <= shore; y++) set(x, y, y >= shore - 1 ? T.SAND : T.MAINLAND, -1);
+    }
+
+    /* land: a wobbly disc per island, sand where it meets the water */
+    function radiusAt(d, ang) {
+      return d.r * (1 + d.wobble * (Math.sin(ang * 3 + d.seed) * 0.6 + Math.sin(ang * 5 + d.seed * 2) * 0.4));
+    }
+    DISTRICTS.forEach(function (d) {
+      var R = Math.ceil(d.r * 1.4);
+      for (var y = d.cy - R; y <= d.cy + R; y++) for (var x = d.cx - R; x <= d.cx + R; x++) {
+        if (!inside(x, y)) continue;
+        var dx = x - d.cx, dy = y - d.cy, r = radiusAt(d, Math.atan2(dy, dx)), dd = Math.sqrt(dx * dx + dy * dy);
+        if (dd <= r) set(x, y, T.GROUND, d.index);
+        else if (dd <= r + 2.2 && get(x, y) === T.DEEP) set(x, y, T.SHALLOW);
+      }
+    });
+    for (var i = 0; i < W * H; i++) {
+      if (tile[i] !== T.GROUND) continue;
+      var xx = i % W, yy = (i / W) | 0;
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(function (o) { var t = get(xx + o[0], yy + o[1]); return t === T.DEEP || t === T.SHALLOW; })) tile[i] = T.SAND;
+    }
+
+    /* streets, by district style. inner = land that is not beach */
+    DISTRICTS.forEach(function (d) {
+      var R = Math.ceil(d.r * 1.4);
+      for (var y = d.cy - R; y <= d.cy + R; y++) for (var x = d.cx - R; x <= d.cx + R; x++) {
+        if (!inside(x, y) || dist[at(x, y)] !== d.index || get(x, y) !== T.GROUND) continue;
+        var gx = ((x - d.cx) % d.block + d.block) % d.block, gy = ((y - d.cy) % d.block + d.block) % d.block;
+        var n = hash(x * 3 + d.seed, y * 7);
+        if (d.style === 'grid' || d.style === 'alleys') {
+          if (!gx || !gy) set(x, y, T.ROAD);
+          else set(x, y, n < (d.style === 'alleys' ? 0.06 : 0.12) ? T.GROUND : T.BUILDING);
+        } else if (d.style === 'civic') {
+          /* wide boulevards, whole blocks of lawn */
+          if (gx <= 1 || gy <= 1) set(x, y, T.ROAD);
+          else if (hash(Math.floor((x - d.cx) / d.block), Math.floor((y - d.cy) / d.block) + d.seed) < 0.35) set(x, y, gx === 4 && gy === 4 ? T.TREE : T.GRASS);
+          else set(x, y, T.BUILDING);
+        } else if (d.style === 'village') {
+          /* little houses in pairs, yards between, lanes that wander */
+          var lane = (!gx && hash(Math.floor((y - d.cy) / 9), x) < 0.9) || (!gy && hash(Math.floor((x - d.cx) / 9), y + 5) < 0.9);
+          if (lane) set(x, y, T.ROAD);
+          else if (n < 0.62) set(x, y, T.BUILDING);
+          else if (n < 0.72) set(x, y, T.TREE);
+          else set(x, y, T.GROUND);
+        } else if (d.style === 'wild') {
+          /* forest, clearings, paths along the grain */
+          var path = Math.abs(Math.sin((x - d.cx) / 3.1) * 3 - ((y - d.cy) % 7)) < 0.7 || !gx;
+          if (path) set(x, y, T.ROAD);
+          else if (n < 0.62) set(x, y, T.TREE);
+          else if (n < 0.67) set(x, y, T.BUILDING);
+          else set(x, y, T.GRASS);
+        }
+      }
+    });
+
+    /* a walkable line, x first then y, so it is always 4-connected */
+    function carve(x0, y0, x1, y1, t, keep) {
+      var x = x0, y = y0, sx = x1 > x0 ? 1 : -1, sy = y1 > y0 ? 1 : -1;
+      function put() { var c = get(x, y); if (!keep || !keep[c]) set(x, y, t); }
+      put();
+      while (x !== x1) { x += sx; put(); }
+      while (y !== y1) { y += sy; put(); }
+    }
+    var LAND = {}; [T.GROUND, T.ROAD, T.BUILDING, T.TREE, T.GRASS, T.STALL, T.LANDMARK, T.SAND].forEach(function (t) { LAND[t] = 1; });
+
+    /* bridges: from one island's shore to the next, along the line between
+       their centres, as a staircase two tiles wide */
+    var LINKS = [['worldwood', 'yucayeque'], ['worldwood', 'naturia'], ['worldwood', 'haven'], ['worldwood', 'majinryu'],
+                 ['worldwood', 'redrum'], ['redrum', 'naturia'], ['redrum', 'yucayeque'], ['haven', 'yucayeque'], ['majinryu', 'naturia']];
+    var byId = {}; DISTRICTS.forEach(function (d) { byId[d.id] = d; });
+    var landings = [];
+    LINKS.forEach(function (l) {
+      var a = byId[l[0]], b = byId[l[1]], steps = 400, last = null, first = null, k;
+      for (k = 0; k <= steps; k++) {
+        var px = Math.round(a.cx + (b.cx - a.cx) * k / steps), py = Math.round(a.cy + (b.cy - a.cy) * k / steps);
+        if (dist[at(px, py)] === a.index) last = [px, py];
+        if (!first && dist[at(px, py)] === b.index) { first = [px, py]; break; }
+      }
+      if (!last || !first) return;
+      var path = [], x = last[0], y = last[1], bx = first[0], by = first[1];
+      while (x !== bx || y !== by) {
+        if (Math.abs(bx - x) >= Math.abs(by - y)) x += bx > x ? 1 : -1; else y += by > y ? 1 : -1;
+        path.push([x, y]);
+      }
+      path.forEach(function (p) {
+        if (!LAND[get(p[0], p[1])] || dist[at(p[0], p[1])] < 0) {
+          set(p[0], p[1], T.BRIDGE);
+          /* the second lane, beside the first */
+          var hx = Math.abs(bx - last[0]) >= Math.abs(by - last[1]);
+          var q = hx ? [p[0], p[1] + 1] : [p[0] + 1, p[1]];
+          if (!LAND[get(q[0], q[1])] || dist[at(q[0], q[1])] < 0) set(q[0], q[1], T.BRIDGE);
+        }
+      });
+      landings.push({ d: a, x: last[0], y: last[1], to: b }, { d: b, x: first[0], y: first[1], to: a });
+    });
+    /* each landing gets a road home to its island's centre */
+    landings.forEach(function (l) { carve(l.x, l.y, l.d.cx, l.d.cy, T.ROAD); });
+
+    /* landmarks: a block the size of the thing, a road to its door */
+    function landmark(d, id, name, dx, dy, w, h, text) {
+      var x0 = d.cx + dx, y0 = d.cy + dy, x, y;
+      for (y = y0 - 1; y <= y0 + h; y++) for (x = x0 - 1; x <= x0 + w; x++) {
+        if (dist[at(x, y)] !== d.index) continue;
+        set(x, y, (y >= y0 && y < y0 + h && x >= x0 && x < x0 + w) ? T.LANDMARK : T.ROAD);
+      }
+      var door = { x: x0 + (w >> 1), y: y0 + h };
+      carve(door.x, door.y, d.cx, d.cy, T.ROAD, { 9: 1 });
+      marks.push({ id: id, name: name, x: x0, y: y0, w: w, h: h, d: d.id });
+      signs.push({ x: door.x - 1, y: door.y, text: text });
+      return door;
+    }
+    var W0 = byId.worldwood, Y0 = byId.yucayeque, N0 = byId.naturia, H0 = byId.haven, M0 = byId.majinryu, R0 = byId.redrum;
+    landmark(W0, 'tower', 'the tuned tower', -6, -9, 3, 5, 'a replica of a tower from earth.\nretuned. it hums in colours.');
+    landmark(W0, 'sapphire', 'the sapphire', 3, 2, 5, 3, 'THE SAPPHIRE\na gallery. closed tonight.');
+    landmark(H0, 'ncpd', 'NCPD', -3, -6, 6, 3, 'NOVA CITY POLICE DEPARTMENT\nthe steps are very clean.');
+    landmark(M0, 'hospital', 'nova city hospital', -2, -7, 5, 4, 'NOVA CITY HOSPITAL\nthe lights never go off up there.');
+    landmark(M0, 'pagoda', 'pagoda', 4, 1, 3, 3, 'an old gate. older than the hospital,\nor built to look it.');
+    landmark(N0, 'greattree', 'the great tree', -2, -6, 4, 4, 'NOVA CITY PARK\nthe tree is warm to the touch.');
+    landmark(Y0, 'market', 'the market hall', -3, -3, 6, 2, 'the market. fruit, records, gossip.\neverything is a little cheaper if you smile.');
+    var arcadeDoor = landmark(R0, 'arcade', 'arcade', -3, -1, 4, 2, 'ARCADE\nthe sign is a knife. the high score is "HEX".');
+
+    /* noorborj: the lighthouse on redrum's northern tip */
+    var top = R0.cy; while (dist[at(R0.cx, top - 1)] === R0.index) top--;
+    landmark(R0, 'noorborj', 'noorborj', -1, top - R0.cy + 1, 3, 4, 'NOORBORJ\na lighthouse. the door does not have a handle on this side.');
+
+    /* yucayeque's market: stalls round the hall */
+    for (var s = 0; s < 8; s++) {
+      var sx = Y0.cx - 6 + (s % 4) * 4, sy = Y0.cy + 2 + Math.floor(s / 4) * 3;
+      if (dist[at(sx, sy)] === Y0.index && get(sx, sy) !== T.LANDMARK) { set(sx, sy, T.STALL); set(sx, sy + 1, T.ROAD); }
+    }
+
+    /* who is out tonight */
+    var spawn = { x: arcadeDoor.x, y: arcadeDoor.y + 3, dir: 'up' };
+    carve(spawn.x, spawn.y, arcadeDoor.x, arcadeDoor.y, T.ROAD);
+    npcs.push({ id: 'hex', x: arcadeDoor.x, y: arcadeDoor.y, dir: 'down', look: 'hex', scene: 'hex', still: true });
+    function person(d, dx, dy, look, lines) {
+      var x = d.cx + dx, y = d.cy + dy;
+      if (SOLID[get(x, y)]) carve(x, y, d.cx, d.cy, T.ROAD);
+      npcs.push({ id: d.id + npcs.length, x: x, y: y, dir: 'down', look: look, lines: lines, roam: 3 });
+    }
+    person(W0, 2, 6, 'reveler', ['the replica tower? they tuned it to a song.\nnobody agrees which one.', 'worldwood never sleeps. i tried once.']);
+    person(W0, -4, 3, 'reveler', ['the sapphire opens late. if it opens.']);
+    person(Y0, 0, 6, 'local', ['you hungry? the patties two stalls down.\ntell them i sent you. they will charge you more.']);
+    person(Y0, 5, -6, 'local', ['the music starts when the sun goes.\nit stops when the sun comes back. mostly.']);
+    person(N0, 3, 4, 'ape', ['...', 'the plants glow because they are happy.\nbe quiet and they glow more.']);
+    person(H0, 4, 2, 'clerk', ['haven has no crime. we checked.\ntwice. in triplicate.']);
+    person(M0, 1, 4, 'medic', ['the hospital is the best on teknoa.\nthe streets around it are not.']);
+    person(R0, 3, 2, 'merc', ['redrum is not on any map the council prints.\nwe like it that way.', 'the lighthouse? do not go knocking.']);
+
+    return { W: W, H: H, tile: tile, dist: dist, marks: marks, signs: signs, npcs: npcs, spawn: spawn };
+  }
+
+  function solid(world, x, y) {
+    if (x < 0 || y < 0 || x >= world.W || y >= world.H) return true;
+    return !!SOLID[world.tile[y * world.W + x]];
+  }
+
+  /* every walkable tile reachable from (x, y), as a flat array of flags */
+  function reach(world, x, y) {
+    var seen = new Uint8Array(world.W * world.H), q = [[x, y]];
+    seen[y * world.W + x] = 1;
+    while (q.length) {
+      var p = q.pop();
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (o) {
+        var nx = p[0] + o[0], ny = p[1] + o[1], k = ny * world.W + nx;
+        if (!solid(world, nx, ny) && !seen[k]) { seen[k] = 1; q.push([nx, ny]); }
+      });
+    }
+    return seen;
+  }
+
+  root.MFWorldMap = { W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, solid: solid, reach: reach };
+})(typeof window !== 'undefined' ? window : globalThis);

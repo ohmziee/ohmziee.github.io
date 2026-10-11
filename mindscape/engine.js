@@ -19,7 +19,8 @@
 
   function newState() {
     return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {} },
-             flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {} };
+             flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {},
+             world: { x: -1, y: -1, d: 'down' } };          /* where they stand in nova city */
   }
 
   /* ── conditions ─────────────────────────────────────────── */

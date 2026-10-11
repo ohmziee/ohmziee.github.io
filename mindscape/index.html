@@ -17,6 +17,8 @@
 <script src="../wiki/shell.js"></script>
 <script src="engine.js" defer></script>
 <script src="avatar.js" defer></script>
+<script src="world.js" defer></script>
+<script src="overworld.js" defer></script>
 <script src="scenes.js" defer></script>
 <script src="../wiki/seal.js" defer></script>
 <script src="ui.js" defer></script>
@@ -74,6 +76,19 @@
       </div>
       <p class="more" id="more" aria-hidden="true">&#9660;</p>
     </section>
+  </main>
+
+  <main id="world" class="world" hidden tabindex="-1" aria-label="nova city">
+    <div class="wscreen">
+      <canvas id="wCanvas" aria-label="nova city, seen from above"></canvas>
+      <div class="wcard" id="wCard" hidden><img id="wCardImg" alt="" decoding="async"><div class="wcard-t"><b id="wCardName"></b><span id="wCardSub"></span></div></div>
+      <div class="wtalk" id="wTalk" hidden><b id="wWho"></b><p id="wLine"></p><span class="more" aria-hidden="true">&#9660;</span></div>
+    </div>
+    <p class="whelp">arrows / wasd move &middot; z / enter talk &middot; hold x to run</p>
+    <div class="wpad" id="wPad" aria-hidden="true">
+      <div class="dpad"><button type="button" data-k="up">&#9650;</button><button type="button" data-k="left">&#9664;</button><button type="button" data-k="right">&#9654;</button><button type="button" data-k="down">&#9660;</button></div>
+      <div class="ab"><button type="button" data-k="b">B</button><button type="button" data-k="a">A</button></div>
+    </div>
   </main>
 
   <aside class="panel" id="inv" hidden aria-label="inventory">
