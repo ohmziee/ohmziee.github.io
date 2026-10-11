@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-2abf17hkv/9AKX4DehNnfk3TpG4dhCShcnrx3eGiF+A=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-c84nFNdMHFmMpPDWf3Jc+a86jfITtyDdYyxxZCtFVCY=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -3345,11 +3345,20 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   /* FILES: edit freely. locked:true needs the mindscape unlocked. */
   var FILES = {
-    'readme.txt':      { body: 'you found the shell.\nmost of this place is still static.\ntype help. touch nothing you do not understand.' },
+    'readme.txt':      { body: 'you found the shell.\nmost of this place is still static.\ntype help. touch nothing you do not understand.\nsome files are shy. ls -a finds them.' },
     'signal.log':      { body: '[00:00:41] origin unresolved\n[00:02:13] integrity 41%\n[00:03:07] handshake accepted\n[00:03:08] observer connected  <- that is you' },
     'sealed.log':      { body: '[--:--:--] vault entry recovered: OMS\n[--:--:--] integrity 100%. contents withheld.\n[--:--:--] guard: armed. more than one lock.\n[--:--:--] it will not open for a command.\n           it answers to its name.\n           call it the way you would call the cat.' },
     'choombas.txt':    { body: 'for the ones who never fit.\nwe are all alone here. together.\nthe stream is the campfire. bring nothing. stay anyway.' },
-    'hex.txt':         { locked: true, body: '[HEX] designation: companion / anomaly\nstatus: awake\nnotes: she remembers things that have not happened yet.\n(full file withheld)' },
+    /* the character files: each one is the way into that wiki entry.
+       see "character files" below */
+    'hex.txt':         { body: '[HEX] designation: companion / anomaly\nstatus: awake\nnote, scrawled in the margin:\n\n  Gum\'s in my pocket. don\'t ask.\n  Always carry matches. always.\n  Somebody owes me a jacket.\n  Oms says I talk too much. he\'s wrong.\n  Look up at four a.m. sometime.\n  If you\'re reading this, hi.\n  Never trust a quiet room.\n  Every first letter, top to bottom. that\'s the word.\n\nwhen you have it:  unlock hex' },
+    'tekna.sys':       { body: 'TEKNA // self-designation record\nfield:  why_this_name\nvalue:  63 68 6f 73 65 6e\nformat: ascii, base 16\n\none word.  unlock tekna' },
+    'riddim.wav':      { body: '[a speaker crackles. a voice, kingston by way of coney island]', play: riddimPlay },
+    'ren.lock':        { body: '[a keypad, hand-soldered. a sticky note: "if you can open this you can have the file. - R"]', play: renPlay },
+    'draft_final_FINAL.doc': { body: 'DRAFT // DO NOT RUN\n\n  BRONX-BORN REPORTER LANDS THE\n  [ V X C L E U I E S ]\n\n(ed: unscramble before print. one word. we lead with it.)\n\nunlock sitara' },
+    'morty.wav':       { body: '[audio, mostly static. a man hums an old song, then taps on something metal]\n\n  -.-  .-  --..  .  .-.  ..-  -.\n\nwhere he was born. he never says it any other way.\n\n  a .-    b -...  c -.-.  d -..   e .     f ..-.  g --.\n  h ....  i ..    j .---  k -.-   l .-..  m --    n -.\n  o ---   p .--.  q --.-  r .-.   s ...   t -     u ..-\n  v ...-  w .--   x -..-  y -.--  z --..\n\nunlock morty' },
+    '.omran':          { body: 'he was asked once what he did for work.\nhe said it was erulqj.\n\nhe always left a room the same way:\nthree steps back, eyes on the door.\n\nunlock omran' },
+    'yalda.txt':       { body: 'shab-e yalda. the longest night of the year.\nshe always stayed up for it, and she always kept a candle going.', play: yaldaPlay },
     'remnant_protocol.md': { locked: true, body: '# remnant protocol\n1. nothing is deleted. only exiled.\n2. the machine keeps its ghosts.\n3. do not name what you cannot unname.' },
     '.mindscape':      { locked: true, body: 'the door is built now.\nchippin\' in: /mindscape/' }
   };
@@ -3368,12 +3377,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   var CMDS = {
     help: function(){ tprint('commands:\n  help      this\n  ls        list files\n  cat FILE  read a file\n  whoami    identify\n  rain N    set rain 0-100 (75+ lightning, 100 storm)\n  ghostie   she answers  //  ghostie reset  send her home\n  radio     tune in  //  radio next, radio off\n  summon X  ...\n  unlock    ...\n  clear     wipe\n  exit      leave', 'dim'); },
-    ls: function(){ tprint(Object.keys(FILES).filter(function(f){ return f[0] !== '.' || mindscapeOpen; }).map(function(f){ return (FILES[f].locked && !mindscapeOpen ? '<span class="err">-r--------</span>  ' : '<span class="ok">-rw-r--r--</span>  ') + f; }).join('\n')); },
+    ls: function(a){ var all = /^-\w*a/.test(a || ''); tprint(Object.keys(FILES).filter(function(f){ return f[0] !== '.' || mindscapeOpen || all; }).map(function(f){ return (FILES[f].locked && !mindscapeOpen ? '<span class="err">-r--------</span>  ' : '<span class="ok">-rw-r--r--</span>  ') + f; }).join('\n')); },
     cat: function(a){
       if(!a) return tprint('cat: what file?', 'err');
       var f = FILES[a]; if(!f) return tprint('cat: ' + esc(a) + ': no such file. it may have been exiled.', 'err');
       if(f.locked && !mindscapeOpen) return tprint('cat: ' + esc(a) + ': ACCESS DENIED  // mindscape sealed', 'err');
       tprint(esc(f.body));
+      if(f.play) f.play();
     },
     whoami: function(){
       var me = whoAmI();
@@ -3409,6 +3419,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         wikiState = 1; saveWiki(); paintWiki();
         return tprint('WIKI CHANNEL ENABLED.\n...the panel lights. the door does not move.', 'ok');
       }
+      if(CHARS[k]) return charUnlock(k);
       if(mindscapeOpen) return tprint('already open. it remembers you.', 'ok');
       if(k !== 'exiled') return tprint('unlock: wrong word. say the name.', 'err');
       if(intensity < 100) return tprint('unlock: the name is right.\nthe signal is buried under too little weather.\nit only listens at full storm.  // try: rain 100', 'err');
@@ -3458,18 +3469,23 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(msg) tprint(msg, 'err');
   }
   function unb64(s){ return Uint8Array.from(atob(s), function(c){ return c.charCodeAt(0); }); }
-  function vaultKey(answer){
+  /* stretch an answer into a seal's key and try it on that seal's check
+     blob. "vault" is the original seal; every other name is a character's,
+     with its own salt and check under keys.<name> */
+  function sealOpen(name, answer){
     var S = window.EXILED_SEAL, sub = window.crypto && window.crypto.subtle, enc = new TextEncoder();
-    if(!S || !S.check || !sub) return Promise.reject(new Error('no signal'));
+    var c = S && (name === 'vault' ? { salt: S.salt, check: S.check } : S.keys && S.keys[name]);
+    if(!c || !c.check || !sub) return Promise.reject(new Error('no signal'));
     return sub.importKey('raw', enc.encode(answer.trim().toLowerCase()), 'PBKDF2', false, ['deriveKey'])
       .then(function(base){
-        return sub.deriveKey({ name: 'PBKDF2', salt: enc.encode(S.salt), iterations: S.iter, hash: 'SHA-256' },
+        return sub.deriveKey({ name: 'PBKDF2', salt: enc.encode(c.salt), iterations: S.iter, hash: 'SHA-256' },
           base, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
       })
       .then(function(key){
-        return sub.decrypt({ name: 'AES-GCM', iv: unb64(S.check.iv) }, key, unb64(S.check.ct)).then(function(){ return key; });
+        return sub.decrypt({ name: 'AES-GCM', iv: unb64(c.check.iv) }, key, unb64(c.check.ct)).then(function(){ return key; });
       });
   }
+  function vaultKey(answer){ return sealOpen('vault', answer); }
   function vaultBegin(){
     vault.step = 1; vault.key = null;
     tprint('...\nyou reach for something that does not want to be found.\nthe vault stirs. it asks one question. it will not ask twice.\n\n    <span class="p">what is the music of life?</span>', 'dim');
@@ -3722,6 +3738,141 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     });
   }
 
+  /* ── character files ───────────────────────────────────────
+     Every wiki entry but the vault's opens from here. Each character has a
+     file; reading it is the way in. Some files are a clue whose answer goes
+     to "unlock <name>"; some are a little game that hands the key over when
+     it is won, so those carry their answer folded (fold) rather than as
+     text. Either way the answer is stretched into the seal's key by
+     sealOpen, and kept where the wiki looks: the exiled.keys map. */
+  var CHARS = { hex: 'Hex', tekna: 'Tekna', gilly: 'Gilly', ren: 'Ren', sitara: 'Sitara',
+                morty: 'Morty', omran: 'Omran', yalda: 'Yalda' };
+  function fold(a){ return a.map(function(c){ return String.fromCharCode(c ^ 0x5A); }).join(''); }
+  function heldKeys(){ try{ return JSON.parse(localStorage.getItem('exiled.keys') || '{}') || {}; }catch(e){ return {}; } }
+  function sealKeep(name, key){
+    return window.crypto.subtle.exportKey('raw', key).then(function(raw){
+      var b = '', u = new Uint8Array(raw), keys = heldKeys();
+      for(var i = 0; i < u.length; i++) b += String.fromCharCode(u[i]);
+      keys[name] = btoa(b);
+      try{ localStorage.setItem('exiled.keys', JSON.stringify(keys)); }catch(e){}
+    });
+  }
+  function sealGrant(name, answer){
+    tprint('...', 'dim');
+    return sealOpen(name, answer).then(function(key){ return sealKeep(name, key); }).then(function(){
+      tprint('KEY ACCEPTED. ' + CHARS[name] + '\'s file is open in the wiki now.', 'ok');
+      return true;
+    }, function(err){
+      tprint(err && err.message === 'no signal' ? 'the wiki is not answering. no signal. try again later.'
+        : 'wrong key. the file stays shut.', 'err');
+      return false;
+    });
+  }
+  function charUnlock(name){
+    if(heldKeys()[name]) return tprint(CHARS[name] + ': already open. the wiki remembers you.', 'ok');
+    tprint(CHARS[name] + '\'s file wants its key.', 'dim');
+    tPrompt.textContent = '?>';
+    termTrap = function(line){ tPrompt.textContent = prompt(); sealGrant(name, line); };
+  }
+  /* a game in progress owns the next line; leaving the shell ends it */
+  var playId = 0;
+  function playStop(){ playId++; termTrap = null; tPrompt.textContent = prompt(); }
+  function playEnd(msg, cls){ playStop(); if(msg) tprint(msg, cls); }
+
+  /* Gilly: call and response. A pattern shows, then hides; play it back.
+     Four rounds, each one longer. */
+  var RIDDIM = ['boom', 'tss', 'ka', 'bap'];
+  function riddimPlay(){
+    var id = ++playId, round = 0, LENS = [3, 4, 5, 6];
+    tprint('"ok ok. i play it, you play it back. four rounds. keep up."\n(type the sounds in order, spaces between.)', 'dim');
+    function deal(){
+      if(id !== playId) return;
+      if(round >= LENS.length){ playEnd('"YES. that\'s a riddim. you can have it."', 'ok'); return sealGrant('gilly', fold([41, 53, 47, 52, 62, 57, 54, 59, 41, 50])); }
+      var seq = [], i;
+      for(i = 0; i < LENS[round]; i++) seq.push(RIDDIM[rint(0, RIDDIM.length - 1)]);
+      var head = '<span class="p">ROUND ' + (round + 1) + '/' + LENS.length + '</span>   ';
+      var shown = tprint(head + seq.join(' . ').toUpperCase(), 'ok');
+      setTimeout(function(){
+        if(id !== playId) return;
+        shown.innerHTML = head + seq.map(function(){ return '██'; }).join(' . ');
+        tPrompt.textContent = 'RIDDIM>';
+        termTrap = function(line){
+          if(id !== playId) return;
+          var got = line.toLowerCase().replace(/[^a-z]+/g, ' ').trim();
+          if(got === 'exit' || got === 'quit') return playEnd('the speaker clicks off.', 'dim');
+          if(got !== seq.join(' ')) return playEnd('"nah. off beat." it was: ' + seq.join(' ') + '\n(cat riddim.wav to go again.)', 'err');
+          round++; tPrompt.textContent = prompt();
+          if(round < LENS.length) tprint('"yes yes. again."', 'ok');
+          setTimeout(deal, 900);
+        };
+      }, 1800 + seq.length * 550 + (onPhone() ? 800 : 0));
+    }
+    setTimeout(deal, 1200);
+  }
+
+  /* Ren: a four-digit code, no repeats. Each guess: * for a right digit in
+     the right place, + for a right digit in the wrong place. */
+  var REN_TRIES = 10;
+  function renScore(a, b){ return new Array(a + 1).join('*') + new Array(b + 1).join('+') || '-'; }
+  function renPlay(){
+    var id = ++playId, left = REN_TRIES, pool = '0123456789'.split(''), code, i, j, t;
+    for(i = pool.length - 1; i > 0; i--){ j = rint(0, i); t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+    code = pool.slice(0, 4).join('');
+    tprint('4 digits, no repeats.\n  *  right digit, right place\n  +  right digit, wrong place\n' + REN_TRIES + ' tries. exit to walk away.', 'dim');
+    function guess(line){
+      if(id !== playId) return;
+      var w = line.trim().toLowerCase(), g = w.replace(/\D/g, '');
+      if(w === 'exit' || w === 'quit') return playEnd('you step back from the keypad.', 'dim');
+      if(!/^\d{4}$/.test(g) || /(\d).*\1/.test(g)){ tprint('four different digits.', 'dim'); termTrap = guess; return; }
+      var a = 0, b = 0;
+      for(var k = 0; k < 4; k++){ if(g.charAt(k) === code.charAt(k)) a++; else if(code.indexOf(g.charAt(k)) >= 0) b++; }
+      if(a === 4){ playEnd('CLICK. the keypad goes green.', 'ok'); return sealGrant('ren', fold([56, 54, 47, 63, 42, 40, 51, 52, 46])); }
+      left--;
+      if(!left) return playEnd(g + '   ' + renScore(a, b) + '\nthe keypad resets itself. it was ' + code + '.\n(cat ren.lock to try again.)', 'err');
+      tprint(g + '   ' + renScore(a, b) + '   tries left ' + left, 'dim');
+      termTrap = guess;
+    }
+    tPrompt.textContent = 'LOCK>'; termTrap = guess;
+  }
+
+  /* Yalda: keep the candle lit until dawn. Now and then it gutters; type
+     light before it goes out. */
+  var YALDA_GUTTERS = 7, YALDA_GRACE = 5000;
+  function yaldaFlame(n){ return ['   ~\n   |█|', '   .\n   |█|', '   (·)\n   |█|'][n]; }
+  function yaldaPlay(){
+    var id = ++playId, kept = 0, low = false, clock = 0;
+    tprint('keep it lit until dawn. when it gutters, type:  light', 'dim');
+    var candle = tprint(yaldaFlame(2), 'ok');
+    function later(){
+      var c = ++clock;
+      setTimeout(function(){
+        if(id !== playId || c !== clock) return;
+        low = true; candle.textContent = yaldaFlame(1);
+        tprint('the flame gutters.', 'err');
+        var c2 = ++clock;
+        setTimeout(function(){
+          if(id !== playId || c2 !== clock) return;
+          candle.textContent = yaldaFlame(0);
+          playEnd('the candle went out. the night won this one.\n(cat yalda.txt to sit with it again.)', 'err');
+        }, YALDA_GRACE + (onPhone() ? 2000 : 0));
+      }, rint(3000, 8000));
+    }
+    function tend(line){
+      if(id !== playId) return;
+      var w = line.trim().toLowerCase();
+      if(w === 'exit' || w === 'quit') return playEnd('you leave the candle to itself.', 'dim');
+      termTrap = tend;
+      if(w !== 'light') return tprint('the candle only answers to: light', 'dim');
+      if(!low) return tprint('it is burning fine. let it.', 'dim');
+      low = false; kept++; clock++; candle.textContent = yaldaFlame(2);
+      if(kept < YALDA_GUTTERS){ tprint('the flame steadies.', 'ok'); return later(); }
+      playEnd('the sky goes grey, then gold. you kept it lit all night.', 'ok');
+      sealGrant('yalda', fold([50, 59, 60, 63, 32]));
+    }
+    tPrompt.textContent = 'NIGHT>'; termTrap = tend;
+    later();
+  }
+
   /* command history, like a real shell: up/down walk it, walking past the
      newest restores what was half-typed. Only shell commands are kept,
      never a line typed into a trap (the vault's answers stay unrecorded). */
@@ -3762,6 +3913,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     term.classList.remove('open'); if(location.hash === '#terminal') history.replaceState(null, '', ' ');
     if(termReturn && termReturn.focus){ try { termReturn.focus(); } catch(e){} } termReturn = null;
     if(vault.step) vaultReset('the connection dropped. the vault forgets you.');
+    else if(termTrap) playStop();
   }
   /* ── EXiLED RADIO ──────────────────────────────────────────
      Plays a public YouTube playlist through the IFrame API, full tracks,

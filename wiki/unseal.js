@@ -5,8 +5,8 @@
   var isIndex = !slug && document.body.getAttribute('data-wiki-index') !== null;
   function done(){ root.classList.remove('unsealing'); }
   setTimeout(done, 2500);
-  /* the keys this browser holds: the vault's on its own, characters met
-     in the mindscape in a map by name */
+  /* the keys this browser holds: the vault's on its own, characters opened
+     from the terminal in a map by name */
   var held = {};
   try{ var v = localStorage.getItem('exiled.vault'); if(v) held.vault = v; }catch(e){}
   try{
