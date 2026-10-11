@@ -241,3 +241,4 @@ a{color:var(--lavender)}
 .shop .msg.ok{color:var(--live)}
 .shop .go:disabled{opacity:.45;cursor:not-allowed;background:transparent}
 .shop .leave{width:100%;margin-top:.5rem;padding:.6rem;letter-spacing:.2em}
+@media (max-width:640px){.shop .chip-face{flex-direction:row;flex-wrap:wrap;justify-content:center}.shop .chip-face .avatar{max-width:6.5rem}.shop .walkers canvas{width:2.4rem;height:2.4rem}.shop .chip-title{font-size:clamp(1.6rem,7vw,2.4rem)}}

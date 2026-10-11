@@ -186,14 +186,17 @@
        names and prices live in shops.js; this only says where */
     var SHOP_AT = [{ id: 'neon-fade', d: W0, dx: -7, dy: 3, art: 'barber' },
                    { id: 'la-navaja', d: Y0, dx: 6, dy: -9, art: 'barber' },
-                   { id: 'haven-groom', d: H0, dx: 2, dy: 3, art: 'barber' }];
+                   { id: 'haven-groom', d: H0, dx: 2, dy: 3, art: 'barber' },
+                   { id: 'static-threads', d: W0, dx: 6, dy: -7, art: 'threads' },
+                   { id: 'el-trapo', d: Y0, dx: -9, dy: -8, art: 'threads' },
+                   { id: 'back-alley', d: R0, dx: 1, dy: 2, art: 'threads' }];
     var shopKeepers = [];
     SHOP_AT.forEach(function (sp) {
       var info = root.MFShops && root.MFShops.SHOPS[sp.id], kind = info && root.MFShops.KINDS[info.kind];
       var door = landmark(sp.d, sp.art, info ? info.name : sp.id, sp.dx, sp.dy, 3, 2,
         (info ? info.name : sp.id.toUpperCase()) + '\n' + (kind ? kind.what : 'open') + '. talk to the one out front.');
       marks[marks.length - 1].shop = sp.id;
-      shopKeepers.push({ id: 'shop-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art, shop: sp.id, still: true });
+      shopKeepers.push({ id: 'shop-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art === 'threads' ? 'tailor' : sp.art, shop: sp.id, still: true });
     });
 
     /* yucayeque's market: stalls round the hall */

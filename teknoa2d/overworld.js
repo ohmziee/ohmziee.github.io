@@ -186,6 +186,15 @@
     px(g, '#ffe97c', 4, 5, 3, 1); px(g, '#ffe97c', 4, h - 4, 3, 1);
     px(g, '#0b0d1a', 36, 18, 8, 14); px(g, '#7cf5ff', 36, 18, 8, 1);
   };
+  /* a clothes shop: an awning, a lit window, a mannequin in it */
+  MARK_ART.threads = function (g, w, h) {
+    px(g, '#1c1736', 0, 0, w, h);
+    for (var x = 0; x < w; x += 6) px(g, (x / 6) % 2 ? '#ff4fd8' : '#dce3ff', x, 0, 6, 5);
+    px(g, '#0b0d1a', 0, 5, w, 1);
+    px(g, '#0b0d1a', 4, 9, 26, 14); px(g, '#3a2f6a', 5, 10, 24, 12); px(g, '#7cf5ff', 5, 10, 24, 1);
+    px(g, '#e8b796', 15, 11, 4, 3); px(g, '#ff4fd8', 13, 14, 8, 6); px(g, '#9aa0b8', 16, 20, 2, 2);
+    px(g, '#0b0d1a', 34, 16, 10, 16); px(g, '#ff4fd8', 34, 16, 10, 1);
+  };
   var markArt = {};
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
@@ -216,6 +225,7 @@
     clerk:   { H: '#c8ccd8', S: '#e0b090', C: '#2a3a6a', P: '#2a2f4a', k: '#111' },
     medic:   { H: '#1a1a1a', S: '#e0b48a', C: '#e6e8f0', P: '#8ad0b0', k: '#111' },
     merc:    { H: '#3a1218', S: '#b07a5a', C: '#3a1218', P: '#1a080c', k: '#111' },
+    tailor:  { H: '#c9a25a', S: '#e8b796', C: '#5a1e3c', c: '#3a1428', A: '#f2c94c', P: '#14121c', k: '#111', hair: 'bob', acc: 'glasses' },
     barber:  { H: '#14121c', B: '#14121c', S: '#a06a48', C: '#dce3ff', c: '#9aa0b8', P: '#2a2f4a', k: '#111', hair: 'buzz', beard: 'full' }
   };
   /* the Chippin' In parts, at walking size: hair shape, what they wear, the
@@ -255,6 +265,19 @@
       if (bd === 'goatee' || bd === 'circle') put(8, 6, 'B');
       if (bd === 'full') { for (x = 6; x <= 9; x++) put(7, x, 'B'); put(8, 6, 'B'); put(8, 7, 'B'); }
       if (bd === 'sideburns' || bd === 'full') { put(5, 8, 'B'); put(6, 8, 'B'); }
+    }
+    if (look.top === 'tank') { put(9, side ? 5 : 4, 'S'); if (!side) put(9, 11, 'S'); }
+    if (look.top === 'turtleneck') for (x = 6; x <= 9; x++) put(8, side ? x - 1 : x, 'c');
+    if (look.acc === 'cap') {
+      for (x = 5; x <= 10; x++) put(1, x, 'A');
+      for (x = 4; x <= 11; x++) put(2, x, 'A');
+      if (dir === 'down') for (x = 4; x <= 11; x++) put(3, x, 'A');
+      else if (side) for (x = 2; x <= 5; x++) put(3, x, 'A');
+    }
+    if (look.acc === 'headphones') {
+      for (x = 5; x <= 10; x++) put(1, x, 'A');
+      if (side) { put(4, 9, 'A'); put(5, 9, 'A'); }
+      else { put(4, 3, 'A'); put(5, 3, 'A'); put(4, 12, 'A'); put(5, 12, 'A'); }
     }
     if (look.top === 'coat') for (y = 13; y <= 14; y++) { put(y, side ? 5 : 4, 'C'); put(y, side ? 9 : 11, 'C'); }
     if (look.top === 'jacket' && dir === 'down') for (y = 9; y <= 12; y++) { put(y, 7, 'k'); put(y, 8, 'k'); }

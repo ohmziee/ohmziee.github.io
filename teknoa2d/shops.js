@@ -10,7 +10,12 @@
     barber: { title: 'BARBER', what: 'cut, dye, shave',
               slots: [{ key: 'hair', label: 'cut', price: 60 },
                       { key: 'hairC', label: 'dye', price: 40 },
-                      { key: 'beard', label: 'facial hair', price: 30 }] }
+                      { key: 'beard', label: 'facial hair', price: 30 }] },
+    clothes: { title: 'THREADS', what: 'tops, extras, colours',
+              slots: [{ key: 'top', label: 'top', price: 80 },
+                      { key: 'topC', label: 'top colour', price: 40 },
+                      { key: 'acc', label: 'extra', price: 50 },
+                      { key: 'accC', label: 'extra colour', price: 25 }] }
   };
 
   /* PLACEHOLDER names and lines: rename freely, nothing else depends on them */
@@ -20,7 +25,13 @@
     'la-navaja':  { kind: 'barber', name: 'LA NAVAJA', district: 'yucayeque', mult: 0.8,
                     hello: 'joules, a good story, a song. i take all three.', bye: 'tell your friends. tell them i was expensive.' },
     'haven-groom': { kind: 'barber', name: 'HAVEN GROOMING CO.', district: 'haven', mult: 1.5,
-                    hello: 'appointments only. this is your appointment.', bye: 'the council would approve. probably.' }
+                    hello: 'appointments only. this is your appointment.', bye: 'the council would approve. probably.' },
+    'static-threads': { kind: 'clothes', name: 'STATIC THREADS', district: 'worldwood', mult: 1,
+                    hello: 'everything in here glows under blacklight. even the socks.', bye: 'wear it loud.' },
+    'el-trapo':   { kind: 'clothes', name: 'EL TRAPO', district: 'yucayeque', mult: 0.8,
+                    hello: 'secondhand clothes. firsthand stories.', bye: 'it was my cousin\'s. now it\'s yours. don\'t tell him.' },
+    'back-alley': { kind: 'clothes', name: 'BACK ALLEY FITS', district: 'redrum', mult: 0.7,
+                    hello: 'no receipts. no returns. no questions.', bye: 'you didn\'t get that here.' }
   };
 
   function price(base, mult) { return Math.round(base * (mult || 1) / 5) * 5; }

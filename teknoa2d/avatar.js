@@ -72,6 +72,10 @@
                 17: 'CCCCCCckkcCCCCCC', 18: 'CCCCCCckkcCCCCCC', 19: 'CCCCCCckkcCCCCCC' },
       coat:   { 12: '....CC....CC....', 13: '....CCC..CCC....', 14: '...cCCCCCCCCc...', 15: '..cCCCCcCCCCCc..',
                 16: '.cCCCCCACCCCCCc.', 17: 'cCCCCCCcCCCCCCCc', 18: 'cCCCCCCACCCCCCCc', 19: 'cCCCCCCcCCCCCCCc' },
+      tank:   { 14: '....SCCSSCCS....', 15: '..SSCCCCCCCCSS..', 16: '.SSSCCCCCCCCSSS.',
+                17: 'SSSScCCCCCCcSSSS', 18: 'SSSScCCCCCCcSSSS', 19: 'SSSScCCCCCCcSSSS' },
+      turtleneck: { 12: '......CCCC......', 13: '.....cCCCCc.....', 14: '...CCCCCCCCCC...', 15: '..CCCCCCCCCCCC..',
+                16: '.CCCCCCCCCCCCCC.', 17: 'CCCCCCCCCCCCCCCC', 18: 'CCCCCCCCCCCCCCCC', 19: 'cCCCCCCCCCCCCCCc' },
     },
     acc: {
       none:    {},
@@ -80,6 +84,9 @@
       glasses: { 7: '....AAAA.AAAA...', 8: '....A..AAA..A...' },
       mask:    { 9: '....AAAAAAAA....', 10: '....AAAAAAAA....', 11: '.....AAAAAA.....' },
       studs:   { 13: '......AAAA......', 7: '............A...', 8: '............A...' },
+      headphones: { 2: '.....AAAAAA.....', 3: '....A......A....', 4: '...A........A...', 5: '...A........A...',
+                    6: '...A........A...', 7: '..AA........AA..', 8: '..AA........AA..', 9: '..AA........AA..' },
+      cap:     { 2: '.....AAAAAA.....', 3: '....AAAAAAAA....', 4: '....AAAAAAAAAAA.' },
     },
   };
 
@@ -87,8 +94,8 @@
     skin:  ['#F6D7C3', '#E8B796', '#C98E6A', '#A06A48', '#7A4B32', '#4E2F20'],
     hair:  ['#14121C', '#4A2E1E', '#C9A25A', '#E8E4F0', '#9F8CFF', '#FF4FD8', '#7CF5FF', '#C4374A', '#7CFFB2'],
     eye:   ['#3A2A1E', '#3F7FBF', '#4F9E62', '#9F8CFF', '#FF4FD8', '#7CF5FF', '#F2C94C'],
-    cloth: ['#14121C', '#2A1D5E', '#5A1E3C', '#1E3A4A', '#3A3F4A', '#DCE3FF', '#7A1F2B'],
-    acc:   ['#B9C0D8', '#F2C94C', '#FF4FD8', '#7CF5FF'],
+    cloth: ['#14121C', '#2A1D5E', '#5A1E3C', '#1E3A4A', '#3A3F4A', '#DCE3FF', '#7A1F2B', '#2F5A3A', '#C9A25A', '#FF4FD8'],
+    acc:   ['#B9C0D8', '#F2C94C', '#FF4FD8', '#7CF5FF', '#14121C', '#C4374A', '#7CFFB2'],
   };
 
   /* what a look is made of, in the order the creator shows them */
