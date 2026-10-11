@@ -317,6 +317,14 @@
     });
     return (spriteCache[key] = c);
   }
+  /* the crowd: a look of their own from their seed, the same every visit */
+  var crowdLooks = {};
+  function crowdLook(n) {
+    if (crowdLooks[n.seed]) return crowdLooks[n.seed];
+    var a = n.seed >>> 0;
+    function rng() { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    return (crowdLooks[n.seed] = lookOf(A ? A.random(rng) : {}));
+  }
   /* the player looks like their Chippin' In face */
   function shade(hex, f) {
     var n = parseInt(String(hex).slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
@@ -458,7 +466,7 @@
       if (me.t >= 1) {
         me.moving = false; me.t = 0;
         enterDistrict(world.dist[me.y * world.W + me.x]);
-        s.world = { x: me.x, y: me.y, d: me.dir };
+        s.world = { x: me.x, y: me.y, d: me.dir, v: M.V };
         pickUp();
       }
     }
@@ -508,7 +516,7 @@
     });
     drawLoose(cx, cy, now);
     /* people, back to front */
-    var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
+    var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1 });
     who.sort(function (a, b) { return a.y - b.y; });
     who.forEach(function (p) {
@@ -572,10 +580,10 @@
     }
     var at = s.world;
     /* back where they stood, unless something is standing there now */
-    if (at && at.x >= 0 && !M.solid(world, at.x, at.y) && !npcs.some(function (n) { return n.x === at.x && n.y === at.y; })) { me.x = at.x; me.y = at.y; me.dir = at.d || 'down'; }
+    if (at && at.x >= 0 && at.v === M.V && !M.solid(world, at.x, at.y) && !npcs.some(function (n) { return n.x === at.x && n.y === at.y; })) { me.x = at.x; me.y = at.y; me.dir = at.d || 'down'; }
     else { me.x = world.spawn.x; me.y = world.spawn.y; me.dir = world.spawn.dir; }
     me.moving = false; held = {}; talkBox = null; $('wTalk').hidden = true;
-    s.world = { x: me.x, y: me.y, d: me.dir };
+    s.world = { x: me.x, y: me.y, d: me.dir, v: M.V };
     $('world').hidden = false;
     district = -2; enterDistrict(world.dist[me.y * world.W + me.x]);
     wallet();

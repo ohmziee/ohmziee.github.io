@@ -11,7 +11,10 @@
    Tiles:  0 deep water  1 shallow  2 sand  3 ground  4 road  5 building
            6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall */
 (function (root) {
-  var W = 170, H = 128;
+  var W = 260, H = 200;
+  /* bump when the map changes shape: a saved position from an older map
+     means nothing on this one, so that player starts at the spawn */
+  var VERSION = 2;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
             GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = 1;
@@ -25,9 +28,12 @@
     { id: 'naturia', name: 'NATURIA', sub: 'district 3 // the glowing wild', km: 139, at: [-1, -0.3], style: 'wild', block: 6, seed: 37, wobble: 0.18 },
     { id: 'haven', name: 'HAVEN', sub: 'district 4 // where the council sits', km: 88, at: [1, 1], style: 'civic', block: 7, seed: 41, wobble: 0.04 },
     { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, at: [-1, 1], style: 'grid', block: 4, seed: 53, wobble: 0.12 },
-    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 10 }
+    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 22 }
   ];
-  var CENTRE = [80, 78], GAP = 4, SCALE = 1.55;
+  var CENTRE = [125, 115], GAP = 4, SCALE = 2.45;
+  /* hand-placed offsets (landmarks, shops, people) were laid out at the
+     first draft's scale; F spreads them out to match */
+  var F = SCALE / 1.55;
 
   /* deterministic noise: the same city every load, on every device */
   function hash(a, b) {
@@ -86,27 +92,35 @@
         if (!inside(x, y) || dist[at(x, y)] !== d.index || get(x, y) !== T.GROUND) continue;
         var gx = ((x - d.cx) % d.block + d.block) % d.block, gy = ((y - d.cy) % d.block + d.block) % d.block;
         var n = hash(x * 3 + d.seed, y * 7);
+        var bx = Math.floor((x - d.cx) / d.block), by = Math.floor((y - d.cy) / d.block), bn = hash(bx * 13 + d.seed, by * 17 + 5);
+        var mid = d.block >> 1;
         if (d.style === 'grid' || d.style === 'alleys') {
           if (!gx || !gy) set(x, y, T.ROAD);
+          /* a plaza: a whole block left open, a tree or two in it */
+          else if (bn < 0.3) set(x, y, n < 0.08 ? T.TREE : n < 0.2 ? T.GRASS : T.GROUND);
+          /* an alley straight through the block */
+          else if (bn < 0.75 && (bn < 0.52 ? gy === mid : gx === mid)) set(x, y, T.GROUND);
           else set(x, y, n < (d.style === 'alleys' ? 0.06 : 0.12) ? T.GROUND : T.BUILDING);
         } else if (d.style === 'civic') {
           /* wide boulevards, whole blocks of lawn */
           if (gx <= 1 || gy <= 1) set(x, y, T.ROAD);
-          else if (hash(Math.floor((x - d.cx) / d.block), Math.floor((y - d.cy) / d.block) + d.seed) < 0.35) set(x, y, gx === 4 && gy === 4 ? T.TREE : T.GRASS);
+          else if (hash(Math.floor((x - d.cx) / d.block), Math.floor((y - d.cy) / d.block) + d.seed) < 0.5) set(x, y, gx === 4 && gy === 4 ? T.TREE : T.GRASS);
           else set(x, y, T.BUILDING);
         } else if (d.style === 'village') {
           /* little houses in pairs, yards between, lanes that wander */
           var lane = (!gx && hash(Math.floor((y - d.cy) / 9), x) < 0.9) || (!gy && hash(Math.floor((x - d.cx) / 9), y + 5) < 0.9);
           if (lane) set(x, y, T.ROAD);
-          else if (n < 0.62) set(x, y, T.BUILDING);
-          else if (n < 0.72) set(x, y, T.TREE);
+          /* houses in the middle of a block, yards round the edge */
+          else if (n < 0.52 && gx > 1 && gy > 1 && gx < d.block && gy < d.block) set(x, y, T.BUILDING);
+          else if (n > 0.88) set(x, y, T.TREE);
           else set(x, y, T.GROUND);
         } else if (d.style === 'wild') {
           /* forest, clearings, paths along the grain */
           var path = Math.abs(Math.sin((x - d.cx) / 3.1) * 3 - ((y - d.cy) % 7)) < 0.7 || !gx;
           if (path) set(x, y, T.ROAD);
-          else if (n < 0.62) set(x, y, T.TREE);
-          else if (n < 0.67) set(x, y, T.BUILDING);
+          /* groves, not a wall of trees: thick in patches, open between */
+          else if (n < (bn < 0.5 ? 0.6 : 0.22)) set(x, y, T.TREE);
+          else if (n < (bn < 0.5 ? 0.64 : 0.25)) set(x, y, T.BUILDING);
           else set(x, y, T.GRASS);
         }
       }
@@ -156,7 +170,8 @@
     landings.forEach(function (l) { carve(l.x, l.y, l.d.cx, l.d.cy, T.ROAD); });
 
     /* landmarks: a block the size of the thing, a road to its door */
-    function landmark(d, id, name, dx, dy, w, h, text) {
+    function landmark(d, id, name, dx, dy, w, h, text, exact) {
+      if (!exact) { dx = Math.round(dx * F); dy = Math.round(dy * F); }
       var x0 = d.cx + dx, y0 = d.cy + dy, x, y;
       for (y = y0 - 1; y <= y0 + h; y++) for (x = x0 - 1; x <= x0 + w; x++) {
         if (dist[at(x, y)] !== d.index) continue;
@@ -181,8 +196,10 @@
     var arcadeDoor = landmark(R0, 'arcade', 'arcade', -3, -1, 4, 2, 'ARCADE\nthe sign is a knife. the high score is "HEX".');
 
     /* noorborj: the lighthouse on redrum's northern tip */
-    var top = R0.cy; while (dist[at(R0.cx, top - 1)] === R0.index) top--;
-    landmark(R0, 'noorborj', 'noorborj', -1, top - R0.cy + 1, 3, 4, 'NOORBORJ\na lighthouse. the door does not have a handle on this side.');
+    /* the tip is wherever redrum reaches furthest north, not always above its centre */
+    var top = R0.cy, tipX = R0.cx;
+    for (var ty = 0; ty < H && top === R0.cy; ty++) for (var tx = 0; tx < W; tx++) if (dist[at(tx, ty)] === R0.index) { top = ty; tipX = tx; break; }
+    landmark(R0, 'noorborj', 'noorborj', tipX - R0.cx - 1, top - R0.cy + 1, 3, 4, 'NOORBORJ\na lighthouse. the door does not have a handle on this side.', true);
 
     /* shops: a front the size of the place, the keeper outside the door.
        names and prices live in shops.js; this only says where */
@@ -203,7 +220,7 @@
 
     /* yucayeque's market: stalls round the hall */
     for (var s = 0; s < 8; s++) {
-      var sx = Y0.cx - 6 + (s % 4) * 4, sy = Y0.cy + 2 + Math.floor(s / 4) * 3;
+      var sx = Y0.cx + Math.round((-6 + (s % 4) * 4) * F), sy = Y0.cy + Math.round((2 + Math.floor(s / 4) * 3) * F);
       if (dist[at(sx, sy)] === Y0.index && get(sx, sy) !== T.LANDMARK) { set(sx, sy, T.STALL); set(sx, sy + 1, T.ROAD); }
     }
 
@@ -213,7 +230,7 @@
     npcs.push({ id: 'hex', x: arcadeDoor.x, y: arcadeDoor.y, dir: 'down', look: 'hex', scene: 'hex', still: true });
     shopKeepers.forEach(function (k) { npcs.push(k); });
     function person(d, dx, dy, look, lines) {
-      var x = d.cx + dx, y = d.cy + dy;
+      var x = d.cx + Math.round(dx * F), y = d.cy + Math.round(dy * F);
       if (SOLID[get(x, y)]) carve(x, y, d.cx, d.cy, T.ROAD);
       npcs.push({ id: d.id + npcs.length, x: x, y: y, dir: 'down', look: look, lines: lines, roam: 3 });
     }
@@ -226,8 +243,82 @@
     person(M0, 1, 4, 'medic', ['the hospital is the best on teknoa.\nthe streets around it are not.']);
     person(R0, 3, 2, 'merc', ['redrum is not on any map the council prints.\nwe like it that way.', 'the lighthouse? do not go knocking.']);
 
+    /* no sealed pockets: open ground nobody can walk to is joined to the
+       streets with a path, or, if it is only a tile or two, filled in */
+    var seen = reachFrom(spawn.x, spawn.y);
+    for (var p = 0; p < W * H; p++) {
+      if (seen[p] || SOLID[tile[p]] || dist[p] < 0) continue;
+      var comp = flood(p), d0 = DISTRICTS[dist[p]];
+      if (comp.length < 4) { comp.forEach(function (q) { tile[q] = d0.style === 'wild' || d0.style === 'village' ? T.TREE : T.BUILDING; }); continue; }
+      carve(p % W, (p / W) | 0, d0.cx, d0.cy, T.ROAD, { 9: 1 });
+      seen = reachFrom(spawn.x, spawn.y);
+    }
+    function reachFrom(x, y) { return reach({ W: W, H: H, tile: tile }, x, y); }
+    function flood(start) {
+      var out = [], q = [start], mark = {}; mark[start] = 1;
+      while (q.length) {
+        var c = q.pop(); out.push(c);
+        [1, -1, W, -W].forEach(function (o) {
+          var n = c + o;
+          if (n < 0 || n >= W * H || mark[n] || SOLID[tile[n]] || seen[n]) return;
+          if ((o === 1 || o === -1) && ((n / W) | 0) !== ((c / W) | 0)) return;
+          mark[n] = 1; q.push(n);
+        });
+      }
+      return out;
+    }
+
+    /* the crowd: people through every district, each with a look of their
+       own and something to say about where they live. PLACEHOLDER lines,
+       flavour only: nothing here is canon until it is written down */
+    var busy = {};
+    npcs.forEach(function (n) { busy[n.y * W + n.x] = 1; });
+    signs.forEach(function (sg) { busy[sg.y * W + sg.x] = 1; });
+    DISTRICTS.forEach(function (d) {
+      var open = [];
+      for (var k = 0; k < W * H; k++) {
+        var t = tile[k];
+        if (dist[k] === d.index && seen[k] && (t === T.ROAD || t === T.GROUND || t === T.GRASS)) open.push(k);
+      }
+      var want = Math.max(2, Math.round(open.length / 140)), lines = CROWD[d.id] || [], placed = 0;
+      for (var tries = 0; placed < want && tries < want * 40; tries++) {
+        var c = open[Math.floor(hash(d.seed * 7 + tries, 991) * open.length)], cx = c % W, cy = (c / W) | 0, near = false;
+        for (var j = 0; j < npcs.length && !near; j++) if (Math.abs(npcs[j].x - cx) + Math.abs(npcs[j].y - cy) < 6) near = true;
+        if (near || busy[c]) continue;
+        var a = lines[(placed * 2) % lines.length], b = lines[(placed * 2 + 1) % lines.length];
+        npcs.push({ id: d.id + '-' + placed, x: cx, y: cy, dir: ['down', 'left', 'right', 'up'][placed % 4], look: 'gen', seed: d.seed * 1000 + placed,
+                    lines: a === b ? [a] : [a, b], roam: 3 });
+        placed++;
+      }
+    });
+
     return { W: W, H: H, tile: tile, dist: dist, marks: marks, signs: signs, npcs: npcs, spawn: spawn };
   }
+
+  var CROWD = {
+    worldwood: ['the billboards change ads when you look at them.\ni stopped looking.', 'rent here is a crime. the neon is free though.',
+                'someone tuned the streetlights to a minor key.\nit suits us.', 'i came for one night. that was four years ago.',
+                'if you hear bass through the pavement,\nyou are close to something good.', 'the rain never washes the glow off. we checked.',
+                'you look new. it\'s fine.\neveryone looks new under these lights.', 'best noodles are in the place with no sign.\nthat is the sign.'],
+    yucayeque: ['my abuela sang that song\nbefore the city had a name.', 'mangoes, three for a joule.\ntwo if you can carry a tune.',
+                'the drums start at sundown.\nyou feel them before you hear them.', 'everyone here is somebody\'s cousin.\ngive it a week.',
+                'haggle. it\'s rude not to.', 'the old songs are a map.\nlisten right and you won\'t get lost.',
+                'smell that? someone\'s grandmother is cooking.\nfollow it.', 'we keep the porch lights on.\npeople find their way home by them.'],
+    naturia:   ['step soft. the moss remembers footprints.', 'the glow gets brighter after rain.\nso do the frogs.',
+                'i came out here to think. now i just listen.', 'don\'t pick the blue ones. they don\'t like it.',
+                'the paths move a little every season.\nor i do.', 'quieter here than anywhere in the city.\nthat\'s the point.',
+                'the trees hum at night. low.\nyou get used to it.', 'saw a fox made of light once.\nnobody believes me. fine.'],
+    haven:     ['please keep to the paths.\nthe lawns are on a schedule.', 'the council meets on tuesdays.\nnobody knows which tuesdays.',
+                'i have a permit for standing here. do you?', 'everything in haven is very clean.\nsuspiciously clean.',
+                'the fountains are filtered three times.\nyou could drink them. don\'t.', 'i moved here for the quiet.\nit is very, very quiet.',
+                'there\'s a form for that.\nthere\'s a form for everything.', 'the police are polite here.\nextremely polite.'],
+    majinryu:  ['lanterns on the left are paper.\non the right, they\'re something else.', 'the labs run all night.\nyou can tell by the hum.',
+                'the hospital patched my arm.\nworks better than the old one.', 'the gate is older than all of us.\nwe keep it painted anyway.',
+                'tea, two doors down. ask for the house blend.\ndon\'t ask what\'s in it.', 'every lantern is lit by hand.\nevery single one.',
+                'the night market moves.\nfollow the lanterns.', 'interns from the labs eat here.\nthey never say what they work on.'],
+    redrum:    ['you lost? good. stay lost.', 'nobody here saw anything. including me.', 'the arcade is neutral ground. mostly.',
+                'keep your joules in your shoe.', 'red lights mean go here. figure it out.', 'they say the lighthouse is empty.\nthey say a lot of things.']
+  };
 
   function solid(world, x, y) {
     if (x < 0 || y < 0 || x >= world.W || y >= world.H) return true;
@@ -252,7 +343,7 @@
      Picked from open ground the player can actually reach, never on a
      sign or where someone stands, so they survive the map changing. The
      same day gives the same spots on every device. */
-  var LOOSE_PER = 2;
+  var LOOSE_PER = 3;
   function loose(world, day) {
     if (!world.open) {
       var r = reach(world, world.spawn.x, world.spawn.y), busy = {};
@@ -276,5 +367,5 @@
     return out;
   }
 
-  root.MFWorldMap = { W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, solid: solid, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, solid: solid, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);
