@@ -1,30 +1,41 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex">
-<title>MINDSCAPE // EXiLED</title>
-<!-- the redacted channel. what goes behind it is still being decided; this
-     is the door until then. opened on its own it hops into the main page -->
+<title>404 Not Found</title>
+<link rel="stylesheet" href="mindscape.css">
+<!-- opened on its own, this hops into the main page's frame -->
 <script src="../wiki/shell.js"></script>
-<style>
-html{background:#05060B;color:#7A82A0;font:14px/1.7 "Share Tech Mono","Courier New",monospace}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem 1rem;box-sizing:border-box}
-main{max-width:30rem;text-align:center}
-h1{margin:0 0 1rem;color:#DCE3FF;font:700 1.6rem/1 "Rajdhani","Segoe UI",sans-serif;letter-spacing:.3em}
-.k{color:#7CFFB2;letter-spacing:.16em;font-size:.72rem}
-a{color:#9F8CFF}
-</style>
+<script src="pages.js" defer></script>
+<script src="mindscape.js" defer></script>
 </head>
 <body>
-<main>
-  <p class="k">ACCESS GRANTED</p>
-  <h1>MINDSCAPE</h1>
-  <p>the door is open. there is nothing behind it yet.<br>it is being built. it is listening.</p>
-  <p>looking for nova city? it moved. teknoa 2d is an open channel now.</p>
-  <p><a href="../index.html">&lt;&lt; back to the storm</a></p>
-</main>
+  <!-- what anyone who has not broken the seal sees: nothing worth a second look -->
+  <main id="denied" class="denied" hidden>
+    <h1>Not Found</h1>
+    <p>The requested URL was not found on this server.</p>
+    <hr>
+    <address>Apache Server at ohmziee.github.io Port 443</address>
+  </main>
+
+  <div class="browser" id="browser" hidden>
+    <div class="chrome">
+      <div class="titlebar"><span class="t">mindscape</span><a class="wake" href="../index.html">[ wake up ]</a></div>
+      <div class="toolbar">
+        <button type="button" id="back" aria-label="back" disabled>&#9664; back</button>
+        <button type="button" id="fwd" aria-label="forward" disabled>forward &#9654;</button>
+        <button type="button" id="reload" aria-label="reload">reload</button>
+        <button type="button" id="hum" aria-pressed="false">hum: off</button>
+      </div>
+      <form class="addrbar" id="addrForm" autocomplete="off"><label for="addr">Address</label><input id="addr" spellcheck="false" autocapitalize="off"></form>
+      <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+    </div>
+    <main class="page" id="page" aria-live="polite"></main>
+    <div class="statusbar" id="status" role="status">Done</div>
+  </div>
+  <div class="flicker" aria-hidden="true"></div>
 </body>
 </html>

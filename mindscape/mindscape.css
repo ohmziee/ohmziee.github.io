@@ -1,0 +1,99 @@
+/* EXiLED mindscape — an old browser, open on pages that should not be there.
+   body[data-depth] 0..3 decides how much the page comes apart. */
+
+:root{
+  --void:#05060B;
+  --chrome:#2a2b30;
+  --chrome-hi:#3a3c44;
+  --chrome-lo:#16171b;
+  --chrome-ink:#c9c7b8;
+  --paper:#e9e2c0;
+  --paper-ink:#2b2a22;
+  --link:#1a2f9a;
+  --link-seen:#5a1a7a;
+  --wall:#cdbf6a;
+  --wall-2:#b8a956;
+  --carpet:#8a7a4a;
+  --font-ui:"Courier New",monospace;
+  --font-page:"Times New Roman",Times,serif;
+}
+*{box-sizing:border-box}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100%;background:var(--void);color:var(--chrome-ink);font:14px/1.5 var(--font-ui);
+  padding:max(.6rem,env(safe-area-inset-top)) max(.6rem,env(safe-area-inset-right)) .6rem max(.6rem,env(safe-area-inset-left))}
+[hidden]{display:none !important}
+
+/* ── nobody's here ── */
+body.denied{background:#fff;color:#000;font:16px/1.4 var(--font-page);padding:1rem 1.2rem}
+.denied h1{font-size:2em;margin:.2em 0 .4em}
+.denied address{font-style:italic}
+
+/* ── the browser ── */
+.browser{max-width:62rem;margin:0 auto;display:flex;flex-direction:column;min-height:calc(100vh - 1.2rem);border:2px solid var(--chrome-hi);border-right-color:var(--chrome-lo);border-bottom-color:var(--chrome-lo);background:var(--chrome)}
+.chrome{border-bottom:2px solid var(--chrome-lo)}
+.titlebar{display:flex;justify-content:space-between;align-items:center;padding:.25rem .5rem;background:linear-gradient(90deg,#3b3a2a,#22221a);color:#e9e2c0;font-size:.8rem;letter-spacing:.08em}
+.wake{color:#e9e2c0;text-decoration:none;font-size:.75rem}
+.wake:hover,.wake:focus-visible{color:#fff;text-decoration:underline}
+.toolbar{display:flex;flex-wrap:wrap;gap:.3rem;padding:.35rem .5rem}
+.toolbar button{font:inherit;font-size:.78rem;color:var(--chrome-ink);background:var(--chrome);border:2px solid var(--chrome-hi);border-right-color:var(--chrome-lo);border-bottom-color:var(--chrome-lo);padding:.15rem .55rem;cursor:pointer}
+.toolbar button:active{border-color:var(--chrome-lo);border-right-color:var(--chrome-hi);border-bottom-color:var(--chrome-hi)}
+.toolbar button:disabled{opacity:.4;cursor:default}
+.addrbar{display:flex;align-items:center;gap:.5rem;padding:0 .5rem .4rem;font-size:.78rem}
+.addrbar input{flex:1;min-width:0;font:inherit;font-size:.85rem;color:#1a1a12;background:#f1edd8;border:2px solid var(--chrome-lo);border-right-color:var(--chrome-hi);border-bottom-color:var(--chrome-hi);padding:.2rem .4rem}
+.progress{height:3px;background:var(--chrome-lo)}
+.progress i{display:block;height:100%;background:#9a8a3a;transform-origin:left;transform:scaleX(0);transition:none}
+.statusbar{border-top:2px solid var(--chrome-hi);padding:.2rem .5rem;font-size:.75rem;color:#9a9888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.loading .page{opacity:.35}
+
+/* ── the page ── */
+.page{flex:1;overflow:auto;background:var(--paper);color:var(--paper-ink);font:16px/1.5 var(--font-page);padding:1rem 1.2rem 2rem;transition:opacity .12s}
+.page a{color:var(--link)}
+.page a.seen{color:var(--link-seen)}
+.page a.hid{color:inherit;text-decoration:none;cursor:default}
+.page a.hid:hover,.page a.hid:focus-visible{text-decoration:underline;cursor:pointer}
+.page h2{font-size:1.6em;margin:.2em 0 .5em}
+.page hr{border:0;border-top:1px solid #9a947a}
+.page blockquote{margin:.6em 0;padding-left:.8em;border-left:3px solid #a89e70;color:#4a4636}
+
+/* an apache directory listing */
+.s-dirlist{background:#fff;color:#000}
+.s-dirlist ul{list-style:none;padding:0;font:15px/1.7 var(--font-ui)}
+.s-dirlist li::before{content:"[DIR] ";color:#888}
+/* a homepage from a long time ago */
+.s-site{background:#1a1a5a;background-image:radial-gradient(#2a2a8a 1px,transparent 1px);background-size:14px 14px;color:#ffff8a;text-align:center;font-family:"Comic Sans MS","Times New Roman",serif}
+.s-site a{color:#8affff}
+.s-site a.seen{color:#ff8aff}
+.s-site h2{color:#ff6a6a;letter-spacing:.06em}
+.s-site blockquote{border:0;color:#ffcf6a;padding:0}
+/* a forum nobody moderates */
+.s-forum{background:#d8d8d0;font-family:Verdana,Arial,sans-serif;font-size:13px}
+.s-forum blockquote{background:#efefe6;border:1px solid #a8a89a;border-left:4px solid #6a6a90;padding:.5em .7em;margin:.5em 0;color:#2a2a2a}
+/* a plain text file */
+.s-text{font:14px/1.6 var(--font-ui);white-space:normal}
+/* the server is sorry */
+.s-error{background:#fff;color:#000}
+/* a gallery of rooms */
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));gap:1rem;margin:1rem 0}
+.room{margin:0;text-align:center;font:12px var(--font-ui);color:#4a4636}
+.room .pic{position:relative;aspect-ratio:4/3;border:3px solid #fff;outline:1px solid #a89e70;overflow:hidden;
+  background:linear-gradient(180deg,#efe7b4 0 12%,var(--wall) 12% 62%,var(--carpet) 62% 100%)}
+.room .pic::before{content:"";position:absolute;left:30%;right:30%;top:4%;height:5%;background:#fffbe0;box-shadow:0 0 18px 6px rgba(255,250,200,.7)}
+.room .pic::after{content:"";position:absolute;left:44%;width:12%;top:30%;height:32%;background:#7a6a3a;opacity:.55}
+.room .pic i{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(0,0,0,.05) 9px 10px)}
+.room:nth-child(3n) .pic::after{left:12%}
+.room:nth-child(4n) .pic::after{opacity:0}
+.room:nth-child(5n) .pic::before{opacity:.35}
+
+/* ── coming apart ── */
+.unstable{font-family:var(--font-ui)}
+.flicker{position:fixed;inset:0;pointer-events:none;background:#fffbe0;opacity:0;mix-blend-mode:overlay}
+body[data-depth="1"] .flicker{animation:flick 7s infinite steps(1)}
+body[data-depth="2"] .flicker{animation:flick 4s infinite steps(1)}
+body[data-depth="3"] .flicker{animation:flick 2.2s infinite steps(1)}
+@keyframes flick{0%,93%,100%{opacity:0}94%{opacity:.12}95%{opacity:0}96%{opacity:.08}}
+body[data-depth="2"] .page{text-shadow:.6px 0 rgba(255,0,60,.35),-.6px 0 rgba(0,200,255,.35)}
+body[data-depth="3"] .page{text-shadow:1.4px 0 rgba(255,0,60,.5),-1.4px 0 rgba(0,200,255,.5);filter:saturate(1.4) contrast(1.05)}
+body[data-depth="3"] .browser{animation:drift 9s infinite ease-in-out}
+@keyframes drift{0%,100%{transform:none}50%{transform:translateX(.6px) skewX(.15deg)}}
+body.tear .page{clip-path:polygon(0 0,100% 0,100% 38%,98% 38%,98% 44%,100% 44%,100% 100%,0 100%);transform:translateX(3px)}
+@media (prefers-reduced-motion:reduce){.flicker,body[data-depth="3"] .browser{animation:none}body.tear .page{clip-path:none;transform:none}}
