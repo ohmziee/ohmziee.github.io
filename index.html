@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-CK/FRToFHCvryvEupkvMwz3s67nu4seP4D6x91LVXOo=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-WnLIF27ulDdeaXFDNHUhP3NfiRCa3zaVJjy2R6o6KKg=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -656,6 +656,8 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-ctl button:hover,#radio .r-ctl button:focus-visible{border-color:var(--lavender);background:rgba(42,29,94,.4)}
 #radio #radioPlay{flex:0 0 auto;min-width:6.5rem;border-color:#7CFFB2;color:#7CFFB2}
 #radio .r-ctl input{flex:1 1 auto;min-width:0;accent-color:var(--lavender)}
+/* where a page cannot set volume (iPhone) or youtube has its own (touch) */
+#radio.novol #radioVol{display:none}
 #radio .r-tracks{list-style:none;max-height:min(30vh,15rem);overflow-y:auto;border-top:1px solid rgba(42,29,94,.7);counter-reset:trk}
 #radio .r-tracks[hidden]{display:none}
 #radio .r-tracks li{counter-increment:trk}
@@ -767,8 +769,12 @@ body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #radio #ambTab{b
   #radioTab{padding-right:3.6rem}
   #radio #ambTab{left:auto;right:0;height:var(--bar-h);padding:0 1rem env(safe-area-inset-bottom,0px);
     border:0;border-top:1px solid var(--violet);border-left:1px solid rgba(42,29,94,.7);background:#0B0D1A}
-  #radio.open #ambTab{display:none}
+  /* the open sheet covers the bar, so the rain rides just above it instead,
+     on the left: ghostie floats on the right */
+  #radio.open #ambTab{bottom:calc(100% + .5rem);left:.6rem;right:auto;height:2.6rem;padding:0 .9rem;border:1px solid var(--violet);
+    background:rgba(11,13,26,.94)}
   #radio #ambTab .a-label{display:none}
+  #radio.open #ambTab .a-label{display:inline}
   #radioPanel,#radio.mini #radioPanel{width:100%;border-left:0;border-right:0;border-bottom:0;
     max-height:calc(88dvh - env(safe-area-inset-top,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
   #radio .r-tracks{max-height:22vh}
@@ -865,6 +871,14 @@ body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #radio #ambTab{b
 @keyframes notefloat{0%{opacity:0;transform:translate(-50%,0) rotate(0)}15%{opacity:1}
   100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-72px) rotate(var(--rot))}}
 @media (prefers-reduced-motion:reduce){#ghostie.vibing .frame{animation:none}#ghostie .note{display:none}}
+/* one song undoes them: a slow droop instead of the sway, and tears */
+#ghostie.weepy{filter:drop-shadow(0 0 14px rgba(124,245,255,.38))}
+#ghostie.vibing.weepy .frame{animation:weep 3.4s ease-in-out infinite;transform-origin:50% 92%}
+@keyframes weep{0%,100%{transform:rotate(-2deg) translateY(3px)}50%{transform:rotate(2deg) translateY(7px)}}
+#ghostie .tear{position:absolute;left:var(--tx);top:var(--ty);width:6px;height:9px;pointer-events:none;
+  border-radius:50% 50% 50% 50%/62% 62% 38% 38%;background:#7CF5FF;box-shadow:0 0 6px #7CF5FF;animation:tearfall 1.7s ease-in forwards}
+@keyframes tearfall{0%{opacity:0;transform:translateY(0) scale(.5)}18%{opacity:1}100%{opacity:0;transform:translateY(48px) scale(1)}}
+@media (prefers-reduced-motion:reduce){#ghostie.vibing.weepy .frame{animation:none}#ghostie .tear{display:none}}
 @keyframes gjit{50%{filter:drop-shadow(0 0 14px rgba(159,140,255,.45)) hue-rotate(120deg);transform:translate(-4px,-6px)}}
 @media (prefers-reduced-motion:reduce){#ghostie{opacity:1;animation:none}}
 
@@ -2157,6 +2171,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   function ambSet(on, save){
     if(on && !amb.ac){
+      /* iPhones mute generated sound with the ring/silent switch, unlike a
+         music player. Saying this page plays audio (iOS 16.4+) makes the
+         rain follow the volume buttons like the radio does */
+      try { if(navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if(!Ctx){ ambBtn.hidden = true; return; }
       try { ambBuild(new Ctx()); } catch(e){ ambBtn.hidden = true; return; }
@@ -4238,7 +4256,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     radio.src = s; radio.playing = false; radio.want = was;
     rEl.classList.toggle('src-juke', s === 'juke'); rEl.classList.toggle('src-yt', s === 'yt');
     srcJ.setAttribute('aria-selected', String(s === 'juke')); srcY.setAttribute('aria-selected', String(s === 'yt'));
-    radioVolume(+rVol.value);
+    radioVolume(+rVol.value); volPaint();
     ghostVibe(false);
     if(s === 'yt'){
       var d = radio.ready && radio.yt.getVideoData ? radio.yt.getVideoData() : null;
@@ -4253,6 +4271,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   srcJ.addEventListener('click', function(){ radioSource('juke'); });
   srcY.addEventListener('click', function(){ radioSource('yt'); });
+  /* iOS ignores a page setting volume (only the hardware buttons count),
+     for <audio> and the youtube player alike: probe once, and hide the
+     slider wherever it would move and change nothing. On touch screens the
+     youtube tab drops it too; the player has its own. */
+  var volWorks = (function(){ try { var a = new Audio(); a.volume = 0.5; return a.volume === 0.5; } catch(e){ return false; } })();
+  var coarse = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  function volPaint(){ rEl.classList.toggle('novol', !volWorks || (radio.src === 'yt' && coarse)); }
   function radioVolume(v){
     if(radio.src === 'juke'){ if(juke.el) juke.el.volume = v / 100; }
     else if(radio.ready) radio.yt.setVolume(v);
@@ -4434,16 +4459,38 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      that at most one every 90s, and not every track). Off air: the
      headphones come off a moment later, so a skip between tracks does not
      make her take them off and put them back on. */
-  var vibe = { on: false, off: 0, notes: 0, said: 0, last: '', first: true };
+  var vibe = { on: false, off: 0, notes: 0, said: 0, last: '', first: true, sad: false, tears: 0 };
+  /* the song that gets them every time. matched on the title, so it holds
+     wherever it sits in the playlist */
+  var WEEPY = /tall\s*boy/i;
   var vibeLines = {
     first: ['oh. OH. music.', 'finally. some atmosphere.', 'do not talk to me. i am listening.'],
     jazz:  ['saxophone hours.', 'this is detective music. who did it.', 'i was a lounge singer once. probably.',
             'smoky. i approve.', 'the piano is sad and so am i. nice.'],
     mine:  ['your pick? bold. i respect it.', 'ooh. a request.', 'never heard this. i hate that i like it.'],
     any:   ['oh this one is good.', 'turn it up. no, up.', 'i am not dancing. this is floating.',
-            'certified ghost banger.', 'i know all the words. there are no words.', 'the rain and this. perfect.']
+            'certified ghost banger.', 'i know all the words. there are no words.', 'the rain and this. perfect.'],
+    weepy: ['...this one always gets me.', "don't look at me. it's the rain.", "i'm fine. leave it on.",
+            'who put this on. (do not turn it off)', 'oh no. not this one. ok yes this one.']
   };
+  function ghostWeep(sad){
+    if(sad === vibe.sad) return;
+    vibe.sad = sad; gh.classList.toggle('weepy', sad);
+    clearInterval(vibe.tears);
+    if(sad && !reduce) vibe.tears = setInterval(ghostTear, 650);
+  }
+  /* a tear from one eye or the other, where the art's eyes sit */
+  function ghostTear(){
+    if(poofed || document.hidden) return;
+    var t = document.createElement('span'); t.className = 'tear';
+    var left = Math.random() < .5;
+    t.style.setProperty('--tx', (left ? 30 : 62) + Math.round(Math.random() * 4) + '%');
+    t.style.setProperty('--ty', '50%');
+    gh.appendChild(t);
+    setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 1800);
+  }
   function ghostVibe(on, title){
+    ghostWeep(!!(on && radio.src === 'yt' && WEEPY.test(title || (on ? vibe.last : ''))));
     if(on){
       clearTimeout(vibe.off);
       if(!vibe.on){
@@ -4453,7 +4500,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       if(title && title !== vibe.last){ vibe.last = title; ghostHears(title); }
     } else if(vibe.on){
       clearTimeout(vibe.off);
-      vibe.off = setTimeout(function(){ vibe.on = false; gh.classList.remove('vibing'); clearInterval(vibe.notes); }, 2500);
+      vibe.off = setTimeout(function(){ vibe.on = false; gh.classList.remove('vibing'); clearInterval(vibe.notes); ghostWeep(false); }, 2500);
     }
   }
   function ghostNote(){
@@ -4462,13 +4509,15 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     n.textContent = Math.random() < .5 ? '\u266A' : '\u266B';
     n.style.setProperty('--dx', Math.round(Math.random() * 60 - 30) + 'px');
     n.style.setProperty('--rot', Math.round(Math.random() * 50 - 25) + 'deg');
-    n.style.color = ['#9F8CFF', '#7CFFB2', '#FF4FD8'][Math.floor(Math.random() * 3)];
+    n.style.color = vibe.sad ? '#7CF5FF' : ['#9F8CFF', '#7CFFB2', '#FF4FD8'][Math.floor(Math.random() * 3)];
     gh.appendChild(n);
     setTimeout(function(){ if(n.parentNode) n.parentNode.removeChild(n); }, 2500);
   }
   function ghostHears(title){
     if(poofed) return;
     var now = Date.now();
+    /* that song always gets a word out of them */
+    if(vibe.sad){ vibe.first = false; vibe.said = now; setTimeout(function(){ if(!talking) speak(vibeLines.weepy[Math.floor(Math.random() * vibeLines.weepy.length)], 3200); }, 1500); return; }
     if(!vibe.first && (now - vibe.said < 90000 || Math.random() < .4)) return;
     var set = vibe.first ? vibeLines.first : radio.src === 'yt' && radio.mine ? vibeLines.mine
             : radio.src === 'juke' || /jazz|noir|lounge|swing|sax|blues/i.test(title) ? vibeLines.jazz : vibeLines.any;
@@ -4642,6 +4691,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     radioVolume(+rVol.value);
     try { localStorage.setItem('exiled.radioVol', rVol.value); } catch(e){}
   });
+  volPaint();
 
   /* ── DATABYTES, opened in place ─────────────────────────────
      The channel used to navigate to databytes.html, which stopped the radio
