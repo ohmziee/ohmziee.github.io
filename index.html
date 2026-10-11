@@ -266,6 +266,8 @@ main{position:relative;z-index:3}
 .chat-say .cols button[aria-pressed="true"]{border-color:var(--ice)}
 .chat-say .cols .auto{background:none;border:1px dashed rgba(220,227,255,.4);font-size:.55rem;width:auto;padding:0 .4rem;border-radius:.6rem;color:var(--rain)}
 .chat-say .cols .auto:hover{background:none}
+.chat-say .note{flex:1 1 100%;order:6;font-size:.66rem;color:#FF8A6B;letter-spacing:.03em}
+.chat-say .note[hidden]{display:none}
 @media (max-width:640px){
   .chat-say{flex-wrap:wrap}
   .chat-say .h{flex:1 1 40%}
@@ -995,6 +997,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         <input class="m" id="chatInput" maxlength="400" placeholder="say something" aria-label="message">
         <button type="submit">SEND</button>
         <div class="cols" id="chatCols" role="group" aria-label="pick a name colour" hidden></div>
+        <div class="note" id="chatNote" role="status" hidden></div>
       </form>
     </div>
   </section>
@@ -2805,6 +2808,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     chatFeed.appendChild(row);
     while(chatFeed.children.length > CHAT_KEEP) chatFeed.removeChild(chatFeed.firstChild);
     if(animate) chatBump();
+    return row;
   }
 
   function pushMessage(animate){ renderMessage(nextMessage(), animate); }
@@ -2968,6 +2972,27 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     });
     hEl.addEventListener('input', paintCol);
 
+    /* one person per name. a random id per browser tells the server who
+       has been speaking under a name, so nobody else can wear it while
+       they are around */
+    var sid = '';
+    try{ sid = localStorage.getItem('exiled.sid') || ''; }catch(e){}
+    if(!/^[0-9a-f]{32}$/.test(sid) && window.crypto && crypto.getRandomValues){
+      sid = Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(16)), function(x){
+        return (x < 16 ? '0' : '') + x.toString(16);
+      }).join('');
+      try{ localStorage.setItem('exiled.sid', sid); }catch(e){}
+    }
+    var note = document.getElementById('chatNote');
+    function taken(){
+      note.textContent = "that name's in use right now. pick another.";
+      note.hidden = false;
+    }
+    hEl.addEventListener('input', function(){ note.hidden = true; });
+    /* names already talking in this room */
+    var inRoom = {};
+    CHAT_USERS.forEach(function(u){ inRoom[u.toLowerCase()] = 1; });
+
     var lastId = 0, seen = {}, echoes = [];
 
     /* regulars keep their own colour when they speak live */
@@ -3102,6 +3127,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       ev.preventDefault();
       var h = hEl.value.trim(), b = inEl.value.trim();
       if(!h || !b) return;
+      if(inRoom[h.toLowerCase()] || regs[h.toLowerCase()]){ taken(); return; }
+      note.hidden = true;
       try{ localStorage.setItem('exiled.handle', h); }catch(e){}
       /* an open terminal picks up the new name straight away, unless it is
          mid-puzzle with a prompt of its own */
@@ -3111,11 +3138,15 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       /* local echo first, always. a shadow-dropped message has to look
          identical to an accepted one from where the sender is sitting. */
       var saidAt = Date.now();
-      renderMessage({ u: h, c: handleCol(h, myCol), t: b }, true);
+      var row = renderMessage({ u: h, c: handleCol(h, myCol), t: b }, true);
       echoes.push({ h: h.toLowerCase(), b: b, at: saidAt });
+      var payload = { handle: h, body: b };
+      if(myCol >= 0) payload.color = myCol;
+      if(sid) payload.sid = sid;
       /* ask "am i new" before the post lands, or the answer is always no */
+      var plan = null;
       firstId(h).then(function(first){
-        stage(planFor(h, b, !first), saidAt);
+        plan = planFor(h, b, !first);
         return fetch(LIVE.url + '/functions/v1/' + LIVE.fn, {
           method: 'POST',
           headers: {
@@ -3123,9 +3154,19 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
             apikey: LIVE.anon,
             Authorization: 'Bearer ' + LIVE.anon
           },
-          body: JSON.stringify(myCol >= 0 ? { handle: h, body: b, color: myCol } : { handle: h, body: b })
+          body: JSON.stringify(payload)
         });
-      }).catch(function(){ /* offline: the sender still saw their line */ });
+      }).then(function(r){
+        /* someone else is using this name. the only post that comes back:
+           the line was never stored, so take it back and hand it over */
+        if(r && r.status === 409){
+          if(row.parentNode) row.parentNode.removeChild(row);
+          if(!inEl.value) inEl.value = b;
+          taken();
+          return;
+        }
+        stage(plan, saidAt);
+      }, function(){ /* offline: the sender still saw their line */ if(plan) stage(plan, saidAt); });
     }
     say.addEventListener('submit', send);
 
