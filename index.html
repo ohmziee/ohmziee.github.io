@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-RDldZMraInkw8ttT1BS7sbwNVqdbXkg2N9uEj6OH+CA=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-52yaFCRaAlVpyAX8g0LpTz0HYXZr38o+//Tw91szvuw=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -628,6 +628,36 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-tracks li.now button{color:var(--ice)}
 #radio .r-tracks li.now button::before{color:#7CFFB2}
 #radio .r-tracks li.dead button{color:var(--rain);font-style:italic}
+/* two stations as tabs; each element says which one it belongs to */
+#radio.src-juke .r-yt,#radio.src-yt .r-juke{display:none}
+#radio .r-srcs{display:flex;border-bottom:1px solid var(--violet)}
+#radio .r-srcs button{flex:1 1 0;padding:.5rem .4rem;font-size:.7rem;letter-spacing:.2em;color:var(--rain);transition:color .2s,background .2s}
+#radio .r-srcs button:hover,#radio .r-srcs button:focus-visible{color:var(--ice);background:rgba(42,29,94,.3)}
+#radio .r-srcs button[aria-selected="true"]{color:#7CFFB2;background:rgba(42,29,94,.45);box-shadow:inset 0 -2px #7CFFB2}
+#radio.mini .r-srcs,#radio.mini .j-note{display:none}
+/* the jukebox screen: a record that turns while it plays */
+#radio .r-screen.r-juke{aspect-ratio:auto;min-height:0;height:9.5rem;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 120%,rgba(159,140,255,.22),transparent 65%),#05060B}
+#radio .r-juke > .j-disc{position:relative;inset:auto;width:7.6rem;height:7.6rem;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:conic-gradient(from 30deg,rgba(255,255,255,.07),transparent 18%,transparent 50%,rgba(255,255,255,.06) 62%,transparent 80%),
+    repeating-radial-gradient(circle,#0c0e1a 0 2px,#161929 2px 3px);
+  box-shadow:0 0 0 1px rgba(159,140,255,.5),0 0 34px -8px rgba(159,140,255,.55)}
+#radio .j-label{width:2.7rem;height:2.7rem;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle,#05060B 0 3px,var(--lavender) 4px);color:#0B0D1A;font:700 .48rem/1 var(--font-display);letter-spacing:.08em;padding-top:1.2rem}
+@keyframes jspin{to{transform:rotate(360deg)}}
+#radio.on.src-juke .j-disc{animation:jspin 3.6s linear infinite}
+@media (prefers-reduced-motion:reduce){#radio.on.src-juke .j-disc{animation:none}}
+#radio #jukeOne{flex:0 0 auto;color:var(--rain)}
+#radio #jukeOne[aria-pressed="true"]{color:#7CFFB2;border-color:#7CFFB2}
+#radio .j-note{padding:.4rem .75rem;font-size:.66rem;letter-spacing:.06em;color:var(--rain);border-top:1px solid rgba(42,29,94,.7)}
+#radio .j-note button{color:#7CFFB2;text-decoration:underline;padding:0 .2rem;letter-spacing:inherit}
+#radio .j-tracks li{display:flex}
+#radio .j-tracks .j-play{flex:1 1 auto;min-width:0}
+#radio .j-tracks .j-dur{margin-left:auto;padding-left:.6rem;color:var(--violet);font-size:.66rem}
+#radio .j-tracks .j-pick{flex:0 0 auto;width:auto;padding:.45rem .75rem;color:#4A5068;font-size:.85rem}
+#radio .j-tracks .j-pick::before{content:none}
+#radio .j-tracks .j-pick[aria-pressed="true"]{color:#7CFFB2}
+#radio .j-tracks.picking li:not(.picked) .j-play{opacity:.5}
 #radio .r-src{display:block;padding:.5rem .75rem;font-size:.66rem;letter-spacing:.12em;color:var(--rain);border-top:1px solid rgba(42,29,94,.7);text-decoration:none}
 #radio .r-src:hover{color:var(--lavender)}
 #radioPanel{max-height:calc(100dvh - 2rem);overflow-y:auto;overflow-x:hidden}
@@ -1106,9 +1136,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 <div id="dockStrip" aria-hidden="true"></div>
 
 <!-- ═══ RADIO ═══
-     the playlist lives on youtube (RADIO_LIST in the script). edit it there;
-     nothing here needs touching. -->
-<div id="radio">
+     two sources, as tabs. JUKEBOX (the default) plays the site's own tracks
+     from jukebox/, listed in RADIO_JUKE in the script. YOUTUBE plays the
+     youtube playlist (RADIO_LIST); edit that one on youtube. -->
+<div id="radio" class="src-juke">
   <button type="button" id="radioTab" aria-expanded="false" aria-controls="radioPanel"><span class="r-dot" aria-hidden="true"></span>RADIO<span class="r-tabnow" id="radioTabNow"></span></button>
   <button type="button" id="ambTab" aria-pressed="false" aria-label="rain sounds" title="rain sounds: off"><span class="a-fill" id="ambFill" aria-hidden="true"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="a-wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/><path class="a-x" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg><span class="a-label">RAIN</span></button>
   <div id="radioPanel" role="region" aria-label="EXiLED radio" hidden>
@@ -1119,22 +1150,30 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <button type="button" id="radioMini" aria-pressed="false" title="shrink to just the screen" aria-label="shrink the radio">min</button>
       <button type="button" id="radioClose" title="pause and tuck away" aria-label="radio off">off</button>
     </div>
-    <div class="r-screen"><div id="radioYT"></div></div>
+    <div class="r-srcs" role="tablist" aria-label="station">
+      <button type="button" role="tab" id="srcJuke" aria-selected="true" aria-controls="radioPanel">JUKEBOX</button>
+      <button type="button" role="tab" id="srcYT" aria-selected="false" aria-controls="radioPanel">YOUTUBE</button>
+    </div>
+    <div class="r-screen r-yt"><div id="radioYT"></div></div>
+    <div class="r-screen r-juke" aria-hidden="true"><div class="j-disc"><span class="j-label">EXiLED</span></div></div>
     <div class="r-now"><small>NOW PLAYING</small><span id="radioNow">dead air // press tune in</span></div>
     <div class="r-ctl">
       <button type="button" id="radioPrev" aria-label="previous track">&laquo;</button>
       <button type="button" id="radioPlay">TUNE IN</button>
       <button type="button" id="radioNext" aria-label="next track">&raquo;</button>
+      <button type="button" id="jukeOne" class="r-juke" aria-pressed="false" title="repeat this track" aria-label="repeat this track">&#x27F2;1</button>
       <input type="range" id="radioVol" min="0" max="100" value="70" aria-label="volume">
     </div>
-    <form class="r-find" id="radioFind" autocomplete="off" role="search">
+    <p class="j-note r-juke" id="jukeNote"></p>
+    <ol class="r-tracks j-tracks r-juke" id="jukeTracks"></ol>
+    <form class="r-find r-yt" id="radioFind" autocomplete="off" role="search">
       <input type="search" id="radioQ" maxlength="200" placeholder="search youtube or paste a link" aria-label="search youtube or paste a link">
       <button type="submit">find</button>
     </form>
-    <div class="r-results" id="radioResults" hidden></div>
-    <button type="button" class="r-back" id="radioBack" hidden>&laquo; back to EXiLED RADIO</button>
-    <ol class="r-tracks" id="radioTracks"></ol>
-    <a class="r-src" id="radioSrc" href="#" target="_blank" rel="noopener">open the playlist on youtube &rsaquo;</a>
+    <div class="r-results r-yt" id="radioResults" hidden></div>
+    <button type="button" class="r-back r-yt" id="radioBack" hidden>&laquo; back to EXiLED RADIO</button>
+    <ol class="r-tracks r-yt" id="radioTracks"></ol>
+    <a class="r-src r-yt" id="radioSrc" href="#" target="_blank" rel="noopener">open the playlist on youtube &rsaquo;</a>
   </div>
 </div>
 
@@ -3248,8 +3287,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       var k = (a || '').toLowerCase();
       if(k === 'off'){ radioClose(); return tprint('radio off. the quiet comes back.', 'dim'); }
       if(k === 'next'){
-        if(!radio.ready) return tprint('radio: nothing on air. try: radio', 'err');
-        radio.yt.nextVideo(); return tprint('skipping.', 'ok');
+        if(!radioLive()) return tprint('radio: nothing on air. try: radio', 'err');
+        radioSkip(1); return tprint('skipping.', 'ok');
       }
       radioOpen(true); tprint('tuning in... EXiLED RADIO, bottom left.\n(radio next skips. radio off ends it.)', 'ok');
     },
@@ -3593,7 +3632,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      lifted from this source is useless anywhere else. Free quota is about
      100 searches a day across everyone; pasted links cost nothing. */
   var RADIO_KEY = 'AIzaSyDvNwLvXTuo2yCUSRhIHS0puXZpt8ZVSB8';
-  var radio = { yt: null, loading: false, ready: false, want: false, ids: [], titles: {}, idx: -1, playing: false, tries: 0,
+  var radio = { src: 'juke', yt: null, loading: false, ready: false, want: false, ids: [], titles: {}, idx: -1, playing: false, tries: 0,
                 mine: false, minePl: false, back: 0, pending: null, lastFind: 0, found: {} };
   var rEl = document.getElementById('radio'), rPanel = document.getElementById('radioPanel'), rTab = document.getElementById('radioTab');
   var rState = document.getElementById('radioState'), rNow = document.getElementById('radioNow'), rPlay = document.getElementById('radioPlay');
@@ -3612,14 +3651,194 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   document.getElementById('radioSrc').href = 'https://www.youtube.com/playlist?list=' + RADIO_LIST;
   try { var v0 = localStorage.getItem('exiled.radioVol'); if(v0 !== null && !isNaN(+v0)) rVol.value = +v0; } catch(e){}
 
+  /* ── the jukebox ──
+     The default station: the site's own tracks, served from jukebox/ next
+     to the page, so nothing outside the site is touched until someone picks
+     the YouTube tab. Plays in order and wraps around. A visitor can repeat
+     one track (⟲1), or mark tracks with ⟲ to loop just those; both, and
+     the track they were on, are remembered on their device. */
+  var RADIO_JUKE = [
+    { t: 'Last Call on Queen Street', f: '01-last-call-on-queen-street.mp3', d: 156 },
+    { t: 'Smoke off the Tower', f: '02-smoke-off-the-tower.mp3', d: 170 },
+    { t: 'Neon in the Puddles', f: '03-neon-in-the-puddles.mp3', d: 160 },
+    { t: 'Ghost in the Booth', f: '04-ghost-in-the-booth.mp3', d: 166 },
+    { t: 'Exiled Blues', f: '05-exiled-blues.mp3', d: 173 },
+    { t: 'Rain on the Fire Escape', f: '06-rain-on-the-fire-escape.mp3', d: 139 },
+    { t: 'Geary After Midnight', f: '07-geary-after-midnight.mp3', d: 178 },
+    { t: 'Streetlight Lullaby', f: '08-streetlight-lullaby.mp3', d: 158 },
+    { t: '3 A.M. Heartache', f: '09-3-a-m-heartache.mp3', d: 130 },
+    { t: 'Finch Station', f: '10-finch-station.mp3', d: 136 },
+    { t: 'Melancholy Rain', f: '11-melancholy-rain.mp3', d: 210 },
+    { t: 'Found Each Other in the Dark', f: '12-found-each-other-in-the-dark.mp3', d: 107 },
+    { t: 'You Were My Home', f: '13-you-were-my-home.mp3', d: 198 }
+  ];
+  var juke = { el: null, idx: 0, started: false, one: false, picks: [], errs: 0, pickBtns: [] };
+  var jList = document.getElementById('jukeTracks'), jNote = document.getElementById('jukeNote'), jOne = document.getElementById('jukeOne');
+  var srcJ = document.getElementById('srcJuke'), srcY = document.getElementById('srcYT');
+  try {
+    var jSaved = JSON.parse(localStorage.getItem('exiled.juke') || '{}') || {};
+    if(jSaved.idx >= 0 && jSaved.idx < RADIO_JUKE.length) juke.idx = jSaved.idx;
+    juke.one = !!jSaved.one;
+    juke.picks = (jSaved.picks || []).filter(function(f){ return RADIO_JUKE.some(function(t){ return t.f === f; }); });
+  } catch(e){}
+  function jukeSave(){
+    try { localStorage.setItem('exiled.juke', JSON.stringify({ idx: juke.idx, one: juke.one, picks: juke.picks })); } catch(e){}
+  }
+  function jukeTime(s){ return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
+  function jukeAudio(){
+    if(juke.el) return juke.el;
+    var a = juke.el = new Audio();
+    a.preload = 'none'; a.loop = juke.one; a.volume = radio.fade ? 0 : +rVol.value / 100;
+    a.addEventListener('playing', function(){
+      juke.errs = 0;
+      if(radio.src !== 'juke') return;
+      radio.playing = true; radioRemember('on');
+      if(radio.fade){ radio.fade = false; radioFadeIn(); }
+      jukeShow();
+    });
+    a.addEventListener('pause', function(){
+      if(radio.src !== 'juke') return;
+      radio.playing = false;
+      /* the end of a track pauses too; only a real pause counts as "off" */
+      if(!a.ended) radioRemember('off');
+      jukeShow();
+    });
+    a.addEventListener('ended', function(){ jukeGo(jukeStep(1), true); });
+    /* a missing file: say so and move on, but don't spin forever */
+    a.addEventListener('error', function(){
+      if(radio.src !== 'juke' || !juke.started) return;
+      rNow.textContent = 'signal lost // skipping';
+      if(++juke.errs < RADIO_JUKE.length) setTimeout(function(){ jukeGo(jukeStep(1), true); }, 1500);
+      else { radio.playing = false; radioPaint('NO SIGNAL'); }
+    });
+    return a;
+  }
+  /* the next track in a direction, keeping to the visitor's picks if any */
+  function jukeStep(dir){
+    var n = RADIO_JUKE.length, i = juke.idx;
+    for(var k = 0; k < n; k++){
+      i = (i + dir + n) % n;
+      if(!juke.picks.length || juke.picks.indexOf(RADIO_JUKE[i].f) >= 0) return i;
+    }
+    return juke.idx;
+  }
+  function jukeGo(i, play){
+    var a = jukeAudio();
+    juke.idx = i; juke.started = true; jukeSave();
+    a.src = 'jukebox/' + RADIO_JUKE[i].f;
+    if(play){ radio.want = true; var p = a.play(); if(p && p.catch) p.catch(function(){}); }
+    jukeShow();
+  }
+  function jukePlay(){
+    if(!juke.started) return jukeGo(juke.idx, true);
+    var p = jukeAudio().play(); if(p && p.catch) p.catch(function(){});
+  }
+  function jukeShow(){
+    if(radio.src !== 'juke') return;
+    rNow.textContent = juke.started ? RADIO_JUKE[juke.idx].t : 'dead air // press tune in';
+    radioPaint();
+    ghostVibe(radio.playing, radio.playing && RADIO_JUKE[juke.idx].t);
+  }
+  function jukeList(){
+    jList.textContent = ''; juke.pickBtns = [];
+    RADIO_JUKE.forEach(function(t, i){
+      var li = document.createElement('li'), b = document.createElement('button'), p = document.createElement('button');
+      var s = document.createElement('span'), d = document.createElement('span');
+      b.type = 'button'; p.type = 'button'; b.className = 'j-play'; p.className = 'j-pick'; d.className = 'j-dur';
+      s.textContent = t.t; d.textContent = jukeTime(t.d); p.textContent = '⟲';
+      b.appendChild(s); b.appendChild(d);
+      b.addEventListener('click', function(){ jukeGo(i, true); });
+      p.addEventListener('click', function(){ jukePick(t.f); });
+      li.appendChild(b); li.appendChild(p); jList.appendChild(li);
+      juke.pickBtns.push(p);
+    });
+    jukePicks();
+  }
+  function jukePick(f){
+    var k = juke.picks.indexOf(f);
+    if(k >= 0) juke.picks.splice(k, 1); else juke.picks.push(f);
+    jukeSave(); jukePicks();
+  }
+  function jukePicks(){
+    var n = juke.picks.length, lis = jList.children;
+    juke.pickBtns.forEach(function(p, i){
+      var on = juke.picks.indexOf(RADIO_JUKE[i].f) >= 0;
+      if(lis[i]) lis[i].classList.toggle('picked', on);
+      p.setAttribute('aria-pressed', String(on));
+      p.title = on ? 'take this out of your loop' : 'add this to your loop';
+      p.setAttribute('aria-label', p.title + ': ' + RADIO_JUKE[i].t);
+    });
+    jList.classList.toggle('picking', n > 0);
+    jOne.setAttribute('aria-pressed', String(juke.one));
+    if(juke.el) juke.el.loop = juke.one;
+    jNote.textContent = '';
+    var msg = document.createElement('span');
+    msg.textContent = juke.one ? 'repeating this track' + (n ? ' · then your picks · ' : '')
+      : n ? 'looping your ' + (n === 1 ? 'pick' : n + ' picks') + ' · '
+      : 'playing the whole jukebox · tap ⟲ to loop just the ones you like';
+    jNote.appendChild(msg);
+    if(n){
+      var c = document.createElement('button'); c.type = 'button'; c.textContent = 'clear';
+      c.addEventListener('click', function(){ juke.picks = []; jukeSave(); jukePicks(); });
+      jNote.appendChild(c);
+    }
+  }
+  jOne.addEventListener('click', function(){ juke.one = !juke.one; jukeSave(); jukePicks(); });
+  jukeList();
+
+  /* ── one station at a time ──
+     Switching tabs pauses the other station. If something was playing,
+     the new station picks up straight away. YouTube is only fetched once
+     someone opens its tab. Every visit starts on the jukebox. */
+  function radioSource(s){
+    if(s === radio.src) return;
+    var was = radio.playing;
+    if(radio.src === 'juke' && juke.el) juke.el.pause();
+    if(radio.src === 'yt' && radio.ready) radio.yt.pauseVideo();
+    radio.src = s; radio.playing = false; radio.want = was;
+    rEl.classList.toggle('src-juke', s === 'juke'); rEl.classList.toggle('src-yt', s === 'yt');
+    srcJ.setAttribute('aria-selected', String(s === 'juke')); srcY.setAttribute('aria-selected', String(s === 'yt'));
+    radioVolume(+rVol.value);
+    ghostVibe(false);
+    if(s === 'yt'){
+      var d = radio.ready && radio.yt.getVideoData ? radio.yt.getVideoData() : null;
+      rNow.textContent = d && d.title ? d.title : 'dead air // press tune in';
+      radioPaint();
+      radioLoad();
+      if(was && radio.ready) radio.yt.playVideo();
+    } else {
+      jukeShow();
+      if(was) jukePlay();
+    }
+  }
+  srcJ.addEventListener('click', function(){ radioSource('juke'); });
+  srcY.addEventListener('click', function(){ radioSource('yt'); });
+  function radioVolume(v){
+    if(radio.src === 'juke'){ if(juke.el) juke.el.volume = v / 100; }
+    else if(radio.ready) radio.yt.setVolume(v);
+  }
+  function radioSkip(dir){
+    if(radio.src === 'juke'){
+      /* back, a few seconds in, restarts the track, like a real deck */
+      if(dir < 0 && juke.el && juke.el.currentTime > 4){ juke.el.currentTime = 0; return; }
+      return jukeGo(jukeStep(dir), true);
+    }
+    if(!radio.ready) return;
+    if(dir > 0) radio.yt.nextVideo(); else radio.yt.previousVideo();
+  }
+  function radioLive(){ return radio.src === 'juke' ? juke.started : radio.ready; }
+
   function radioPaint(label){
+    var live = radioLive(), lis, i;
     rEl.classList.toggle('on', radio.playing);
-    rState.textContent = label || (radio.playing ? (radio.mine ? 'YOUR PICK' : 'ON AIR') : radio.ready ? 'PAUSED' : 'OFF AIR');
+    rState.textContent = label || (radio.playing ? (radio.src === 'yt' && radio.mine ? 'YOUR PICK' : 'ON AIR') : live ? 'PAUSED' : 'OFF AIR');
     rPlay.textContent = radio.playing ? 'PAUSE' : 'TUNE IN';
     /* tucked away: the tab keeps the track name, one tap resumes it */
-    rTabNow.textContent = radio.ready && rNow.textContent ? rNow.textContent : '';
-    var lis = rTracks.children;
-    for(var i = 0; i < lis.length; i++) lis[i].classList.toggle('now', i === radio.idx);
+    rTabNow.textContent = live && rNow.textContent ? rNow.textContent : '';
+    lis = rTracks.children;
+    for(i = 0; i < lis.length; i++) lis[i].classList.toggle('now', i === radio.idx);
+    lis = jList.children;
+    for(i = 0; i < lis.length; i++) lis[i].classList.toggle('now', juke.started && i === juke.idx);
   }
   function radioTitle(id, cb, dead){
     if(radio.titles[id]) return cb(radio.titles[id]);
@@ -3652,6 +3871,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     radioPaint();
   }
   function radioState(e){
+    /* the youtube player is paused while the jukebox has the air */
+    if(radio.src !== 'yt') return;
     var st = e.data;
     radio.playing = st === 1;
     if(st === 1){ radioRemember('on'); if(radio.fade){ radio.fade = false; radioFadeIn(); } }
@@ -3676,7 +3897,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
           radio.yt.setLoop(true); radio.yt.setVolume(radio.fade ? 0 : +rVol.value);
           radioList(); radioPaint();
           if(radio.pending){ var p = radio.pending; radio.pending = null; radioMine(p); }
-          else if(radio.want) radio.yt.playVideo();
+          else if(radio.want && radio.src === 'yt') radio.yt.playVideo();
         },
         onStateChange: radioState,
         /* a track that was removed or blocks embedding: skip it */
@@ -3704,11 +3925,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     rPanel.hidden = false; rTab.hidden = true; rTab.setAttribute('aria-expanded', 'true'); rEl.classList.add('open');
     if(play) radio.want = true;
+    if(radio.src === 'juke'){ if(play) jukePlay(); return; }
     radioLoad();
     if(play && radio.ready) radio.yt.playVideo();
   }
   function radioClose(){
     if(radio.ready) radio.yt.pauseVideo();
+    if(juke.el) juke.el.pause();
     radio.want = false; radio.playing = false;
     rPanel.hidden = true; rTab.hidden = false; rTab.setAttribute('aria-expanded', 'false'); rEl.classList.remove('open');
     radioPaint(); ghostVibe(false);
@@ -3732,9 +3955,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   function radioFadeIn(){
     var target = +rVol.value, v = 0, iv = setInterval(function(){
-      if(!radio.ready){ return clearInterval(iv); }
       v = Math.min(target, v + Math.max(1, Math.round(target / 20)));
-      radio.yt.setVolume(v);
+      radioVolume(v);
       if(v >= target) clearInterval(iv);
     }, 150);
   }
@@ -3742,7 +3964,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     document.removeEventListener('pointerdown', radioFirstTouch, true);
     document.removeEventListener('keydown', radioFirstTouch, true);
     var t = e && e.target;
-    if(radioPref === 'off' || radio.yt || radio.loading) return;
+    if(radioPref === 'off' || radio.yt || radio.loading || juke.started) return;
     if(t && t.closest && t.closest('#radio')) return;
     radio.fade = true;
     if(!rEl.classList.contains('mini')) radioMini(true, true);
@@ -3793,8 +4015,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(poofed) return;
     var now = Date.now();
     if(!vibe.first && (now - vibe.said < 90000 || Math.random() < .4)) return;
-    var set = vibe.first ? vibeLines.first : radio.mine ? vibeLines.mine
-            : /jazz|noir|lounge|swing|sax|blues/i.test(title) ? vibeLines.jazz : vibeLines.any;
+    var set = vibe.first ? vibeLines.first : radio.src === 'yt' && radio.mine ? vibeLines.mine
+            : radio.src === 'juke' || /jazz|noir|lounge|swing|sax|blues/i.test(title) ? vibeLines.jazz : vibeLines.any;
     vibe.first = false; vibe.said = now;
     setTimeout(function(){ if(!talking) speak(set[Math.floor(Math.random() * set.length)], 2800); }, 1200);
   }
@@ -3869,7 +4091,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   });
   rBack.addEventListener('click', function(){ if(radio.ready) radioHome(); });
 
-  rTab.addEventListener('click', function(){ radioOpen(radio.ready); });
+  rTab.addEventListener('click', function(){ radioOpen(radioLive()); });
   var radioSeen = false;
   try { radioSeen = !!localStorage.getItem('exiled.radioSeen'); } catch(e){}
   if(!radioSeen){
@@ -3921,16 +4143,19 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
   document.getElementById('radioClose').addEventListener('click', radioClose);
   rPlay.addEventListener('click', function(){
+    if(radio.src === 'juke'){ if(radio.playing) juke.el.pause(); else jukePlay(); return; }
     if(!radio.ready){ radio.want = true; return radioLoad(); }
     if(radio.playing) radio.yt.pauseVideo(); else radio.yt.playVideo();
   });
-  document.getElementById('radioPrev').addEventListener('click', function(){ if(radio.ready) radio.yt.previousVideo(); });
-  document.getElementById('radioNext').addEventListener('click', function(){ if(radio.ready) radio.yt.nextVideo(); });
+  document.getElementById('radioPrev').addEventListener('click', function(){ radioSkip(-1); });
+  document.getElementById('radioNext').addEventListener('click', function(){ radioSkip(1); });
   document.getElementById('radioList').addEventListener('click', function(){
-    rTracks.hidden = !rTracks.hidden; this.setAttribute('aria-expanded', String(!rTracks.hidden));
+    var hide = !rTracks.hidden;
+    rTracks.hidden = hide; jList.hidden = hide; jNote.hidden = hide;
+    this.setAttribute('aria-expanded', String(!hide));
   });
   rVol.addEventListener('input', function(){
-    if(radio.ready) radio.yt.setVolume(+rVol.value);
+    radioVolume(+rVol.value);
     try { localStorage.setItem('exiled.radioVol', rVol.value); } catch(e){}
   });
 
