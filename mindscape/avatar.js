@@ -1,4 +1,4 @@
-/* EXiLED mainframe — the operator's face. Pixel layers drawn in code until
+/* EXiLED mindscape — the operator's face. Pixel layers drawn in code until
    there is real art; swap a part's rows for a drawn sprite later and nothing
    else changes. No DOM in here: render() returns an SVG string.
 

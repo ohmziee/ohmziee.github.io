@@ -1,13 +1,14 @@
-/* EXiLED mainframe — the screen. engine.js decides what happens; this
+/* EXiLED mindscape — the screen. engine.js decides what happens; this
    draws it and turns clicks and keys into engine calls. */
 (function () {
   var MF = window.MF, D = window.MF_DATA, A = window.MFAvatar, store = null;
   try { store = window.localStorage; } catch (e) {}
   var $ = function (id) { return document.getElementById(id); };
 
-  /* the mainframe has to have been opened on the main page first */
+  /* the mindscape has to have been opened on the main page first */
   var open = false;
-  try { open = !!store.getItem('exiled.mainframe'); } catch (e) {}
+  /* exiled.mainframe: the old name, from before the rename */
+  try { open = !!(store.getItem('exiled.mindscape') || store.getItem('exiled.mainframe')); } catch (e) {}
   if (!open || !MF || !D || !A) return;
   $('locked').hidden = true;
 
@@ -191,7 +192,7 @@
       MF.answer(s, S, !!raw); render();
     }, function () {
       asking = false; $('askIn').disabled = false;
-      speaker.textContent = D.who.sys || 'MAINFRAME';
+      speaker.textContent = D.who.sys || 'MINDSCAPE';
       line.classList.remove('narr');
       line.textContent = 'the line is down. nothing can be checked right now. come back later.';
     });
