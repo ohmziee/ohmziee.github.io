@@ -2983,6 +2983,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       }).join('');
       try{ localStorage.setItem('exiled.sid', sid); }catch(e){}
     }
+    /* "name#key" in the name box: the key is split off before anything is
+       shown or saved as the name, and kept on this device to send along */
+    var ownerKey = '';
+    try{ ownerKey = localStorage.getItem('exiled.owner') || ''; }catch(e){}
     var note = document.getElementById('chatNote');
     function taken(){
       note.textContent = "that name's in use right now. pick another.";
@@ -3126,6 +3130,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     function send(ev){
       ev.preventDefault();
       var h = hEl.value.trim(), b = inEl.value.trim();
+      var cut = h.indexOf('#');
+      if(cut >= 0){
+        var k = h.slice(cut + 1).trim();
+        h = h.slice(0, cut).trim();
+        hEl.value = h;
+        if(k){ ownerKey = k; try{ localStorage.setItem('exiled.owner', k); }catch(e){} }
+      }
       if(!h || !b) return;
       if(inRoom[h.toLowerCase()] || regs[h.toLowerCase()]){ taken(); return; }
       note.hidden = true;
@@ -3143,6 +3154,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       var payload = { handle: h, body: b };
       if(myCol >= 0) payload.color = myCol;
       if(sid) payload.sid = sid;
+      if(ownerKey) payload.owner = ownerKey;
       /* ask "am i new" before the post lands, or the answer is always no */
       var plan = null;
       firstId(h).then(function(first){
