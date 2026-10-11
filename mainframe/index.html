@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MAINFRAME // EXiLED</title>
+<meta name="description" content="the mainframe is listening.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05060B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="mainframe.css">
+<script src="engine.js" defer></script>
+<script src="avatar.js" defer></script>
+<script src="scenes.js" defer></script>
+<script src="../wiki/seal.js" defer></script>
+<script src="ui.js" defer></script>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <header class="mbar">
+    <a class="back" href="../index.html">&lt;&lt; EXiLED</a>
+    <span class="chan">MAINFRAME</span>
+    <span class="tools" hidden>
+      <button type="button" id="invBtn" aria-controls="inv" aria-expanded="false">INV</button>
+      <button type="button" id="sysBtn" aria-controls="sys" aria-expanded="false">SYS</button>
+    </span>
+  </header>
+
+  <!-- shown until ui.js decides; also what a browser that never opened the mainframe sees -->
+  <main id="locked" class="locked">
+    <p class="k">ACCESS DENIED</p>
+    <p>the door is not built yet.<br>it is listening, though.</p>
+    <p><a href="../index.html">&lt;&lt; back to the storm</a></p>
+  </main>
+
+  <main id="chip" class="chip" hidden>
+    <h1 class="chip-title">CHIPPIN' IN</h1>
+    <p class="dim">the mainframe needs to know who is on the line.</p>
+    <div class="chip-cols">
+      <section class="chip-face" aria-label="your operator">
+        <div class="avatar" id="avBig"></div>
+        <button type="button" id="avRand">RANDOMIZE</button>
+      </section>
+      <section class="chip-form">
+        <label for="handle">HANDLE</label>
+        <input id="handle" maxlength="25" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <h2>LOOK</h2>
+        <div id="slots"></div>
+        <h2>ORIGIN</h2>
+        <div id="origins" class="origins" role="radiogroup" aria-label="origin"></div>
+        <p class="msg" id="chipMsg" role="status"></p>
+        <button type="button" id="chipGo" class="go">CHIP IN</button>
+      </section>
+    </div>
+  </main>
+
+  <main id="stage" class="stage" hidden>
+    <section class="signal" aria-hidden="true">
+      <div class="who-card" id="whoCard"><span class="who-name" id="whoBig"></span><span class="who-mood" id="whoMood"></span></div>
+    </section>
+    <section class="box" id="box" aria-live="polite">
+      <p class="speaker" id="speaker"></p>
+      <p class="line" id="line"></p>
+      <ol class="choices" id="choices"></ol>
+      <div class="ask" id="ask" hidden>
+        <input id="askIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="your answer">
+        <button type="button" id="askGo">SAY IT</button>
+      </div>
+      <p class="more" id="more" aria-hidden="true">&#9660;</p>
+    </section>
+  </main>
+
+  <aside class="panel" id="inv" hidden aria-label="inventory">
+    <div class="op"><div class="avatar" id="avSmall"></div><p><b id="opHandle"></b><span id="opOrigin" class="d"></span></p></div>
+    <h2>INVENTORY</h2>
+    <ul id="invList"></ul>
+    <h2>CONTACTS</h2>
+    <ul id="metList"></ul>
+  </aside>
+
+  <aside class="panel" id="sys" hidden aria-label="system">
+    <h2>SAVE CODE</h2>
+    <p class="dim">your run lives in this browser. copy the code to carry it to another device.</p>
+    <textarea id="code" rows="4" readonly spellcheck="false" aria-label="your save code"></textarea>
+    <button type="button" id="copyBtn">COPY</button>
+    <h2>LOAD A CODE</h2>
+    <textarea id="paste" rows="4" spellcheck="false" aria-label="paste a save code"></textarea>
+    <button type="button" id="loadBtn">LOAD</button>
+    <p class="msg" id="sysMsg" role="status"></p>
+    <h2>WIPE</h2>
+    <button type="button" id="wipeBtn" class="danger">WIPE THIS RUN</button>
+  </aside>
+</body>
+</html>
