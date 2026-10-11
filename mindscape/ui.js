@@ -83,16 +83,37 @@
   var typing = null, full = '', current = null;
 
   function name(who) { return D.who[who] || who; }
+  /* the speaker card: a portrait if they have one (faces/<who>.webp), their
+     name, their mood. The CSS animates it: it breathes while idle, bobs
+     while a line types out, glitches in when the speaker changes, and
+     glows in the mood's colour (data-mood). */
+  var card = $('whoCard'), lastWho = null;
+  function setWho(who, mood) {
+    /* narration: whoever spoke last stays on screen, dimmed, so a scene
+       doesn't blink them out and glitch them back in between every line */
+    card.classList.toggle('quiet', !who);
+    if (!who) { $('whoMood').textContent = ''; card.setAttribute('data-mood', ''); return; }
+    var src = D.faces && D.faces[who];
+    $('whoBig').textContent = who ? name(who) : '';
+    $('whoMood').textContent = mood ? '// ' + mood : '';
+    card.classList.toggle('on', !!who);
+    card.classList.toggle('faced', !!src);
+    card.setAttribute('data-mood', mood || '');
+    if (src && $('whoImg').getAttribute('src') !== src) { $('whoImg').setAttribute('src', src); $('whoImg').setAttribute('alt', name(who)); }
+    if (who && who !== lastWho && !reduce) { card.classList.remove('arrive'); void card.offsetWidth; card.classList.add('arrive'); }
+    lastWho = who || null;
+  }
+  function talking(on) { card.classList.toggle('talk', on); }
   function type(text) {
     clearInterval(typing); typing = null; full = text;
     if (reduce) { line.textContent = text; more.hidden = false; return; }
-    var i = 0; line.textContent = ''; more.hidden = true;
+    var i = 0; line.textContent = ''; more.hidden = true; talking(true);
     typing = setInterval(function () {
       i += 2; line.textContent = text.slice(0, i);
-      if (i >= text.length) { clearInterval(typing); typing = null; more.hidden = false; }
+      if (i >= text.length) { clearInterval(typing); typing = null; more.hidden = false; talking(false); }
     }, 18);
   }
-  function finishTyping() { clearInterval(typing); typing = null; line.textContent = full; more.hidden = false; }
+  function finishTyping() { clearInterval(typing); typing = null; line.textContent = full; more.hidden = false; talking(false); }
 
   function render() {
     var v;
@@ -109,9 +130,7 @@
     if (v.kind === 'line') {
       speaker.textContent = v.who ? name(v.who) : '';
       line.classList.toggle('narr', !v.who);
-      $('whoBig').textContent = v.who ? name(v.who) : '';
-      $('whoMood').textContent = v.mood ? '// ' + v.mood : '';
-      $('whoCard').classList.toggle('on', !!v.who);
+      setWho(v.who, v.mood);
       type(v.text);
       return;
     }
@@ -123,7 +142,7 @@
         if (last) {
           speaker.textContent = last.who ? name(last.who) : ''; line.classList.toggle('narr', !last.who);
           line.textContent = last.text.replace(/\$handle\b/g, s.player.handle || 'stranger');
-          $('whoBig').textContent = last.who ? name(last.who) : ''; $('whoCard').classList.toggle('on', !!last.who);
+          setWho(last.who, last.mood);
         }
       }
       $('ask').hidden = false; $('askIn').value = ''; $('askIn').disabled = false;
