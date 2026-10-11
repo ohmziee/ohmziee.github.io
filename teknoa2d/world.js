@@ -182,6 +182,20 @@
     var top = R0.cy; while (dist[at(R0.cx, top - 1)] === R0.index) top--;
     landmark(R0, 'noorborj', 'noorborj', -1, top - R0.cy + 1, 3, 4, 'NOORBORJ\na lighthouse. the door does not have a handle on this side.');
 
+    /* shops: a front the size of the place, the keeper outside the door.
+       names and prices live in shops.js; this only says where */
+    var SHOP_AT = [{ id: 'neon-fade', d: W0, dx: -7, dy: 3, art: 'barber' },
+                   { id: 'la-navaja', d: Y0, dx: 6, dy: -9, art: 'barber' },
+                   { id: 'haven-groom', d: H0, dx: 2, dy: 3, art: 'barber' }];
+    var shopKeepers = [];
+    SHOP_AT.forEach(function (sp) {
+      var info = root.MFShops && root.MFShops.SHOPS[sp.id], kind = info && root.MFShops.KINDS[info.kind];
+      var door = landmark(sp.d, sp.art, info ? info.name : sp.id, sp.dx, sp.dy, 3, 2,
+        (info ? info.name : sp.id.toUpperCase()) + '\n' + (kind ? kind.what : 'open') + '. talk to the one out front.');
+      marks[marks.length - 1].shop = sp.id;
+      shopKeepers.push({ id: 'shop-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art, shop: sp.id, still: true });
+    });
+
     /* yucayeque's market: stalls round the hall */
     for (var s = 0; s < 8; s++) {
       var sx = Y0.cx - 6 + (s % 4) * 4, sy = Y0.cy + 2 + Math.floor(s / 4) * 3;
@@ -192,6 +206,7 @@
     var spawn = { x: arcadeDoor.x, y: arcadeDoor.y + 3, dir: 'up' };
     carve(spawn.x, spawn.y, arcadeDoor.x, arcadeDoor.y, T.ROAD);
     npcs.push({ id: 'hex', x: arcadeDoor.x, y: arcadeDoor.y, dir: 'down', look: 'hex', scene: 'hex', still: true });
+    shopKeepers.forEach(function (k) { npcs.push(k); });
     function person(d, dx, dy, look, lines) {
       var x = d.cx + dx, y = d.cy + dy;
       if (SOLID[get(x, y)]) carve(x, y, d.cx, d.cy, T.ROAD);

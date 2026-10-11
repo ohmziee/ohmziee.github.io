@@ -220,3 +220,24 @@ a{color:var(--lavender)}
 @media (prefers-reduced-motion:reduce){.wj .gain.on{animation:none;opacity:1}}
 .purse{display:flex;justify-content:space-between;align-items:baseline;margin:.8rem 0 0;padding:.45rem .6rem;border:1px solid var(--violet);font-size:.8rem;letter-spacing:.12em;color:var(--rain)}
 .purse b{color:#ffe97c;font:600 1.05rem var(--font-mono);letter-spacing:.04em}
+
+/* ── a shop counter: the Chippin' In layout, with a bill ── */
+.shop .chip-title{color:#ffe97c;text-shadow:0 0 16px rgba(255,233,124,.3)}
+.shop .dim{font-style:italic}
+.shop .slot .l .tag{display:block;color:var(--rain);font:.72rem var(--font-mono);letter-spacing:.04em}
+.shop .slot.changed .l{color:var(--ice)}
+.shop .slot.changed .l .tag{color:#ffe97c}
+.shop .slot.changed .v{border-style:solid;border-color:#ffe97c}
+.bill{margin-top:1rem;border:1px solid var(--violet);padding:.6rem .8rem}
+.bill ul{list-style:none;margin:0 0 .4rem;padding:0}
+.bill li{display:flex;justify-content:space-between;color:var(--ice);font-size:.9rem;padding:.15rem 0}
+.bill li b{color:#ffe97c;font-family:var(--font-mono);font-weight:400}
+.bill li.empty{color:var(--rain)}
+.bill .tot{display:flex;justify-content:space-between;margin:0;padding-top:.35rem;border-top:1px dashed var(--violet);letter-spacing:.15em;font-size:.82rem;color:var(--lavender)}
+.bill .tot b{color:#ffe97c;font:600 1.05rem var(--font-mono);letter-spacing:.04em}
+.bill .tot.have{border-top:0;padding-top:.1rem}
+.bill .tot.have b{color:var(--ice)}
+.bill .tot.have.short b{color:var(--glitch-b)}
+.shop .msg.ok{color:var(--live)}
+.shop .go:disabled{opacity:.45;cursor:not-allowed;background:transparent}
+.shop .leave{width:100%;margin-top:.5rem;padding:.6rem;letter-spacing:.2em}

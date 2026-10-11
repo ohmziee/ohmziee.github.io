@@ -22,7 +22,7 @@
   function showChip() {
     closePanels();
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
-    $('stage').hidden = true; document.querySelector('.tools').hidden = true; $('chip').hidden = false;
+    $('stage').hidden = true; $('shop').hidden = true; document.querySelector('.tools').hidden = true; $('chip').hidden = false;
     look = Object.keys(s.player.look).length ? A.normalize(s.player.look) : A.random();
     origin = D.origins[s.player.origin] ? s.player.origin : '';
     var carried = '';
@@ -99,11 +99,89 @@
   function showWorld() {
     closePanels();
     $('chip').hidden = true; $('stage').hidden = true; document.querySelector('.tools').hidden = false;
+    $('shop').hidden = true;
     window.MFWorld.show(s, {
       save: function () { if (store) MF.save(s, store); },
+      shop: function (id) { openShop(id); },
       talk: function () { MF.enter(s, S, D.start); showStage(); render(); }
     });
   }
+
+  /* ── shops ──────────────────────────────────────────────────
+     shops.js says what a shop changes and what it costs; this is the
+     counter: try things on, see the bill, pay or walk out. Nothing is
+     taken until PAY. */
+  var SH = window.MFShops, shopId = '', trying = null, shopTimer = 0, shopStep = 0;
+  function openShop(id) {
+    var sh = SH && SH.SHOPS[id];
+    if (!sh) return;
+    shopId = id; trying = A.normalize(s.player.look);
+    closePanels();
+    window.MFWorld.hide();
+    $('stage').hidden = true; $('chip').hidden = true; document.querySelector('.tools').hidden = true;
+    $('shopName').textContent = sh.name;
+    $('shopLine').textContent = '"' + sh.hello + '"';
+    $('shopWhat').textContent = SH.KINDS[sh.kind].title + ' // ' + SH.KINDS[sh.kind].what;
+    $('shopMsg').textContent = ''; $('shopMsg').classList.remove('ok');
+    $('shop').hidden = false;
+    drawShop();
+    clearInterval(shopTimer);
+    shopTimer = setInterval(function () { if ($('shop').hidden) { clearInterval(shopTimer); return; } shopStep ^= 1; drawShopWalk(); }, 420);
+    try { $('shopPay').focus(); } catch (e) {}
+  }
+  function drawShopWalk() {
+    var box = $('shopWalk'); box.innerHTML = '';
+    if (!window.MFWorld || !window.MFWorld.preview) return;
+    ['down', 'left', 'up', 'right'].forEach(function (d) { box.appendChild(window.MFWorld.preview(trying, d, shopStep)); });
+  }
+  function drawShop() {
+    var sh = SH.SHOPS[shopId], kind = SH.KINDS[sh.kind], box = $('shopSlots');
+    var q = SH.quote(shopId, s.player.look, trying, A), have = MF.joules(s);
+    $('shopAv').innerHTML = A.render(trying); drawShopWalk();
+    box.innerHTML = '';
+    kind.slots.forEach(function (ks) {
+      var sl = A.SLOTS.filter(function (x) { return x.key === ks.key; })[0];
+      var row = document.createElement('div'), l = document.createElement('span'), v = document.createElement('span');
+      var changed = trying[ks.key] !== A.normalize(s.player.look)[ks.key];
+      row.className = 'slot' + (changed ? ' changed' : ''); l.className = 'l'; v.className = 'v';
+      l.textContent = ks.label + ' ';
+      var tag = document.createElement('small'); tag.className = 'tag'; tag.textContent = MF.fmtJ(SH.price(ks.price, sh.mult)); l.appendChild(tag);
+      if (sl.colors) { var sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = trying[ks.key]; v.appendChild(sw); }
+      else v.textContent = trying[ks.key];
+      function arrow(step, glyph, name) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.textContent = glyph; b.setAttribute('aria-label', name + ' ' + ks.label);
+        b.addEventListener('click', function () { trying = A.cycle(trying, ks.key, step); $('shopMsg').textContent = ''; drawShop(); });
+        return b;
+      }
+      row.appendChild(l); row.appendChild(arrow(-1, '◀', 'previous')); row.appendChild(v); row.appendChild(arrow(1, '▶', 'next'));
+      box.appendChild(row);
+    });
+    var bill = $('shopBill'); bill.innerHTML = '';
+    q.lines.forEach(function (ln) {
+      var li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
+      a.textContent = ln.label; b.textContent = MF.fmtJ(ln.price); li.appendChild(a); li.appendChild(b); bill.appendChild(li);
+    });
+    if (!q.lines.length) { var e = document.createElement('li'); e.className = 'empty'; e.textContent = 'try something on.'; bill.appendChild(e); }
+    $('shopTotal').textContent = MF.fmtJ(q.total);
+    $('shopHave').textContent = MF.fmtJ(have);
+    var short = q.total > have;
+    $('shopHave').parentNode.classList.toggle('short', short);
+    $('shopPay').disabled = !q.lines.length || short;
+    $('shopPay').textContent = short ? 'NOT ENOUGH JOULES' : q.lines.length ? 'PAY ' + MF.fmtJ(q.total) : 'PAY';
+  }
+  function leaveShop() { if ($('shop').hidden) return; clearInterval(shopTimer); $('shop').hidden = true; showWorld(); }
+  $('shopUndo').addEventListener('click', function () { trying = A.normalize(s.player.look); $('shopMsg').textContent = ''; drawShop(); });
+  $('shopLeave').addEventListener('click', leaveShop);
+  $('shopPay').addEventListener('click', function () {
+    var r = SH.buy(MF, A, s, shopId, trying);
+    if (!r.ok) { $('shopMsg').classList.remove('ok'); $('shopMsg').textContent = r.why + '.'; return drawShop(); }
+    if (store) MF.save(s, store);
+    trying = A.normalize(s.player.look);
+    $('shopMsg').classList.add('ok');
+    $('shopMsg').textContent = 'paid ' + MF.fmtJ(r.total) + '. "' + SH.SHOPS[shopId].bye + '"';
+    drawShop();
+  });
 
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   var box = $('box'), line = $('line'), speaker = $('speaker'), choices = $('choices'), more = $('more');
@@ -251,7 +329,7 @@
   box.addEventListener('click', advance);
   document.addEventListener('keydown', function (e) {
     if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
-    if (e.key === 'Escape') return closePanels();
+    if (e.key === 'Escape') { if (!$('shop').hidden) return leaveShop(); return closePanels(); }
     if ($('stage').hidden) return;               /* out in the street, the keys are the world's */
     if (!$('inv').hidden || !$('sys').hidden) return;
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); return; }

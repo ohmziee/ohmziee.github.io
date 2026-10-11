@@ -7,7 +7,8 @@
      .  nothing          S s  skin, skin shade      H h  hair, hair shade
      E  eye colour       W    eye white             C c  cloth, cloth shade
      k  undershirt dark  A    accent (metal)        m    mouth
-   Layers draw in order: base, top, eyes, hair, accessory. */
+     B  facial hair (the hair dye, a touch darker)
+   Layers draw in order: base, top, eyes, facial hair, hair, accessory. */
 (function (root) {
   var W = 16, H = 20;
 
@@ -51,6 +52,17 @@
       undercut:{ 2: '......HHHHHH....', 3: '....HHHHHHHHH...', 4: '....HHHHHHHHHH..', 5: '....h....HHHHH..',
                  6: '.........HHHH...', 7: '..........HH....' },
     },
+    /* facial hair takes the hair dye. none first: an old look has none */
+    beard: {
+      none:      {},
+      stubble:   { 10: '....B.B..B.B....', 11: '.....B.BB.B.....' },
+      mustache:  { 9: '.....BBBBBB.....' },
+      goatee:    { 11: '......BBBB......', 12: '.......BB.......' },
+      circle:    { 9: '.....BBBBBB.....', 10: '......B..B......', 11: '......BBBB......' },
+      full:      { 7: '....B......B....', 8: '....B......B....', 9: '....BBBBBBBB....', 10: '....BBB..BBB....',
+                   11: '.....BBBBBB.....', 12: '......BBBB......' },
+      sideburns: { 6: '....B......B....', 7: '....B......B....', 8: '....BB....BB....' },
+    },
     top: {
       tee:    { 14: '...CCCCSSCCCC...', 15: '..CCCCCCCCCCCC..', 16: '.CCCCCCCCCCCCCC.',
                 17: 'CCCCCCCCCCCCCCCC', 18: 'CCCCCCCCCCCCCCCC', 19: 'CCCCCCCCCCCCCCCC' },
@@ -84,6 +96,7 @@
     { key: 'skin',     label: 'skin',      colors: 'skin' },
     { key: 'hair',     label: 'hair',      part: 'hair' },
     { key: 'hairC',    label: 'hair dye',  colors: 'hair' },
+    { key: 'beard',    label: 'facial hair', part: 'beard' },
     { key: 'eyes',     label: 'eyes',      part: 'eyes' },
     { key: 'eyeC',     label: 'eye colour', colors: 'eye' },
     { key: 'top',      label: 'top',       part: 'top' },
@@ -106,6 +119,8 @@
   function random(rng) {
     var r = rng || Math.random, out = {};
     SLOTS.forEach(function (s) { var o = options(s); out[s.key] = o[Math.floor(r() * o.length)]; });
+    /* about half of new faces come clean-shaven */
+    if (r() < 0.5) out.beard = 'none';
     return out;
   }
   function cycle(look, key, step) {
@@ -126,7 +141,7 @@
   function grid(look) {
     var l = normalize(look), px = [], y, x;
     var pal = { S: l.skin, s: shade(l.skin, 0.78), m: shade(l.skin, 0.6), H: l.hairC, h: shade(l.hairC, 0.7),
-                E: l.eyeC, W: '#F4F6FF', C: l.topC, c: shade(l.topC, 0.72), k: '#0B0D1A', A: l.accC };
+                E: l.eyeC, W: '#F4F6FF', C: l.topC, c: shade(l.topC, 0.72), k: '#0B0D1A', A: l.accC, B: shade(l.hairC, 0.85) };
     for (y = 0; y < H; y++) { px.push([]); for (x = 0; x < W; x++) px[y].push(null); }
     function draw(rows) {
       for (var k in rows) {
@@ -135,7 +150,7 @@
       }
     }
     var base = {}; BASE.forEach(function (r, i) { base[i] = r; });
-    draw(base); draw(PARTS.top[l.top]); draw(PARTS.eyes[l.eyes]); draw(PARTS.hair[l.hair]); draw(PARTS.acc[l.acc]);
+    draw(base); draw(PARTS.top[l.top]); draw(PARTS.eyes[l.eyes]); draw(PARTS.beard[l.beard]); draw(PARTS.hair[l.hair]); draw(PARTS.acc[l.acc]);
     return px;
   }
 

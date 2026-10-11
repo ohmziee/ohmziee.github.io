@@ -17,6 +17,7 @@
 <script src="../wiki/shell.js"></script>
 <script src="engine.js" defer></script>
 <script src="avatar.js" defer></script>
+<script src="shops.js" defer></script>
 <script src="world.js" defer></script>
 <script src="backup.js" defer></script>
 <script src="overworld.js" defer></script>
@@ -91,6 +92,30 @@
     <div class="wpad" id="wPad" aria-hidden="true">
       <div class="dpad"><button type="button" data-k="up">&#9650;</button><button type="button" data-k="left">&#9664;</button><button type="button" data-k="right">&#9654;</button><button type="button" data-k="down">&#9660;</button></div>
       <div class="ab"><button type="button" data-k="b">B</button><button type="button" data-k="a">A</button></div>
+    </div>
+  </main>
+
+  <main id="shop" class="chip shop" hidden aria-labelledby="shopName">
+    <h1 class="chip-title" id="shopName"></h1>
+    <p class="dim" id="shopLine"></p>
+    <div class="chip-cols">
+      <section class="chip-face" aria-label="how you will look">
+        <div class="avatar" id="shopAv"></div>
+        <div class="walkers" id="shopWalk" aria-hidden="true"></div>
+        <button type="button" id="shopUndo">AS YOU WERE</button>
+      </section>
+      <section class="chip-form">
+        <h2 id="shopWhat"></h2>
+        <div id="shopSlots"></div>
+        <div class="bill">
+          <ul id="shopBill"></ul>
+          <p class="tot"><span>TOTAL</span><b id="shopTotal"></b></p>
+          <p class="tot have"><span>YOU HAVE</span><b id="shopHave"></b></p>
+        </div>
+        <p class="msg" id="shopMsg" role="status"></p>
+        <button type="button" id="shopPay" class="go">PAY</button>
+        <button type="button" id="shopLeave" class="leave">LEAVE</button>
+      </section>
     </div>
   </main>
 

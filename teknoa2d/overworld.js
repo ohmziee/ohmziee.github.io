@@ -177,6 +177,15 @@
       px(g, '#0b0d1a', (w >> 1) - 4, h - 8, 8, 8);
     }
   };
+  /* a barber's front: the striped pole, the big window, the chair */
+  MARK_ART.barber = function (g, w, h) {
+    px(g, '#1c1736', 0, 0, w, h); px(g, '#2a1d5e', 0, 0, w, 3); px(g, '#7cf5ff', 0, 3, w, 1);
+    px(g, '#0b0d1a', 10, 7, 22, 14); px(g, '#1e3a4a', 11, 8, 20, 12);
+    px(g, '#dce3ff', 16, 13, 6, 2); px(g, '#c4374a', 17, 15, 4, 3); px(g, '#9aa0b8', 18, 18, 2, 2);
+    for (var y = 6; y < h - 4; y++) px(g, (y >> 1) % 3 === 0 ? '#ff4fd8' : (y >> 1) % 3 === 1 ? '#dce3ff' : '#7cf5ff', 4, y, 3, 1);
+    px(g, '#ffe97c', 4, 5, 3, 1); px(g, '#ffe97c', 4, h - 4, 3, 1);
+    px(g, '#0b0d1a', 36, 18, 8, 14); px(g, '#7cf5ff', 36, 18, 8, 1);
+  };
   var markArt = {};
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
@@ -206,7 +215,8 @@
     ape:     { H: '#2a2420', S: '#5a4a40', C: '#3a5a3a', P: '#2a2420', k: '#1a1410' },
     clerk:   { H: '#c8ccd8', S: '#e0b090', C: '#2a3a6a', P: '#2a2f4a', k: '#111' },
     medic:   { H: '#1a1a1a', S: '#e0b48a', C: '#e6e8f0', P: '#8ad0b0', k: '#111' },
-    merc:    { H: '#3a1218', S: '#b07a5a', C: '#3a1218', P: '#1a080c', k: '#111' }
+    merc:    { H: '#3a1218', S: '#b07a5a', C: '#3a1218', P: '#1a080c', k: '#111' },
+    barber:  { H: '#14121c', B: '#14121c', S: '#a06a48', C: '#dce3ff', c: '#9aa0b8', P: '#2a2f4a', k: '#111', hair: 'buzz', beard: 'full' }
   };
   /* the Chippin' In parts, at walking size: hair shape, what they wear, the
      extra. dir is down, up or left (right is left mirrored) */
@@ -231,6 +241,21 @@
       case 'spiky': [5, 7, 9, 11].forEach(function (sx) { put(0, side ? sx - 1 : sx, 'H'); }); break;
       case 'undercut': if (dir === 'down') { put(4, 4, 'S'); put(4, 11, 'S'); } break;
     }
+    /* facial hair, at walking size: a few pixels round the mouth */
+    var bd = look.beard;
+    if (dir === 'down') {
+      if (bd === 'stubble') { put(7, 5, 'B'); put(7, 10, 'B'); }
+      if (bd === 'mustache' || bd === 'circle') for (x = 6; x <= 9; x++) put(6, x, 'B');
+      if (bd === 'goatee' || bd === 'circle') { put(8, 7, 'B'); put(8, 8, 'B'); }
+      if (bd === 'full') { put(6, 4, 'B'); put(6, 11, 'B'); put(7, 5, 'B'); put(7, 6, 'B'); put(7, 9, 'B'); put(7, 10, 'B'); for (x = 6; x <= 9; x++) put(8, x, 'B'); }
+      if (bd === 'sideburns') { put(5, 4, 'B'); put(6, 4, 'B'); put(5, 11, 'B'); put(6, 11, 'B'); }
+    } else if (side) {
+      if (bd === 'stubble') put(7, 7, 'B');
+      if (bd === 'mustache' || bd === 'circle') { put(6, 4, 'B'); put(6, 5, 'B'); }
+      if (bd === 'goatee' || bd === 'circle') put(8, 6, 'B');
+      if (bd === 'full') { for (x = 6; x <= 9; x++) put(7, x, 'B'); put(8, 6, 'B'); put(8, 7, 'B'); }
+      if (bd === 'sideburns' || bd === 'full') { put(5, 8, 'B'); put(6, 8, 'B'); }
+    }
     if (look.top === 'coat') for (y = 13; y <= 14; y++) { put(y, side ? 5 : 4, 'C'); put(y, side ? 9 : 11, 'C'); }
     if (look.top === 'jacket' && dir === 'down') for (y = 9; y <= 12; y++) { put(y, 7, 'k'); put(y, 8, 'k'); }
     if (look.top === 'hoodie' && dir !== 'down') for (x = 5; x <= 10; x++) put(8, side ? x - 1 : x, 'c');
@@ -250,7 +275,7 @@
     var g = c.getContext('2d'), flip = dir === 'right', rows = BODY[flip ? 'left' : dir].slice();
     if (step) { var st = STEP[flip ? 'left' : dir]; rows[13] = st[0]; rows[14] = st[1]; rows[15] = st[2]; }
     rows = styled(rows, flip ? 'left' : dir, look);
-    var colours = { H: look.H, h: look.h || look.H, S: look.S, E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C,
+    var colours = { H: look.H, h: look.h || look.H, B: look.B || look.H, S: look.S, E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C,
                     A: look.A || '#d8dce8', P: look.P || '#2a2f4a', k: look.k || '#111' };
     rows.forEach(function (r, y) {
       for (var x = 0; x < TS; x++) {
@@ -270,8 +295,8 @@
   }
   function lookOf(raw) {
     var l = A ? A.normalize(raw) : {};
-    return { H: l.hairC || '#3a2a20', S: l.skin || '#c88a64', C: l.topC || '#9f8cff', c: shade(l.topC || '#9f8cff', 0.7),
-             A: l.accC, P: '#22263a', k: '#0b0b10', hair: l.hair, top: l.top, acc: l.acc };
+    return { H: l.hairC || '#3a2a20', B: shade(l.hairC || '#3a2a20', 0.85), S: l.skin || '#c88a64', C: l.topC || '#9f8cff', c: shade(l.topC || '#9f8cff', 0.7),
+             A: l.accC, P: '#22263a', k: '#0b0b10', hair: l.hair, beard: l.beard, top: l.top, acc: l.acc };
   }
   function playerLook() { return lookOf(s.player.look); }
 
@@ -317,6 +342,7 @@
       var n = npcs[i];
       if (n.x !== tx || n.y !== ty) continue;
       n.dir = { up: 'down', down: 'up', left: 'right', right: 'left' }[me.dir];
+      if (n.shop && api.shop) { api.shop(n.shop); return; }
       if (n.scene === 'hex') {
         if (!s.met.hex && api.talk) { api.talk(); return; }
         return say([HEX_AFTER[Math.floor(Math.random() * HEX_AFTER.length)]], 'Hex');
@@ -324,6 +350,11 @@
       var said = n.said || 0;
       n.said = (said + 1) % n.lines.length;
       return say([n.lines[said]]);
+    }
+    /* walking into a shop's front opens it too */
+    for (i = 0; i < world.marks.length; i++) {
+      var m = world.marks[i];
+      if (m.shop && api.shop && tx >= m.x && tx < m.x + m.w && ty >= m.y && ty < m.y + m.h) { api.shop(m.shop); return; }
     }
     /* a sign is read facing it, or standing on it */
     for (i = 0; i < world.signs.length; i++) {
