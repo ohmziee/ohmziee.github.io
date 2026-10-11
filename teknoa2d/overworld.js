@@ -266,6 +266,13 @@
       if (bd === 'full') { for (x = 6; x <= 9; x++) put(7, x, 'B'); put(8, 6, 'B'); put(8, 7, 'B'); }
       if (bd === 'sideburns' || bd === 'full') { put(5, 8, 'B'); put(6, 8, 'B'); }
     }
+    /* marks, at walking size: only the ones that read from above */
+    if (dir === 'down') {
+      if (look.marks === 'implant') { put(6, 4, 'G'); put(6, 11, 'G'); }
+      if (look.marks === 'chrome') { put(6, 4, 'A'); put(6, 5, 'A'); }
+      if (look.marks === 'freckles') { put(6, 5, 'f'); put(6, 10, 'f'); }
+      if (look.marks === 'scar') { put(4, 9, 'r'); put(6, 10, 'r'); }
+    } else if (side && (look.marks === 'implant' || look.marks === 'chrome')) put(6, 6, look.marks === 'implant' ? 'G' : 'A');
     if (look.top === 'tank') { put(9, side ? 5 : 4, 'S'); if (!side) put(9, 11, 'S'); }
     if (look.top === 'turtleneck') for (x = 6; x <= 9; x++) put(8, side ? x - 1 : x, 'c');
     if (look.acc === 'cap') {
@@ -298,7 +305,7 @@
     var g = c.getContext('2d'), flip = dir === 'right', rows = BODY[flip ? 'left' : dir].slice();
     if (step) { var st = STEP[flip ? 'left' : dir]; rows[13] = st[0]; rows[14] = st[1]; rows[15] = st[2]; }
     rows = styled(rows, flip ? 'left' : dir, look);
-    var colours = { H: look.H, h: look.h || look.H, B: look.B || look.H, S: look.S, E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C,
+    var colours = { H: look.H, h: look.h || look.H, B: look.B || look.H, S: look.S, f: shade(look.S || '#c88a64', 0.62), r: '#d48a8a', G: '#7cf5ff', E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C,
                     A: look.A || '#d8dce8', P: look.P || '#2a2f4a', k: look.k || '#111' };
     rows.forEach(function (r, y) {
       for (var x = 0; x < TS; x++) {
@@ -319,7 +326,7 @@
   function lookOf(raw) {
     var l = A ? A.normalize(raw) : {};
     return { H: l.hairC || '#3a2a20', B: shade(l.hairC || '#3a2a20', 0.85), S: l.skin || '#c88a64', C: l.topC || '#9f8cff', c: shade(l.topC || '#9f8cff', 0.7),
-             A: l.accC, P: '#22263a', k: '#0b0b10', hair: l.hair, beard: l.beard, top: l.top, acc: l.acc };
+             A: l.accC, P: '#22263a', k: '#0b0b10', hair: l.hair, beard: l.beard, marks: l.marks, top: l.top, acc: l.acc };
   }
   function playerLook() { return lookOf(s.player.look); }
 

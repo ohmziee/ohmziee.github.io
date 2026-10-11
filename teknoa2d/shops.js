@@ -15,7 +15,12 @@
               slots: [{ key: 'top', label: 'top', price: 80 },
                       { key: 'topC', label: 'top colour', price: 40 },
                       { key: 'acc', label: 'extra', price: 50 },
-                      { key: 'accC', label: 'extra colour', price: 25 }] }
+                      { key: 'accC', label: 'extra colour', price: 25 }] },
+    clinic:  { title: 'COSMETIC SURGERY', what: 'skin, eyes, marks',
+              slots: [{ key: 'skin', label: 'skin tone', price: 300 },
+                      { key: 'eyes', label: 'eye shape', price: 200 },
+                      { key: 'eyeC', label: 'eye colour', price: 150 },
+                      { key: 'marks', label: 'marks', price: 120 }] }
   };
 
   /* PLACEHOLDER names and lines: rename freely, nothing else depends on them */
@@ -31,7 +36,10 @@
     'el-trapo':   { kind: 'clothes', name: 'EL TRAPO', district: 'yucayeque', mult: 0.8,
                     hello: 'secondhand clothes. firsthand stories.', bye: 'it was my cousin\'s. now it\'s yours. don\'t tell him.' },
     'back-alley': { kind: 'clothes', name: 'BACK ALLEY FITS', district: 'redrum', mult: 0.7,
-                    hello: 'no receipts. no returns. no questions.', bye: 'you didn\'t get that here.' }
+                    hello: 'no receipts. no returns. no questions.', bye: 'you didn\'t get that here.' },
+    /* the vault: nova city hospital is majinryū's notable place */
+    'nova-hospital': { kind: 'clinic', name: 'NOVA CITY HOSPITAL', district: 'majinryu', mult: 1,
+                    hello: 'cosmetic wing. the anaesthetic is optional. that was a joke. mostly.', bye: 'no running for a day. or do. it\'s your face.' }
   };
 
   function price(base, mult) { return Math.round(base * (mult || 1) / 5) * 5; }

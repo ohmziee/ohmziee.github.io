@@ -8,7 +8,8 @@
      E  eye colour       W    eye white             C c  cloth, cloth shade
      k  undershirt dark  A    accent (metal)        m    mouth
      B  facial hair (the hair dye, a touch darker)
-   Layers draw in order: base, top, eyes, facial hair, hair, accessory. */
+     f  freckle / mole (skin, darker)  r  scar     G  implant glow
+   Layers draw in order: base, top, eyes, marks, facial hair, hair, accessory. */
 (function (root) {
   var W = 16, H = 20;
 
@@ -51,6 +52,15 @@
                  4: '.....hHHHHh.....' },
       undercut:{ 2: '......HHHHHH....', 3: '....HHHHHHHHH...', 4: '....HHHHHHHHHH..', 5: '....h....HHHHH..',
                  6: '.........HHHH...', 7: '..........HH....' },
+    },
+    /* marks: what the hospital's cosmetic wing does. none first */
+    marks: {
+      none:     {},
+      freckles: { 9: '....f.f..f.f....', 10: '.....f....f.....' },
+      scar:     { 5: '.........r......', 6: '.........r......', 9: '..........r.....', 10: '..........r.....' },
+      mole:     { 9: '..........f.....' },
+      chrome:   { 9: '....AA..........', 10: '....AA..........', 11: '.....A..........' },
+      implant:  { 9: '....G......G....', 10: '....G......G....', 11: '.....G....G.....' },
     },
     /* facial hair takes the hair dye. none first: an old look has none */
     beard: {
@@ -106,6 +116,7 @@
     { key: 'beard',    label: 'facial hair', part: 'beard' },
     { key: 'eyes',     label: 'eyes',      part: 'eyes' },
     { key: 'eyeC',     label: 'eye colour', colors: 'eye' },
+    { key: 'marks',    label: 'marks',     part: 'marks' },
     { key: 'top',      label: 'top',       part: 'top' },
     { key: 'topC',     label: 'top colour', colors: 'cloth' },
     { key: 'acc',      label: 'extra',     part: 'acc' },
@@ -128,6 +139,8 @@
     SLOTS.forEach(function (s) { var o = options(s); out[s.key] = o[Math.floor(r() * o.length)]; });
     /* about half of new faces come clean-shaven */
     if (r() < 0.5) out.beard = 'none';
+    /* and most without marks: those are a choice */
+    if (r() < 0.7) out.marks = 'none';
     return out;
   }
   function cycle(look, key, step) {
@@ -148,7 +161,8 @@
   function grid(look) {
     var l = normalize(look), px = [], y, x;
     var pal = { S: l.skin, s: shade(l.skin, 0.78), m: shade(l.skin, 0.6), H: l.hairC, h: shade(l.hairC, 0.7),
-                E: l.eyeC, W: '#F4F6FF', C: l.topC, c: shade(l.topC, 0.72), k: '#0B0D1A', A: l.accC, B: shade(l.hairC, 0.85) };
+                E: l.eyeC, W: '#F4F6FF', C: l.topC, c: shade(l.topC, 0.72), k: '#0B0D1A', A: l.accC, B: shade(l.hairC, 0.85),
+                f: shade(l.skin, 0.62), r: '#D48A8A', G: '#7CF5FF' };
     for (y = 0; y < H; y++) { px.push([]); for (x = 0; x < W; x++) px[y].push(null); }
     function draw(rows) {
       for (var k in rows) {
@@ -157,7 +171,7 @@
       }
     }
     var base = {}; BASE.forEach(function (r, i) { base[i] = r; });
-    draw(base); draw(PARTS.top[l.top]); draw(PARTS.eyes[l.eyes]); draw(PARTS.beard[l.beard]); draw(PARTS.hair[l.hair]); draw(PARTS.acc[l.acc]);
+    draw(base); draw(PARTS.top[l.top]); draw(PARTS.eyes[l.eyes]); draw(PARTS.marks[l.marks]); draw(PARTS.beard[l.beard]); draw(PARTS.hair[l.hair]); draw(PARTS.acc[l.acc]);
     return px;
   }
 

@@ -172,7 +172,9 @@
     landmark(W0, 'tower', 'the tuned tower', -6, -9, 3, 5, 'a replica of a tower from earth.\nretuned. it hums in colours.');
     landmark(W0, 'sapphire', 'the sapphire', 3, 2, 5, 3, 'THE SAPPHIRE\na gallery. closed tonight.');
     landmark(H0, 'ncpd', 'NCPD', -3, -6, 6, 3, 'NOVA CITY POLICE DEPARTMENT\nthe steps are very clean.');
-    landmark(M0, 'hospital', 'nova city hospital', -2, -7, 5, 4, 'NOVA CITY HOSPITAL\nthe lights never go off up there.');
+    var hospDoor = landmark(M0, 'hospital', 'nova city hospital', -2, -7, 5, 4, 'NOVA CITY HOSPITAL\nthe lights never go off up there.\ncosmetic wing: talk to the medic out front.');
+    /* its cosmetic wing is a shop (shops.js: nova-hospital) */
+    marks[marks.length - 1].shop = 'nova-hospital';
     landmark(M0, 'pagoda', 'pagoda', 4, 1, 3, 3, 'an old gate. older than the hospital,\nor built to look it.');
     landmark(N0, 'greattree', 'the great tree', -2, -6, 4, 4, 'NOVA CITY PARK\nthe tree is warm to the touch.');
     landmark(Y0, 'market', 'the market hall', -3, -3, 6, 2, 'the market. fruit, records, gossip.\neverything is a little cheaper if you smile.');
@@ -190,7 +192,7 @@
                    { id: 'static-threads', d: W0, dx: 6, dy: -7, art: 'threads' },
                    { id: 'el-trapo', d: Y0, dx: -9, dy: -8, art: 'threads' },
                    { id: 'back-alley', d: R0, dx: 1, dy: 2, art: 'threads' }];
-    var shopKeepers = [];
+    var shopKeepers = [{ id: 'shop-nova-hospital', x: hospDoor.x + 1, y: hospDoor.y, dir: 'down', look: 'medic', shop: 'nova-hospital', still: true }];
     SHOP_AT.forEach(function (sp) {
       var info = root.MFShops && root.MFShops.SHOPS[sp.id], kind = info && root.MFShops.KINDS[info.kind];
       var door = landmark(sp.d, sp.art, info ? info.name : sp.id, sp.dx, sp.dy, 3, 2,
