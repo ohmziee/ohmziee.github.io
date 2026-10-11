@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-c84nFNdMHFmMpPDWf3Jc+a86jfITtyDdYyxxZCtFVCY=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-HKVqv3mKFIkKci+46pnLwy73p6lvnmMyro6TxcV//70=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -2934,6 +2934,53 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     "i'm here. i'm always here.", "i'll stay up with you",
     "you don't have to say anything else", "i'm not going anywhere <3"
   ];
+
+  /* People the room already knows, so it never welcomes them like a
+     stranger. test(handle) picks them out. arrive: the room noticing them
+     turn up after VISIT_MS away (n phantoms, and reg is what a regular may
+     add). react: the odd line after that, at odds. Lines say {h} for the
+     handle they used. */
+  var VISIT_MS = 2 * 3600000;
+  function foldName(h){
+    return String(h).toLowerCase()
+      .replace(/[013457@$]/g, function(c){ return { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's' }[c]; })
+      .replace(/[^a-z]+/g, '').replace(/(.)\1+/g, '$1');
+  }
+  /* mirrors supabase/functions/_shared/reserved.js. Only the owner can
+     post under these, so a line that arrives under one is theirs */
+  function ownerName(h){
+    var W = /^o+h?m+[sz]+[iey]*$/, k = foldName(h);
+    return !!k && (W.test(k) || /ohmz/.test(k) || String(h).split(/[^A-Za-z0-9]+/).some(function(w){
+      w = foldName(w); return W.test(w) || /^o+h?m+z/.test(w);
+    }));
+  }
+  function hexName(h){ var k = foldName(h); return k === 'hex' || k === 'hexerela' || k === 'helfyre' || k === 'hexerelahelfyre'; }
+  var KNOWN = [
+    { test: ownerName, n: [3, 5], odds: 0.25,
+      arrive: ["HE'S HERE", "oms!!!", "the man himself", "{h} in the chat??", "OMS IS IN THE CHAT",
+               "wait {h} is actually here", "everyone act normal", "hi oms <3", "the architect has entered",
+               "yo {h}!!", "ok who told him we were talking about him", "sitting up straight rn",
+               "the creator walks among us", "he lives", "we were just talking about you lol",
+               "oms pls stream", "{h} :O", "it's him"],
+      reg:    ["you're here :)", "hi. i was hoping you'd stop by", "i kept the chat warm for you", "hi oms <3"],
+      react:  ["lol {h}", "real", "oms said it so it's canon", "he's right tho", "taking notes",
+               "noted, boss", "the creator has spoken", "W", "facts", "say less", "^ this", "he's so real for that"] },
+    { test: hexName, n: [2, 4], odds: 0.25,
+      arrive: ["HEX??", "wait is that actually hex", "hex is in the chat. lock your doors (affectionate)",
+               "hi hex!!", "she's real??", "queen", "hex pls be nice to us", "everyone hide your matches",
+               "{h} !!!", "oh no she's here (good)"],
+      reg:    ["hi hex :)", "you came back", "i like it when you're here"],
+      react:  ["lmao hex", "hex is unhinged and i respect it", "ok hex", "she's so real for that",
+               "hex said it", "i'd follow her anywhere honestly", "noted, hex", "hex never misses"] },
+    { test: function(h){ return foldName(h) === 'slater'; }, odds: 0.12,
+      react:  ["slater on the clock again lol", "slater the goat", "real slater", "go back to work slater lmao",
+               "slater never sleeps", "night shift crew", "slater with the wisdom", "lmaooo slater",
+               "slater stay safe out there", "the security guard of this chat fr"] }
+  ];
+  function knownOf(h){
+    for(var i = 0; i < KNOWN.length; i++) if(KNOWN[i].test(h)) return KNOWN[i];
+    return null;
+  }
   /* Mirror of DISTRESS_RES, client side. Not a security control — the
      server already decided to publish — it only picks which reply comes
      back, so a miss costs nothing. */
@@ -3060,6 +3107,39 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       return out;
     }
 
+    /* someone the room knows: a stir when they turn up after a while away,
+       otherwise now and then a line by name. Seeded by the line, like the
+       swarm, so every device sees the same room */
+    function knownPlan(kn, handle, seed, arrive){
+      var rnd = rngFrom(hash2(0x4B1, seed)), out = [];
+      function said(src){ return src[Math.floor(rnd()*src.length)].split('{h}').join(handle); }
+      if(!arrive || !kn.arrive){
+        if(rnd() >= kn.odds) return [];
+        var u = CHAT_USERS[Math.floor(rnd()*CHAT_USERS.length)];
+        return [{ after: 1400 + rnd()*2600, m: { u: u, c: userCol[u], t: said(kn.react) } }];
+      }
+      var bag = kn.arrive.slice(), picked = [], n = kn.n[0] + Math.floor(rnd()*(kn.n[1] - kn.n[0] + 1));
+      for(var i = 0; i < n && bag.length; i++){
+        picked.push({ reg: false, t: bag.splice(Math.floor(rnd()*bag.length), 1)[0].split('{h}').join(handle) });
+      }
+      if(kn.reg && rnd() < 0.5) picked.splice(1 + Math.floor(rnd()*2), 0, { reg: true, t: said(kn.reg) });
+      var delay = 900 + rnd()*1200, crowd = CHAT_USERS.slice();
+      picked.forEach(function(p){
+        var u = p.reg ? REGULARS[0].name : crowd.splice(Math.floor(rnd()*crowd.length), 1)[0];
+        out.push({ after: delay, m: { u: u, c: p.reg ? REGULARS[0].col : userCol[u], t: p.t } });
+        delay += 600 + rnd()*1800;
+      });
+      return out;
+    }
+    /* when a handle last spoke before line id (0: before now), or 0 if never.
+       asked of the server, so the sender and everyone watching agree */
+    function lastSaid(h, id){
+      return api('messages?select=created_at&status=eq.approved&handle=eq.' + encodeURIComponent(h) +
+                 (id ? '&id=lt.' + id : '') + '&order=id.desc&limit=1')
+        .then(function(rows){ return rows && rows.length ? stamp(rows[0].created_at) || 0 : 0; });
+    }
+    function backAfterAWhile(prev, at){ return !prev || at - prev > VISIT_MS; }
+
     /* a lighter touch for someone who is already known here */
     function reactPlan(seed){
       var rnd = rngFrom(hash2(0x3EA, seed));
@@ -3106,6 +3186,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
     function receive(handle, body, id, saidAt, ci){
       renderMessage({ u: handle, c: handleCol(handle, ci), t: body }, true);
+      var kn = knownOf(handle);
+      if(kn){
+        if(!kn.arrive) return stage(knownPlan(kn, handle, lineSeed(handle, body), false), saidAt);
+        lastSaid(handle, id).then(function(prev){
+          stage(knownPlan(kn, handle, lineSeed(handle, body), backAfterAWhile(prev, saidAt)), saidAt);
+        });
+        return;
+      }
       /* a regular is not new here. nobody welcomes them */
       if(regs[handle.toLowerCase()]) return;
       firstId(handle).then(function(first){
@@ -3163,9 +3251,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       if(sid) payload.sid = sid;
       if(ownerKey) payload.owner = ownerKey;
       /* ask "am i new" before the post lands, or the answer is always no */
-      var plan = null;
-      firstId(h).then(function(first){
-        plan = planFor(h, b, !first);
+      var plan = null, kn = knownOf(h);
+      (kn ? lastSaid(h, 0).then(function(prev){ plan = knownPlan(kn, h, lineSeed(h, b), backAfterAWhile(prev, saidAt)); })
+          : firstId(h).then(function(first){ plan = planFor(h, b, !first); })).then(function(){
         return fetch(LIVE.url + '/functions/v1/' + LIVE.fn, {
           method: 'POST',
           headers: {
@@ -3224,18 +3312,26 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       if(rows.length) lastId = rows[rows.length - 1].id;
       rows.forEach(function(r){ seen[r.id] = 1; });
       /* one lookup per handle on screen, not per line */
-      var handles = {};
-      rows.forEach(function(r){ if(!regs[String(r.handle).toLowerCase()]) handles[r.handle] = 1; });
+      var handles = {}, prevs = {}, knownRows = [];
+      rows.forEach(function(r){
+        if(knownOf(r.handle)) knownRows.push(r);
+        else if(!regs[String(r.handle).toLowerCase()]) handles[r.handle] = 1;
+      });
       var firsts = {};
       return Promise.all(Object.keys(handles).map(function(h){
         return firstId(h).then(function(id){ firsts[h] = id; });
-      })).then(function(){
+      }).concat(knownRows.map(function(r){
+        return lastSaid(r.handle, r.id).then(function(t){ prevs[r.id] = t; });
+      }))).then(function(){
         var now = Date.now(), extra = [], later = [];
         rows.forEach(function(r){
           var at = Math.min(stamp(r.created_at) || 0, now);
           extra.push({ at: at, m: { u: r.handle, c: handleCol(r.handle, r.color), t: r.body } });
-          if(!(r.handle in firsts)) return;
-          planFor(r.handle, r.body, !firsts[r.handle] || firsts[r.handle] >= r.id).forEach(function(p){
+          var kn = knownOf(r.handle), plan;
+          if(kn) plan = knownPlan(kn, r.handle, lineSeed(r.handle, r.body), !!kn.arrive && backAfterAWhile(prevs[r.id], at));
+          else if(r.handle in firsts) plan = planFor(r.handle, r.body, !firsts[r.handle] || firsts[r.handle] >= r.id);
+          else return;
+          plan.forEach(function(p){
             if(at + p.after <= now) extra.push({ at: at + p.after, m: p.m });
             else later.push({ at: at, p: p });
           });
