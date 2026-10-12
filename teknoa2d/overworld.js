@@ -320,6 +320,37 @@
     px(g, OUT, (w >> 1) - 5, h - 12, 10, 12); px(g, '#1a1426', (w >> 1) - 4, h - 11, 8, 11); px(g, '#ff4fd8', (w >> 1) - 4, h - 11, 8, 1);
     px(g, '#7cf5ff', (w >> 1) + 6, h - 8, 2, 3);
   };
+  /* casino settebello: gold, a big seven, red carpet to the door */
+  MARK_ART.casino = function (g, w, h) {
+    px(g, '#1a0c10', 0, 0, w, h); px(g, '#f2c94c', 0, 0, w, 3); px(g, '#8a6a1a', 0, 3, w, 1);
+    for (var x = 4; x < w - 4; x += 8) { px(g, '#fff3b0', x, 6, 3, 3); }
+    px(g, '#0b0d1a', (w >> 1) - 10, 12, 20, 18); px(g, '#3a1218', (w >> 1) - 9, 13, 18, 16);
+    px(g, '#f2c94c', (w >> 1) - 5, 15, 10, 2); px(g, '#f2c94c', (w >> 1) + 2, 17, 3, 3); px(g, '#f2c94c', (w >> 1), 20, 3, 3); px(g, '#f2c94c', (w >> 1) - 2, 23, 3, 4);
+    px(g, '#0b0d1a', (w >> 1) - 6, h - 14, 12, 14); px(g, '#c4473a', (w >> 1) - 5, h - 13, 10, 13); px(g, '#f2c94c', (w >> 1) - 5, h - 13, 10, 1);
+    for (var y = 12; y < h - 4; y += 8) { px(g, '#ff4fd8', 6, y, 10, 4); px(g, '#ff4fd8', w - 16, y, 10, 4); }
+  };
+  MARK_ART.slot = function (g, w, h) {
+    px(g, OUT, 2, 0, 12, 16); px(g, '#8a1a2a', 3, 1, 10, 14); px(g, '#f2c94c', 3, 1, 10, 2);
+    px(g, '#f4f6ff', 4, 5, 8, 4); px(g, '#c4473a', 5, 6, 2, 2); px(g, '#f2c94c', 9, 6, 2, 2); px(g, '#9aa0b8', 13, 4, 2, 6);
+  };
+  MARK_ART.lottobooth = function (g, w, h) {
+    px(g, '#3a1218', 0, 2, w, h - 2); px(g, '#f2c94c', 0, 2, w, 3);
+    for (var i = 0; i < 3; i++) { px(g, OUT, 8 + i * 12, 7, 8, 8); px(g, '#f4f6ff', 9 + i * 12, 8, 6, 6); px(g, '#c4473a', 11 + i * 12, 10, 2, 2); }
+  };
+  MARK_ART.bjtable = function (g, w, h) {
+    px(g, '#5a3a22', 0, 0, w, h); px(g, '#1f6a3a', 2, 2, w - 4, h - 4); px(g, '#f2c94c', 2, 2, w - 4, 1);
+    px(g, '#f4f6ff', 14, 10, 6, 8); px(g, '#f4f6ff', 22, 11, 6, 8); px(g, '#c4473a', 16, 12, 2, 2); px(g, '#0b0d1a', 24, 13, 2, 2);
+  };
+  MARK_ART.wheel = function (g, w, h) {
+    px(g, '#5a3a22', 0, 0, w, h); px(g, '#1f6a3a', 2, 2, w - 4, h - 4);
+    var cx = w >> 1, cy = h >> 1;
+    for (var y = -10; y <= 10; y++) for (var x = -10; x <= 10; x++) { var d = Math.sqrt(x * x + y * y); if (d <= 10) px(g, d > 8 ? '#5a3a22' : (Math.floor(Math.atan2(y, x) * 4) % 2 ? '#c4473a' : '#0b0d1a'), cx + x, cy + y); }
+    px(g, '#f2c94c', cx - 2, cy - 2, 4, 4); px(g, '#f4f6ff', cx + 6, cy - 5, 2, 2);
+  };
+  MARK_ART.dicetable = function (g, w, h) {
+    px(g, '#5a3a22', 0, 0, w, h); px(g, '#1f4a6a', 2, 2, w - 4, h - 4);
+    [[14, 10], [26, 14]].forEach(function (d) { px(g, OUT, d[0] - 1, d[1] - 1, 8, 8); px(g, '#f4f6ff', d[0], d[1], 6, 6); px(g, '#0b0d1a', d[0] + 1, d[1] + 1, 1, 1); px(g, '#0b0d1a', d[0] + 4, d[1] + 4, 1, 1); px(g, '#0b0d1a', d[0] + 2, d[1] + 2, 2, 2); });
+  };
   /* a corner store: a lit sign, glass doors, a fridge glowing inside */
   MARK_ART.mart = function (g, w, h) {
     px(g, '#1c1736', 0, 0, w, h); px(g, '#7cffb2', 0, 2, w, 5); px(g, '#0b0d1a', 4, 3, w - 8, 3);
@@ -453,7 +484,7 @@
     px(g, '#5a3c26', 1, 7, w - 2, 8); px(g, '#7a5638', 1, 7, w - 2, 1);
     px(g, '#ff8a6b', 4, 9, 3, 3); px(g, '#7cffb2', 11, 9, 3, 3); px(g, '#ffd36a', 18, 9, 3, 3); px(g, '#ff8a6b', 25, 9, 3, 3);
   };
-  var markArt = {}, UNFRAMED = { plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
+  var markArt = {}, UNFRAMED = { slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
     var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
@@ -503,6 +534,9 @@
     tailor:  { H: '#c9a25a', S: '#e8b796', C: '#5a1e3c', c: '#3a1428', A: '#f2c94c', P: '#14121c', k: '#111', hair: 'bob', acc: 'glasses' },
     /* koga: dark hair, the green robes his people make, war paint (vault: Koga) */
     koga:    { H: '#14100c', B: '#14100c', S: '#8a6a54', C: '#2f6a3a', c: '#1f4a2a', P: '#2a2018', k: '#1a1410', A: '#c4473a', marks: 'scar', fur: 1 },
+    /* enzo: classic grey suit and tie, slightly balding (vault: Enzo) */
+    enzo:    { H: '#5a4a3a', B: '#5a4a3a', S: '#e8c0a0', C: '#6a6a72', c: '#4a4a52', P: '#4a4a52', k: '#111', hair: 'buzz', acc: 'choker', A: '#8a1a2a' },
+    bouncer: { H: '#111', B: '#111', S: '#7a4a30', C: '#111118', c: '#08080c', P: '#111118', k: '#000', hair: 'buzz', acc: 'glasses', A: '#222' },
     shipwright: { H: '#9aa0a8', B: '#9aa0a8', S: '#b07a52', C: '#2f5a6a', c: '#1f3a48', P: '#3a3020', k: '#1a1410', hair: 'buzz', beard: 'full', A: '#f2c94c', acc: 'cap' },
     barber:  { H: '#14121c', B: '#14121c', S: '#a06a48', C: '#dce3ff', c: '#9aa0b8', P: '#2a2f4a', k: '#111', hair: 'buzz', beard: 'full' }
   };
@@ -690,7 +724,7 @@
       /* walking up into your own front door lets you in */
       var hm = !inside && dir === 'up' && markAt(nx, ny);
       if (hm && hm.home && s.homes[hm.home]) goIn(hm.home);
-      else if (hm && hm.room) goIn(hm.room);
+      else if (hm && hm.room && !(M.ROOMS[hm.room] && M.ROOMS[hm.room].door > window.MF.joules(s))) goIn(hm.room);
       return;
     }
     step(nx, ny, dir);
@@ -752,6 +786,7 @@
         var after = s.flags['hex-closed'] ? HEX_COLD : HEX_AFTER;
         return say([after[Math.floor(Math.random() * after.length)]], 'Hex');
       }
+      if (n.name && n.lines) { n.said = ((n.said || 0) + 1) % n.lines.length; return say([n.lines[n.said]], n.name); }
       if (n.koga) { n.said = ((n.said || 0) + 1) % M.KOGA.length; return say([M.KOGA[n.said]], 'Koga'); }
       if (n.pool !== undefined && n.kind) return say([chatter(n)]);
       var said = n.said || 0;
@@ -779,7 +814,12 @@
     if (m && m.shop && api.shop) { api.shop(m.shop); return; }
     if (m && m.store) return openCounter(m.store);
     if (m && m.home) return homeDoor(m.home);
-    if (m && m.room && !inside) return goIn(m.room);
+    if (m && m.room && !inside) {
+      var need = M.ROOMS[m.room] && M.ROOMS[m.room].door;
+      if (need && window.MF.joules(s) < need) return say(['high stakes only.\n' + window.MF.fmtJ(need) + ' in your pocket or keep walking.'], 'BOUNCER');
+      return goIn(m.room);
+    }
+    if (m && m.game) return openTable(m.game, m.house || 'grand');
     if (m && m.shut) return say([m.shut]);
     if (m && m.text) {
       if (m.bed && inside) { s.wake = inside.id; if (api.save) api.save(); }
@@ -995,6 +1035,132 @@
     $('wCounterM').textContent = counter.msg;
   }
 
+  /* ── the tables: casino.js plays, this deals ──────────────
+     left/right sets the stake, up/down picks a play, A plays it, B leaves
+     (not in the middle of a blackjack hand). everything can be tapped */
+  var table = null, tPrev = {};
+  var SYM = { seven: '7', bolt: '⚡', knife: '†', ghost: '☺', bar: 'BAR', cherry: '♥' };
+  var RBET = [['red', 'RED'], ['black', 'BLACK'], ['odd', 'ODD'], ['even', 'EVEN'], ['low', '1-18'], ['high', '19-36'], ['dozen1', '1-12'], ['dozen2', '13-24'], ['dozen3', '25-36'], ['zero', 'ZERO 35:1']];
+  function openTable(game, house) {
+    var C = window.MFCasino, h = C.HOUSES[house];
+    table = { game: game, house: house, bet: h.min, sel: 0, msg: '', view: '', hand: null };
+    tPrev = { up: !!held.up, down: !!held.down, left: !!held.left, right: !!held.right, b: !!held.b };
+    pressedA = false;
+    if (game === 'lotto') claimTickets();
+    $('wTable').hidden = false;
+    drawTable();
+  }
+  function closeTable() { table = null; $('wTable').hidden = true; }
+  function tableActions() {
+    var g = table.game;
+    if (g === 'slots') return [['spin', 'SPIN']];
+    if (g === 'dice') return [['high', 'HIGH (8-12)'], ['low', 'LOW (2-6)'], ['seven', 'SEVEN 4:1']];
+    if (g === 'roulette') return RBET;
+    if (g === 'lotto') return [['ticket', 'QUICK PICK ' + window.MF.fmtJ(window.MFCasino.HOUSES[table.house].ticket)]];
+    if (table.hand && !table.hand.done) return [['hit', 'HIT'], ['stand', 'STAND']].concat(table.hand.player.length === 2 ? [['double', 'DOUBLE']] : []);
+    return [['deal', 'DEAL']];
+  }
+  function stake() {
+    var r = window.MFCasino.play(window.MF, s, table.house, table.bet);
+    if (!r.ok) { table.msg = r.why + '.'; return false; }
+    wallet('-' + window.MF.fmtJ(table.bet));
+    return true;
+  }
+  function won(x, why) {
+    var MF = window.MF, C = window.MFCasino, paid = C.payOut(MF, s, table.bet * x);
+    table.msg = (paid > table.bet ? 'win! +' + MF.fmtJ(paid) : paid === table.bet ? 'stake back.' : paid ? 'a little back: ' + MF.fmtJ(paid) : 'no luck.') + (why ? ' ' + why : '');
+    if (paid) wallet('+' + MF.fmtJ(paid));
+  }
+  function tablePlay(act) {
+    var C = window.MFCasino, MF = window.MF, g = table.game;
+    if (g === 'lotto') {
+      var price = C.HOUSES[table.house].ticket;
+      if (!MF.spend(s, price)) { table.msg = 'not enough joules.'; return drawTable(); }
+      var nums = C.quickPick(Math.random);
+      if (!s.lotto) s.lotto = [];
+      s.lotto.push({ day: today(), nums: nums, house: table.house });
+      wallet('-' + MF.fmtJ(price));
+      table.msg = 'ticket ' + nums.join(' ') + '. drawn tomorrow. come back to collect.';
+    } else if (g === 'blackjack') {
+      if (act === 'deal') { if (!stake()) return drawTable(); table.hand = C.bj.deal(table.bet, Math.random); }
+      else if (act === 'hit') C.bj.hit(table.hand);
+      else if (act === 'stand') C.bj.stand(table.hand);
+      else if (act === 'double') {
+        if (!MF.spend(s, table.bet)) { table.msg = 'not enough to double.'; return drawTable(); }
+        wallet('-' + MF.fmtJ(table.bet)); C.bj.double(table.hand);
+      }
+      if (table.hand.done) {
+        var h = table.hand, paid = C.payOut(MF, s, h.paid);
+        if (paid) wallet('+' + MF.fmtJ(paid));
+        table.msg = h.result + (paid ? '. +' + MF.fmtJ(paid) : '.');
+      } else table.msg = '';
+      table.sel = 0;
+    } else {
+      if (!stake()) return drawTable();
+      if (g === 'slots') { var line = C.slots(Math.random); table.view = line.map(function (x) { return '[' + SYM[x] + ']'; }).join(' '); won(C.pays(line)); }
+      else if (g === 'dice') { var roll = C.dice(Math.random); table.view = 'rolled ' + roll[0] + ' + ' + roll[1] + ' = ' + (roll[0] + roll[1]); won(C.diceWin(act, roll)); }
+      else if (g === 'roulette') {
+        var n = C.roulette(Math.random);
+        table.view = 'the ball lands on ' + n + ' ' + C.colour(n);
+        won(act === 'zero' ? C.rouletteWin('number', n, 0) : C.rouletteWin(act, n));
+      }
+    }
+    if (api.save) api.save();
+    drawTable();
+  }
+  /* yesterday's tickets: drawn, paid, gone */
+  function claimTickets() {
+    var C = window.MFCasino, MF = window.MF, day = today(), keep = [], lines = [], total = 0;
+    (s.lotto || []).forEach(function (t) {
+      if (t.day >= day || t.house !== table.house) { keep.push(t); return; }
+      var draw = C.lottoDraw(t.day), x = C.lottoWin(t.nums, draw), paid = x * C.HOUSES[t.house].ticket;
+      total += paid;
+      lines.push(t.nums.join('') + ' vs ' + draw.join('') + (paid ? ' +' + MF.fmtJ(paid) : ''));
+    });
+    s.lotto = keep;
+    if (total) { MF.earn(s, total); wallet('+' + MF.fmtJ(total)); }
+    table.msg = lines.length ? 'your tickets: ' + lines.join(', ') + '.' : 'draws happen at midnight. tickets pay out here the day after.';
+    if (api.save) api.save();
+  }
+  function tickTable() {
+    function edge(k) { var e = !!held[k] && !tPrev[k]; tPrev[k] = !!held[k]; return e; }
+    var up = edge('up'), dn = edge('down'), lf = edge('left'), rt = edge('right'), b = edge('b'), a = pressedA;
+    pressedA = false;
+    var h = window.MFCasino.HOUSES[table.house], acts = tableActions(), step = table.house === 'grand' ? 100 : 5;
+    if (b) { if (table.hand && !table.hand.done) { table.msg = 'finish the hand first.'; return drawTable(); } return closeTable(); }
+    if (lf || rt) {
+      if (!(table.hand && !table.hand.done)) { table.bet = Math.max(h.min, Math.min(h.max, table.bet + (rt ? step : -step))); drawTable(); }
+    }
+    if (up && acts.length) { table.sel = (table.sel + acts.length - 1) % acts.length; drawTable(); }
+    if (dn && acts.length) { table.sel = (table.sel + 1) % acts.length; drawTable(); }
+    if (a && acts[table.sel]) tablePlay(acts[table.sel][0]);
+  }
+  function drawTable() {
+    var C = window.MFCasino, MF = window.MF, h = C.HOUSES[table.house], g = table.game, acts = tableActions();
+    if (table.sel >= acts.length) table.sel = 0;
+    $('wTableT').textContent = h.name + ' · ' + { slots: 'SLOTS', blackjack: 'BLACKJACK', roulette: 'ROULETTE', dice: 'HIGH-LOW DICE', lotto: 'LOTTERY' }[g];
+    var view = table.view;
+    if (g === 'blackjack' && table.hand) {
+      var hd = table.hand, hide = !hd.done;
+      view = 'dealer: ' + (hide ? hd.dealer[0] + ' ??' : hd.dealer.join(' ') + ' (' + C.bj.total(hd.dealer) + ')') + '\nyou:    ' + hd.player.join(' ') + ' (' + C.bj.total(hd.player) + ')';
+    }
+    if (g === 'lotto') view = 'today\'s tickets: ' + ((s.lotto || []).filter(function (t) { return t.day === today() && t.house === table.house; }).map(function (t) { return t.nums.join(''); }).join(', ') || 'none') + '\nthree right pays 250x. two pays 8x. one gets your money back.';
+    $('wTableV').textContent = view || ' ';
+    $('wTableBet').textContent = g === 'lotto' ? 'ticket ' + MF.fmtJ(h.ticket) : 'stake ' + MF.fmtJ(table.bet) + '  (' + MF.fmtJ(h.min) + '-' + MF.fmtJ(h.max) + ')';
+    var list = $('wTableActs'); list.innerHTML = '';
+    acts.forEach(function (ac, i) {
+      var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'crow' + (i === table.sel ? ' sel' : ''); bt.textContent = ac[1];
+      bt.addEventListener('click', function (e) { e.preventDefault(); table.sel = i; tablePlay(ac[0]); });
+      list.appendChild(bt);
+    });
+    $('wTableM').textContent = table.msg;
+  }
+  function tableButtons() {
+    $('wTableX').addEventListener('click', function () { if (table && !(table.hand && !table.hand.done)) closeTable(); });
+    $('wTableLess').addEventListener('click', function () { if (!table || (table.hand && !table.hand.done)) return; var h = window.MFCasino.HOUSES[table.house]; table.bet = Math.max(h.min, table.bet - (table.house === 'grand' ? 100 : 5)); drawTable(); });
+    $('wTableMore').addEventListener('click', function () { if (!table || (table.hand && !table.hand.done)) return; var h = window.MFCasino.HOUSES[table.house]; table.bet = Math.min(h.max, table.bet + (table.house === 'grand' ? 100 : 5)); drawTable(); });
+  }
+
   /* ── the gathering games ─────────────────────────────────── */
   var mini = null, prevL = false, prevR = false, prevB = false;
   function startMini(p) {
@@ -1147,6 +1313,7 @@
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
     if (mini) { tickMini(dt, now); return; }
     if (counter) { tickCounter(); return; }
+    if (table) { tickTable(); return; }
     if (talkBox && talkBox.yes && talkBox.lines.length === 1 && held.b) { held.b = false; answer(false); }
     if (pressedA) {
       pressedA = false;
@@ -1342,6 +1509,7 @@
       npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
       pad();
       counterButtons();
+      tableButtons();
     }
     var at = s.world;
     if (!s.homes) s.homes = {};

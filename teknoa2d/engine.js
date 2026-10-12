@@ -26,6 +26,7 @@
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
+             lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -168,6 +169,7 @@
     if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
+    s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
                  look: p.look && typeof p.look === 'object' ? p.look : {} };

@@ -250,6 +250,13 @@ a{color:var(--lavender)}
 .crow span{margin-left:auto;padding-left:1rem;color:#ffe97c}
 .wcounter p{margin:.45rem 0;color:#b9a8ff}
 .cnone{color:#6a6a8a}
+/* a casino table: the counter's box, the game in the middle */
+.wtable b{color:#f2c94c}
+.tview{margin:.2rem 0 .5rem;padding:.5rem;min-height:2.6em;white-space:pre-wrap;font:inherit;color:#f4f6ff;background:#141a2e;border:2px solid #3a3150}
+.tbet{display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem;color:#ffe97c}
+.tbet button{font:inherit;background:#141a2e;color:#b9a8ff;border:2px solid #3a3150;padding:.15rem .5rem;cursor:pointer}
+.wtable .clist{flex-direction:row;flex-wrap:wrap}
+.wtable .crow{flex:0 0 auto}
 /* the gathering games: a box over the bottom of the screen */
 .wmini{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;padding:.6rem .8rem .5rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;color:#f4f6ff;font:clamp(.5rem,1.5vw,.66rem)/1.5 var(--font-pixel)}
 .wmini b{display:block;margin-bottom:.45rem;color:#7CFFB2;letter-spacing:.2em}

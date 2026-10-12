@@ -285,6 +285,15 @@
     var STORE_AT = [{ id: 'neon-mart', d: W0, dx: 6, dy: 6, art: 'mart' }, { id: 'la-bodega', d: Y0, dx: -6, dy: 6, art: 'mart' },
                     { id: 'haven-provisions', d: H0, dx: -4, dy: 5, art: 'mart' }, { id: 'redrum-pawn', d: R0, dx: 3, dy: -2, art: 'pawn' },
                     { id: 'lantern-loans', d: M0, dx: 5, dy: 6, art: 'pawn' }];
+    /* the grand casino: worldwood, high stakes only. the bouncer minds the door */
+    var casinoAt = clearSpot(W0, 7, 3, -8, 8);
+    if (casinoAt) {
+      var casinoDoor = landmark(W0, 'casino', 'casino settebello', casinoAt[0], casinoAt[1], 7, 3,
+        'CASINO SETTEBELLO\nhigh stakes only. the house always wins. the house is very polite about it.', true);
+      walkIn('casino');
+      npcs.push({ id: 'bouncer', x: casinoDoor.x + 2, y: casinoDoor.y, dir: 'down', look: 'bouncer', name: 'BOUNCER', still: true,
+                  lines: ['high stakes only.\n⚡1,000 in your pocket or keep walking.', 'mr. volante runs a clean floor.\nkeep it that way.'] });
+    }
     STORE_AT.forEach(function (sp) {
       var info = root.MFShops && root.MFShops.STORES[sp.id], spot = clearSpot(sp.d, 3, 2, sp.dx, sp.dy);
       if (!spot) return;
@@ -705,6 +714,39 @@
         { id: 'shrooms', x: 2, y: 7, w: 1, h: 1, text: 'don\'t pick the blue ones.\nthey don\'t like it.' }],
       people: [
         { x: 9, y: 6, look: 'ape', lines: ['...', 'the tree likes quiet.\nso do i.'] }] },
+    /* casino settebello: enzo's floor (vault: Enzo, Council, a gambler who
+       talks in odds). door: what you need in your pocket to get in */
+    casino: { d: 'worldwood', floor: T.CHECK, house: 'grand', door: 1000, map: [
+      '################',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#######==#######'],
+      things: [
+        { id: 'slot', x: 2, y: 1, w: 1, h: 1, game: 'slots', text: 'a slot machine' },
+        { id: 'slot', x: 4, y: 1, w: 1, h: 1, game: 'slots', text: 'a slot machine' },
+        { id: 'slot', x: 6, y: 1, w: 1, h: 1, game: 'slots', text: 'a slot machine' },
+        { id: 'lottobooth', x: 11, y: 1, w: 3, h: 1, game: 'lotto', text: 'the grand lottery' },
+        { id: 'bjtable', x: 2, y: 4, w: 3, h: 2, game: 'blackjack', text: 'blackjack' },
+        { id: 'wheel', x: 7, y: 4, w: 3, h: 2, game: 'roulette', text: 'roulette' },
+        { id: 'dicetable', x: 11, y: 4, w: 3, h: 2, game: 'dice', text: 'high-low dice' },
+        { id: 'plant', x: 1, y: 8, w: 1, h: 1, text: 'a plant. real gold leaf on the pot.\nthe plant is fake.' },
+        { id: 'plant', x: 14, y: 8, w: 1, h: 1, text: 'a plant. it has seen things.' }],
+      people: [
+        { x: 9, y: 8, look: 'enzo', name: 'Enzo', still: true, lines: [
+          'Welcome to Settebello. House edge on the wheel is two-point-seven percent.\nMy edge is the charm. Call it priceless.',
+          'Seventy percent of this room is losing tonight.\nThe other thirty percent are lying about it.',
+          'The odds you leave richer? Forty-four percent, give or take.\nThe odds you come back tomorrow? Ninety-nine.',
+          'Blackjack pays three to two in this house.\nI am a generous man. Don\'t tell anyone.',
+          'The Founder never once sat at my tables.\nI respected the man. I respected the odds more.'] },
+        { x: 3, y: 7, look: 'gen', seed: 7701, lines: ['up eleven thousand. down twelve.\ni\'m basically even.'] },
+        { x: 12, y: 7, look: 'gen', seed: 7702, lines: ['the wheel likes red tonight.\nit liked red last night too. then it didn\'t.'] }] },
     market: { d: 'yucayeque', map: [
       '##############',
       '#............#',
@@ -749,10 +791,11 @@
     });
     def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
-      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text });
+      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
+                   game: f.game, house: f.game ? def.house : undefined });
     });
     (def.people || []).forEach(function (p, i) {
-      npcs.push({ id: id + '-' + i, x: p.x, y: p.y, dir: p.dir || 'down', look: p.look, seed: p.seed, lines: p.lines, shop: p.shop, still: !!p.still, roam: 2 });
+      npcs.push({ id: id + '-' + i, x: p.x, y: p.y, dir: p.dir || 'down', look: p.look, seed: p.seed, lines: p.lines, shop: p.shop, name: p.name, still: !!p.still, roam: 2 });
     });
     /* you come in standing just inside the mat, facing in */
     var spawn = def.spawn || { x: mat[0], y: h - 2, dir: 'up' };
