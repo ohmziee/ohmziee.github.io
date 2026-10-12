@@ -401,6 +401,8 @@
       $('opJ').textContent = MF.fmtJ(MF.joules(s));
       inv.innerHTML = ''; met.innerHTML = '';
       Object.keys(s.items).forEach(function (k) { inv.appendChild(li(k + (s.items[k] > 1 ? ' x' + s.items[k] : ''), D.items[k])); });
+      var HM = (window.MFShops && window.MFShops.HOMES) || {};
+      Object.keys(s.homes || {}).forEach(function (k) { if (HM[k]) inv.appendChild(li('key: ' + HM[k].name, HM[k].where + (s.wake === k ? '. you wake up here.' : '.'))); });
       if (!inv.children.length) inv.appendChild(empty('nothing yet.'));
       Object.keys(s.met).forEach(function (k) { met.appendChild(li(name(k), 'contact established ' + s.met[k])); });
       if (!met.children.length) met.appendChild(empty('no one yet.'));

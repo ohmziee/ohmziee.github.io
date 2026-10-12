@@ -73,5 +73,25 @@
     return { ok: true, total: q.total, look: look };
   }
 
-  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, price: price, quote: quote, allowed: allowed, buy: buy };
+  /* apartments: one block per district, a door you can buy (world.js puts
+     them on the map, overworld.js sells them and walks you in). Hex hands
+     out the redrum key at the end of her chapter, unless you get on her bad
+     side. PLACEHOLDER names and lines: flavour, not canon. Price is ⚡, at
+     roughly ⚡270 of loose joules a day */
+  var HOMES = {
+    redrum:    { name: 'the walk-up', where: 'redrum, round the back of the arcade', price: 900,
+                 sign: 'rooms upstairs. cash. no questions.', view: 'the arcade sign, through the bars.\nthe knife flickers. it never quite goes out.' },
+    yucayeque: { name: 'casa del patio', where: 'yucayeque, by the market', price: 1200,
+                 sign: 'rooms over the courtyard. ask for the abuela.', view: 'porch lights and somebody\'s radio.\na drum, far off, keeping time for the whole street.' },
+    naturia:   { name: 'the treehouse flats', where: 'naturia, under the canopy', price: 1400,
+                 sign: 'flats in the old grove. mind the moss.', view: 'the trees glow.\nsomething out there with too many lights blinks back.' },
+    majinryu:  { name: 'lantern court', where: 'majinryū, below the hospital', price: 1800,
+                 sign: 'apartments. quiet hours are a suggestion.', view: 'lanterns all the way down the hill.\nthe hospital\'s lights never go off up there.' },
+    haven:     { name: 'the meridian', where: 'haven, off the boulevard', price: 2400,
+                 sign: 'residences. a permit is required to be sad here.', view: 'a very clean street. a very clean lawn.\nnobody on either. nobody ever is.' },
+    worldwood: { name: 'neon heights', where: 'worldwood, in the thick of it', price: 3000,
+                 sign: 'luxury living. the rent is a crime.', view: 'neon, all the way down.\nthe tower hums a colour at you. it might be yours.' }
+  };
+
+  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

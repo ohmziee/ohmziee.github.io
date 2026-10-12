@@ -9,15 +9,16 @@
    is rebuilt; nothing is hand-painted yet.
 
    Tiles:  0 deep water  1 shallow  2 sand  3 ground  4 road  5 building
-           6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall */
+           6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall
+           indoors: 12 floor  13 wall  14 door mat */
 (function (root) {
   var W = 260, H = 200;
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
   var VERSION = 2;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
-            GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11 };
-  var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = 1;
+            GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14 };
+  var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
 
   /* r is in tiles: sqrt(area) scaled, so the islands keep their real
      proportions. style picks how the streets are laid. Redrum sits out on
@@ -218,6 +219,17 @@
       shopKeepers.push({ id: 'shop-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art === 'threads' ? 'tailor' : sp.art, shop: sp.id, still: true });
     });
 
+    /* apartments: one block per district, its door for sale (shops.js
+       HOMES). redrum's is the walk-up behind hex's arcade */
+    var HOME_AT = [{ d: R0, dx: -3, dy: -4 }, { d: W0, dx: -5, dy: -2 }, { d: Y0, dx: 7, dy: 2 },
+                   { d: N0, dx: -6, dy: 3 }, { d: H0, dx: -6, dy: 1 }, { d: M0, dx: -6, dy: 2 }];
+    HOME_AT.forEach(function (h) {
+      var info = root.MFShops && root.MFShops.HOMES[h.d.id];
+      landmark(h.d, 'apt', info ? info.name : 'apartments', h.dx, h.dy, 3, 2,
+        (info ? info.name.toUpperCase() + '\n' + info.sign : 'APARTMENTS') + '\nthe door is for sale. face it and press A.');
+      marks[marks.length - 1].home = h.d.id;
+    });
+
     /* yucayeque's market: stalls round the hall */
     for (var s = 0; s < 8; s++) {
       var sx = Y0.cx + Math.round((-6 + (s % 4) * 4) * F), sy = Y0.cy + Math.round((2 + Math.floor(s / 4) * 3) * F);
@@ -320,6 +332,43 @@
                 'keep your joules in your shoe.', 'red lights mean go here. figure it out.', 'they say the lighthouse is empty.\nthey say a lot of things.']
   };
 
+  /* ── indoors ──────────────────────────────────────────────────
+     an apartment: one small room, the same in every district but for its
+     colours and its window. # wall, . floor, = the mat (step on it to leave).
+     Furniture sits on the floor as marks with something to say. */
+  var ROOM = ['##########',
+              '#........#',
+              '#........#',
+              '#........#',
+              '#........#',
+              '#........#',
+              '#........#',
+              '####==####'];
+  var FURNITURE = [
+    { id: 'window', x: 2, y: 0, w: 2, h: 1, view: true },
+    { id: 'window', x: 5, y: 0, w: 2, h: 1, view: true },
+    { id: 'bed', x: 1, y: 1, w: 2, h: 2, bed: true, text: 'your bed. nobody else\'s.\nyou\'ll wake up here now.' },
+    { id: 'counter', x: 7, y: 1, w: 2, h: 1, text: 'a kettle, two mugs.\none of them is clean.' },
+    { id: 'plant', x: 8, y: 3, w: 1, h: 1, text: 'a plant. it\'s alive.\nyou\'ll try.' },
+    { id: 'sofa', x: 2, y: 4, w: 3, h: 1, text: 'the sofa remembers whoever had it before.\nit\'s getting used to you.' },
+    { id: 'tv', x: 6, y: 4, w: 1, h: 1, text: 'static on every channel.\nyou leave it on anyway. it\'s company.' }
+  ];
+  function room(id) {
+    var di = -1;
+    DISTRICTS.forEach(function (d, i) { if (d.id === id) di = i; });
+    if (di < 0) return null;
+    var info = root.MFShops && root.MFShops.HOMES[id];
+    var w = ROOM[0].length, h = ROOM.length, tile = new Uint8Array(w * h), dist = new Int8Array(w * h).fill(di), marks = [];
+    ROOM.forEach(function (r, y) {
+      for (var x = 0; x < w; x++) tile[y * w + x] = r.charAt(x) === '#' ? T.WALL : r.charAt(x) === '=' ? T.MAT : T.FLOOR;
+    });
+    FURNITURE.forEach(function (f) {
+      for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
+      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: id, bed: !!f.bed, text: f.view ? (info ? info.view : 'the city.') : f.text });
+    });
+    return { W: w, H: h, tile: tile, dist: dist, marks: marks, signs: [], npcs: [], home: id, spawn: { x: 4, y: 6, dir: 'up' } };
+  }
+
   function solid(world, x, y) {
     if (x < 0 || y < 0 || x >= world.W || y >= world.H) return true;
     return !!SOLID[world.tile[y * world.W + x]];
@@ -367,5 +416,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, solid: solid, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, room: room, solid: solid, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);

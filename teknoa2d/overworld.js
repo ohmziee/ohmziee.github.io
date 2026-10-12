@@ -168,6 +168,27 @@
       }
       return;
     }
+    /* indoors: boards, the wall with a skirting board, the mat by the door */
+    if (t === T.FLOOR) {
+      var wood = p.road;
+      px(g, wood, 0, 0, TS, TS);
+      for (i = 3; i < TS; i += 4) px(g, shade(wood, 0.75), 0, i, TS, 1);
+      px(g, shade(wood, 0.75), (v & 3) * 4 + 1, 0, 1, 3); px(g, shade(wood, 0.75), ((v >> 2) & 3) * 4 + 2, 8, 1, 3);
+      return;
+    }
+    if (t === T.WALL) {
+      px(g, p.wall, 0, 0, TS, TS);
+      px(g, shade(p.wall, 1.2), 0, 0, TS, 2);
+      for (i = 5; i < 13; i += 4) px(g, shade(p.wall, 0.85), 0, i, TS, 1);
+      px(g, shade(p.wall, 0.6), 0, 13, TS, 2); px(g, OUT, 0, 15, TS, 1);
+      return;
+    }
+    if (t === T.MAT) {
+      px(g, p.road, 0, 0, TS, TS);
+      px(g, OUT, 1, 3, 14, 12); px(g, '#5a1e3c', 2, 4, 12, 10);
+      for (i = 6; i < 13; i += 3) px(g, '#7a2e54', 2, i, 12, 1);
+      return;
+    }
     px(g, p.ground, 0, 0, TS, TS);
   }
 
@@ -278,12 +299,52 @@
     px(g, '#e8b796', 15, 11, 4, 3); px(g, '#ff4fd8', 13, 14, 8, 6); px(g, '#9aa0b8', 16, 20, 2, 2);
     px(g, '#0b0d1a', 34, 16, 10, 16); px(g, '#ff4fd8', 34, 16, 10, 1);
   };
-  var markArt = {};
+  /* an apartment block: brick, rows of lit and dark windows, a buzzer */
+  MARK_ART.apt = function (g, w, h) {
+    px(g, '#3a2430', 0, 0, w, h); px(g, '#2a1a22', 0, 0, w, 3);
+    for (var y = 6; y < h; y += 4) for (var x = (y >> 2) % 2 ? 0 : 3; x < w; x += 6) px(g, '#4a2e3a', x, y, 4, 1);
+    for (var r = 0; r < 2; r++) for (var c = 0; c < 4; c++) {
+      var wx = 3 + c * 11, wy = 5 + r * 9, lit = (r * 4 + c) % 3 !== 1;
+      px(g, OUT, wx, wy, 7, 6); px(g, lit ? '#ffd36a' : '#141a2e', wx + 1, wy + 1, 5, 4);
+    }
+    px(g, OUT, (w >> 1) - 5, h - 12, 10, 12); px(g, '#1a1426', (w >> 1) - 4, h - 11, 8, 11); px(g, '#ff4fd8', (w >> 1) - 4, h - 11, 8, 1);
+    px(g, '#7cf5ff', (w >> 1) + 6, h - 8, 2, 3);
+  };
+  /* indoors */
+  MARK_ART.window = function (g, w, h) {
+    px(g, '#3a3150', 0, 0, w, h); px(g, OUT, 3, 2, w - 6, h - 5); px(g, '#141a2e', 4, 3, w - 8, h - 7);
+    for (var i = 0; i < 6; i++) px(g, ['#ff4fd8', '#7cf5ff', '#ffe97c'][i % 3], 6 + (i * 5) % (w - 12), 5 + (i * 3) % (h - 10), 1, 1);
+    px(g, OUT, (w >> 1), 2, 1, h - 5); px(g, '#5a4a70', 2, h - 3, w - 4, 2);
+  };
+  MARK_ART.bed = function (g, w, h) {
+    px(g, '#14121c', 0, 0, w, h); px(g, '#5a3a22', 1, 1, w - 2, h - 2);
+    px(g, '#dce3ff', 3, 3, w - 6, 7); px(g, '#9f8cff', 2, 11, w - 4, h - 13); px(g, '#7a6acc', 2, 11, w - 4, 2);
+  };
+  MARK_ART.counter = function (g, w, h) {
+    px(g, '#2a2f4a', 0, 0, w, h); px(g, '#8a92a6', 0, 0, w, 4);
+    px(g, '#ff4f6a', 4, 1, 4, 3); px(g, '#dce3ff', 14, 1, 3, 3); px(g, '#dce3ff', 19, 1, 3, 3);
+    for (var x = 3; x < w - 4; x += 14) { px(g, OUT, x, 6, 8, 8); px(g, '#3a4060', x + 1, 7, 6, 6); }
+  };
+  MARK_ART.plant = function (g, w, h) {
+    px(g, '#5a3a22', 4, 9, 8, 6); px(g, '#7a5638', 4, 9, 8, 1);
+    px(g, '#3fd0b0', 7, 2, 2, 8); px(g, '#3fd0b0', 3, 4, 4, 2); px(g, '#3fd0b0', 9, 3, 4, 2); px(g, '#5fd06a', 5, 6, 6, 2);
+  };
+  MARK_ART.sofa = function (g, w, h) {
+    px(g, '#2a1d5e', 0, 2, w, h - 2); px(g, '#3b2f6a', 2, 6, w - 4, 7); px(g, '#4c3d86', 0, 2, 3, h - 2); px(g, '#4c3d86', w - 3, 2, 3, h - 2);
+    px(g, '#4c3d86', 3, 3, w - 6, 3);
+  };
+  MARK_ART.tv = function (g, w, h) {
+    px(g, '#2a2f4a', 1, 3, 14, 10); px(g, '#9aa0b8', 3, 5, 10, 6);
+    for (var y = 5; y < 11; y += 2) px(g, '#dce3ff', 3, y, 10, 1);
+    px(g, '#14121c', 6, 13, 4, 2);
+  };
+  var markArt = {}, UNFRAMED = { plant: 1, tv: 1, sofa: 1 };
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
     var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
     var g = c.getContext('2d');
     (MARK_ART[m.id] || MARK_ART.market)(g, c.width, c.height);
+    if (UNFRAMED[m.id]) return (markArt[m.id] = c);
     px(g, OUT, 0, 0, c.width, 1); px(g, OUT, 0, c.height - 1, c.width, 1); px(g, OUT, 0, 0, 1, c.height); px(g, OUT, c.width - 1, 0, 1, c.height);
     return (markArt[m.id] = c);
   }
@@ -438,6 +499,8 @@
   var me = { x: 0, y: 0, dir: 'down', moving: false, fx: 0, fy: 0, t: 0, step: 0 };
   var npcs = [], held = {}, pressedA = false, talkBox = null, district = -2, card = { until: 0 };
   var loose = [], toastT = 0;
+  /* the city, kept while the player is indoors; inside is the apartment they're in */
+  var city = null, cityDeco = null, cityNpcs = null, inside = null, H = (window.MFShops && window.MFShops.HOMES) || {};
 
   function occupied(x, y) {
     if (M.solid(world, x, y)) return true;
@@ -449,7 +512,13 @@
   function tryMove(dir) {
     me.dir = dir;
     var d = DIRS[dir], nx = me.x + d[0], ny = me.y + d[1];
-    if (occupied(nx, ny)) { if (L) L.moved(me.x, me.y, dir); return; }
+    if (occupied(nx, ny)) {
+      if (L) L.moved(me.x, me.y, dir);
+      /* walking up into your own front door lets you in */
+      var hm = !inside && dir === 'up' && markAt(nx, ny);
+      if (hm && hm.home && s.homes[hm.home]) goIn(hm.home);
+      return;
+    }
     me.fx = me.x; me.fy = me.y; me.x = nx; me.y = ny; me.moving = true; me.t = 0; me.step ^= 1;
     if (L) L.moved(nx, ny, dir);
   }
@@ -462,13 +531,23 @@
   }
   function showLine() {
     $('wWho').textContent = talkBox.who;
-    $('wLine').textContent = talkBox.lines[0].replace(/\$handle\b/g, s.player.handle || 'stranger');
+    var last = talkBox.yes && talkBox.lines.length === 1;
+    $('wLine').textContent = talkBox.lines[0].replace(/\$handle\b/g, s.player.handle || 'stranger') + (last ? '\n\nA: yes    B: no' : '');
+  }
+  /* a yes/no question: A on the last line says yes, B says no */
+  function ask(lines, yes) { say(lines); talkBox.yes = yes; showLine(); }
+  function answer(ok) {
+    var yes = talkBox.yes;
+    talkBox = null; $('wTalk').hidden = true;
+    if (ok) yes();
   }
   function nextLine() {
     talkBox.lines.shift();
     if (talkBox.lines.length) return showLine();
     talkBox = null; $('wTalk').hidden = true;
   }
+  /* after the cinnamon line she keeps it short */
+  var HEX_COLD = ['...hey.', "arcade's open. i'm busy.", 'not tonight, ok?'];
   var HEX_AFTER = ["the arcade's open. high score's mine though. it's always mine.", 'back already? you missed me. say you missed me.',
                    "don't go knocking on the lighthouse, $handle. trust me on that one."];
   function interact() {
@@ -480,7 +559,8 @@
       if (n.shop && api.shop) { api.shop(n.shop); return; }
       if (n.scene === 'hex') {
         if (!s.met.hex && api.talk) { api.talk(); return; }
-        return say([HEX_AFTER[Math.floor(Math.random() * HEX_AFTER.length)]], 'Hex');
+        var after = s.flags['hex-closed'] ? HEX_COLD : HEX_AFTER;
+        return say([after[Math.floor(Math.random() * after.length)]], 'Hex');
       }
       var said = n.said || 0;
       n.said = (said + 1) % n.lines.length;
@@ -494,16 +574,73 @@
         return say([(here[i].name || 'a stranger') + ' is walking the city too.'], here[i].name || '');
       }
     }
-    /* walking into a shop's front opens it too */
-    for (i = 0; i < world.marks.length; i++) {
-      var m = world.marks[i];
-      if (m.shop && api.shop && tx >= m.x && tx < m.x + m.w && ty >= m.y && ty < m.y + m.h) { api.shop(m.shop); return; }
+    /* walking into a shop's front opens it too; an apartment's door sells
+       itself or lets you in; furniture has something to say */
+    var m = markAt(tx, ty);
+    if (m && m.shop && api.shop) { api.shop(m.shop); return; }
+    if (m && m.home) return homeDoor(m.home);
+    if (m && m.text) {
+      if (m.bed && inside) { s.wake = inside.id; if (api.save) api.save(); }
+      return say([m.text]);
     }
     /* a sign is read facing it, or standing on it */
     for (i = 0; i < world.signs.length; i++) {
       var sg = world.signs[i];
       if ((sg.x === tx && sg.y === ty) || (sg.x === me.x && sg.y === me.y)) return say([sg.text]);
     }
+  }
+
+  function markAt(x, y) {
+    for (var i = 0; i < world.marks.length; i++) {
+      var m = world.marks[i];
+      if (x >= m.x && x < m.x + m.w && y >= m.y && y < m.y + m.h) return m;
+    }
+    return null;
+  }
+
+  /* ── apartments ──────────────────────────────────────────────
+     a door you own lets you in; one you don't is for sale */
+  function homeDoor(id) {
+    var h = H[id] || { name: 'apartments', where: '', price: 0 }, have = window.MF.joules(s), cost = window.MF.fmtJ(h.price);
+    if (s.homes[id]) return goIn(id);
+    if (have < h.price) return say([h.name.toUpperCase() + '\nfor sale: ' + cost + '. you have ' + window.MF.fmtJ(have) + '.\nloose joules turn up all over the city, every day.']);
+    ask([h.name.toUpperCase() + '\nfor sale: ' + cost + '. it comes with a key and a bed.', 'buy it for ' + cost + '?'], function () {
+      if (!window.MF.spend(s, h.price)) return;
+      s.homes[id] = 1;
+      wallet('-' + cost);
+      if (api.save) api.save();
+      say(['the key is yours.\n' + h.name + ', ' + h.where + '.']);
+    });
+  }
+  function doorOf(id) {
+    for (var i = 0; i < city.marks.length; i++) {
+      var m = city.marks[i];
+      if (m.home === id) return { x: m.x + (m.w >> 1), y: m.y + m.h };
+    }
+    return { x: city.spawn.x, y: city.spawn.y };
+  }
+  function here() { return { x: me.x, y: me.y, d: me.dir, v: M.V, in: inside ? inside.id : undefined }; }
+  function goIn(id, at) {
+    var r = M.room(id);
+    if (!r) return;
+    inside = { id: id };
+    world = r; deco = decorate(r); npcs = [];
+    me.x = at ? at.x : r.spawn.x; me.y = at ? at.y : r.spawn.y; me.dir = at ? at.d || 'up' : r.spawn.dir;
+    me.moving = false; held = {};
+    /* indoors is private: off the street's channel until they come back out */
+    if (L) L.setRoom('');
+    s.world = here();
+    if (api.save) api.save();
+  }
+  function goOut() {
+    var d = doorOf(inside.id);
+    inside = null;
+    world = city; deco = cityDeco; npcs = cityNpcs;
+    me.x = d.x; me.y = d.y; me.dir = 'down'; me.moving = false;
+    if (L && district >= 0) L.setRoom(D[district].id);
+    if (L) L.moved(me.x, me.y, me.dir);
+    s.world = here();
+    if (api.save) api.save();
   }
 
   /* ── joules ──────────────────────────────────────────────────
@@ -568,16 +705,27 @@
   function update(now) {
     var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
-    if (pressedA) { pressedA = false; if (talkBox) nextLine(); else if (!me.moving) interact(); }
+    if (talkBox && talkBox.yes && talkBox.lines.length === 1 && held.b) { held.b = false; answer(false); }
+    if (pressedA) {
+      pressedA = false;
+      if (talkBox && talkBox.yes && talkBox.lines.length === 1) answer(true);
+      else if (talkBox) nextLine();
+      else if (!me.moving) interact();
+    }
     if (L) { L.step(dt, SPEED); online(now); }
     if (talkBox) return;
     if (me.moving) {
       me.t += dt * SPEED * (held.b ? 2 : 1);
       if (me.t >= 1) {
         me.moving = false; me.t = 0;
-        enterDistrict(world.dist[me.y * world.W + me.x]);
-        s.world = { x: me.x, y: me.y, d: me.dir, v: M.V };
-        pickUp();
+        if (inside) {
+          s.world = here();
+          if (world.tile[me.y * world.W + me.x] === T.MAT) goOut();
+        } else {
+          enterDistrict(world.dist[me.y * world.W + me.x]);
+          s.world = here();
+          pickUp();
+        }
       }
     }
     if (!me.moving) {
@@ -601,15 +749,17 @@
   function draw(now) {
     var wave = Math.floor(now / 600) % 2;
     var ppx = (me.moving ? me.fx + (me.x - me.fx) * me.t : me.x) * TS, ppy = (me.moving ? me.fy + (me.y - me.fy) * me.t : me.y) * TS;
-    var cx = Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, ppx - (VW * TS) / 2 + TS / 2)));
-    var cy = Math.round(Math.max(0, Math.min(world.H * TS - VH * TS, ppy - (VH * TS) / 2 + TS / 2)));
-    var x0 = Math.floor(cx / TS), y0 = Math.floor(cy / TS), x, y;
+    /* a room smaller than the screen sits in the middle of it, in the dark */
+    var cx = world.W <= VW ? -Math.floor((VW - world.W) * TS / 2) : Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, ppx - (VW * TS) / 2 + TS / 2)));
+    var cy = world.H <= VH ? -Math.floor((VH - world.H) * TS / 2) : Math.round(Math.max(0, Math.min(world.H * TS - VH * TS, ppy - (VH * TS) / 2 + TS / 2)));
+    if (inside) { ctx.fillStyle = '#05060b'; ctx.fillRect(0, 0, VW * TS, VH * TS); }
+    var x0 = Math.max(0, Math.floor(cx / TS)), y0 = Math.max(0, Math.floor(cy / TS)), x, y;
     function at(xx, yy) { return xx < 0 || yy < 0 || xx >= world.W || yy >= world.H ? T.DEEP : world.tile[yy * world.W + xx]; }
     function wet(tt) { return tt === T.DEEP || tt === T.SHALLOW; }
     for (y = y0; y <= y0 + VH; y++) for (x = x0; x <= x0 + VW; x++) {
       if (x >= world.W || y >= world.H) continue;
       var k = y * world.W + x, t = world.tile[k], di = world.dist[k];
-      if (t === T.LANDMARK) continue;
+      if (t === T.LANDMARK) { if (!inside) continue; t = y ? T.FLOOR : T.WALL; }
       var v = Math.floor(hash(x, y) * 32), m = 0, rv = 0, dr = 0;
       var nb = [at(x, y - 1), at(x + 1, y), at(x, y + 1), at(x - 1, y)];
       for (var b = 0; b < 4; b++) {
@@ -637,11 +787,11 @@
       px(ctx, OUT, sx + 2, sy + 2, 12, 8); px(ctx, '#c8a878', sx + 3, sy + 3, 10, 6);
       px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1); px(ctx, '#8a6a48', sx + 4, sy + 7, 6, 1);
     });
-    drawLoose(cx, cy, now);
+    if (!inside) drawLoose(cx, cy, now);
     /* people, back to front */
     var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1 });
-    if (L) L.list().forEach(function (o) {
+    if (L && !inside) L.list().forEach(function (o) {
       var ox = (o.t < 1 ? o.fx + (o.x - o.fx) * o.t : o.x) * TS, oy = (o.t < 1 ? o.fy + (o.y - o.fy) * o.t : o.y) * TS;
       if (ox - cx < -TS || oy - cy < -TS || ox - cx > VW * TS || oy - cy > VH * TS) return;
       who.push({ x: ox, y: oy, img: sprite(lookOf(o.look), o.dir, o.t > 0.25 && o.t < 0.75 ? 1 : 0), them: 1 });
@@ -655,6 +805,7 @@
     });
     /* a little night over everything, and the rain the main page has */
     ctx.fillStyle = 'rgba(5,6,11,.14)'; ctx.fillRect(0, 0, VW * TS, VH * TS);
+    if (inside) return;
     ctx.fillStyle = 'rgba(159,140,255,.3)';
     var drops = Math.round(VW * VH / 10);
     for (var r = 0; r < drops; r++) {
@@ -723,26 +874,41 @@
   function show(state, hooks) {
     s = state; api = hooks || {};
     if (!world) {
-      world = M.build();
-      deco = decorate(world);
+      world = city = M.build();
+      deco = cityDeco = decorate(world);
       canvas = $('wCanvas');
       fit();
       window.addEventListener('resize', function () { if (active) fit(); });
-      npcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
+      npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
       pad();
     }
     var at = s.world;
-    /* back where they stood, unless something is standing there now */
-    if (at && at.x >= 0 && at.v === M.V && !M.solid(world, at.x, at.y) && !npcs.some(function (n) { return n.x === at.x && n.y === at.y; })) { me.x = at.x; me.y = at.y; me.dir = at.d || 'down'; }
+    if (!s.homes) s.homes = {};
+    /* hex's key, for anyone who finished her chapter before she handed it out */
+    var gift = s.met.hex && !s.flags['hex-key'] && !s.flags['hex-closed'];
+    if (gift) { s.homes.redrum = 1; s.flags['hex-key'] = 1; }
+    if (inside) { world = city; deco = cityDeco; npcs = cityNpcs; inside = null; }
+    var wake = s.wake && s.homes[s.wake] ? doorOf(s.wake) : null;
+    /* back where they stood, unless something is standing there now; else
+       outside the apartment they last slept in; else the spawn */
+    if (at && at.x >= 0 && at.v === M.V && at.in && s.homes[at.in]) { var dd = doorOf(at.in); me.x = dd.x; me.y = dd.y; me.dir = 'down'; }
+    else if (at && at.x >= 0 && at.v === M.V && !at.in && !M.solid(world, at.x, at.y) && !npcs.some(function (n) { return n.x === at.x && n.y === at.y; })) { me.x = at.x; me.y = at.y; me.dir = at.d || 'down'; }
+    else if (wake) { me.x = wake.x; me.y = wake.y; me.dir = 'down'; }
     else { me.x = world.spawn.x; me.y = world.spawn.y; me.dir = world.spawn.dir; }
     me.moving = false; held = {}; talkBox = null; $('wTalk').hidden = true;
-    s.world = { x: me.x, y: me.y, d: me.dir, v: M.V };
+    s.world = here();
     $('world').hidden = false;
     fit();
     district = -2; enterDistrict(world.dist[me.y * world.W + me.x]);
     wallet();
-    nudge();
     goOnline();
+    /* they saved indoors: back inside, where they stood if it still makes sense */
+    if (at && at.in && s.homes[at.in] && at.v === M.V) {
+      var r = M.room(at.in), ok = r && at.x > 0 && at.y > 0 && at.x < r.W && at.y < r.H && !M.solid(r, at.x, at.y) && r.tile[at.y * r.W + at.x] !== T.MAT;
+      goIn(at.in, ok ? at : null);
+    }
+    if (gift) setTimeout(function () { if (active && !talkBox) say(["there's a key in your pocket you don't remember taking.\nthe tag says, in eyeliner: walk-up, round the back of the arcade. -H"]); }, 1200);
+    else nudge();
     if (!active) { active = true; last = 0; raf = requestAnimationFrame(loop); }
     try { $('world').focus(); } catch (e) {}
   }
@@ -766,13 +932,13 @@
     if (!L) return;
     if (offline() || document.hidden) { L.stop(); return; }
     if (L.on) { L.restyle(A ? A.normalize(s.player.look) : s.player.look); return; }
-    L.start({ handle: s.player.handle, look: A ? A.normalize(s.player.look) : s.player.look, x: me.x, y: me.y, d: me.dir }, district >= 0 ? D[district].id : '');
+    L.start({ handle: s.player.handle, look: A ? A.normalize(s.player.look) : s.player.look, x: me.x, y: me.y, d: me.dir }, district >= 0 && !inside ? D[district].id : '');
   }
   var onShown = -1, onT = 0;
   function online(now) {
     if (now - onT < 500) return;
     onT = now;
-    var n = L.on && L.live ? L.list().length : -1;
+    var n = L.on && L.live && !inside ? L.list().length : -1;
     if (n === onShown) return;
     onShown = n;
     var el = $('wOn');

@@ -11,8 +11,8 @@
      choice  { text, to, when: [...], fx: [...] }
      go      the scene to run when the beats end and there are no choices
 
-   conditions  flag:x  item:x  trait:x  origin:x  met:x  aff:hex>=3  joules>=50   (! in front negates)
-   effects     flag x  unflag x  give x  take x  trait x  aff hex +2  meet hex  pay 25  charge 25
+   conditions  flag:x  item:x  trait:x  origin:x  met:x  home:x  aff:hex>=3  joules>=50   (! in front negates)
+   effects     flag x  unflag x  give x  take x  trait x  aff hex +2  meet hex  pay 25  charge 25  home redrum
 
    Money is the Teknoan Joule, the official currency of Teknoa, written ⚡. */
 (function (root) {
@@ -22,7 +22,8 @@
   function newState() {
     return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {} },
              flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {},
-             world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city */
+             world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
+             homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -53,6 +54,7 @@
       else if (kind === 'item') ok = !!s.items[name];
       else if (kind === 'trait') ok = !!s.traits[name];
       else if (kind === 'met') ok = !!s.met[name];
+      else if (kind === 'home') ok = !!s.homes[name];
       else if (kind === 'origin') ok = s.player.origin === name;
       else throw new Error('unknown condition: ' + cond);
     }
@@ -78,6 +80,7 @@
     /* a choice that charges should be gated on joules>=N; if it is not, it
        takes what they have rather than going negative */
     else if (op === 'charge') { if (!spend(s, p[1])) s.joules = 0; }
+    else if (op === 'home') s.homes[name] = 1;
     else if (op === 'meet') { if (!s.met[name]) s.met[name] = new Date(now || Date.now()).toISOString().slice(0, 10); }
     else throw new Error('unknown effect: ' + fx);
   }
