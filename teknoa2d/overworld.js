@@ -176,6 +176,12 @@
       px(g, shade(wood, 0.75), (v & 3) * 4 + 1, 0, 1, 3); px(g, shade(wood, 0.75), ((v >> 2) & 3) * 4 + 2, 8, 1, 3);
       return;
     }
+    if (t === T.CHECK) {
+      var tA = shade(p.road, 1.25), tB = shade(p.road, 0.8);
+      px(g, tA, 0, 0, TS, TS); px(g, tB, 0, 0, 8, 8); px(g, tB, 8, 8, 8, 8);
+      px(g, shade(tA, 1.2), 1, 1, 2, 1);
+      return;
+    }
     if (t === T.WALL) {
       px(g, p.wall, 0, 0, TS, TS);
       px(g, shade(p.wall, 1.2), 0, 0, TS, 2);
@@ -338,7 +344,88 @@
     for (var y = 5; y < 11; y += 2) px(g, '#dce3ff', 3, y, 10, 1);
     px(g, '#14121c', 6, 13, 4, 2);
   };
-  var markArt = {}, UNFRAMED = { plant: 1, tv: 1, sofa: 1 };
+  /* the big buildings' insides */
+  MARK_ART.cabinet = function (g, w, h) {
+    px(g, OUT, 2, 0, 12, 16); px(g, '#2a1d5e', 3, 1, 10, 14); px(g, '#ff4fd8', 3, 1, 10, 2);
+    px(g, OUT, 4, 4, 8, 6); px(g, '#7cf5ff', 5, 5, 6, 4); px(g, '#ffe97c', 6, 6, 2, 1);
+    px(g, '#14121c', 4, 11, 8, 2); px(g, '#ff2a4a', 5, 11, 2, 1); px(g, '#7cffb2', 9, 11, 1, 1);
+  };
+  MARK_ART.claw = function (g, w, h) {
+    px(g, OUT, 1, 0, w - 2, h); px(g, '#ffd36a', 2, 1, w - 4, 2); px(g, '#1e3a4a', 2, 3, w - 4, 9);
+    px(g, '#9aa0b8', (w >> 1) - 1, 3, 2, 3); px(g, '#9aa0b8', (w >> 1) - 3, 6, 6, 1);
+    for (var i = 0; i < 5; i++) px(g, '#f4f6ff', 4 + i * 5, 9 - (i % 2), 3, 3);
+    px(g, '#ff4fd8', 2, 12, w - 4, 3);
+  };
+  MARK_ART.prize = function (g, w, h) {
+    px(g, '#3a1218', 0, 4, w, h - 4); px(g, '#ff4fd8', 0, 4, w, 2);
+    for (var i = 0; i < 6; i++) px(g, ['#7cf5ff', '#ffe97c', '#f4f6ff', '#b28cff'][i % 4], 3 + i * 7, 0, 4, 4);
+    px(g, '#ffe97c', 5, 9, w - 10, 1);
+  };
+  MARK_ART.lift = function (g, w, h) {
+    px(g, '#3a3150', 0, 0, w, h); px(g, OUT, 4, 2, w - 8, h - 2); px(g, '#9aa0b8', 5, 3, (w >> 1) - 5, h - 3); px(g, '#8a92a6', (w >> 1), 3, (w >> 1) - 5, h - 3);
+    px(g, '#ff2a4a', (w >> 1) - 2, 0, 4, 2);
+  };
+  MARK_ART.glass = function (g, w, h) {
+    var c = ['#ff4fd8', '#7cf5ff', '#9f8cff', '#ffe97c', '#7cffb2'];
+    for (var y = 0; y < h; y += 4) px(g, c[(y >> 2) % c.length], 2, y, w - 4, 4);
+    px(g, '#f4f6ff', 4, 2, 1, h - 4);
+  };
+  MARK_ART.fork = function (g, w, h) {
+    px(g, '#5a4a70', 6, h - 6, w - 12, 6); px(g, '#dce3ff', (w >> 1) - 1, h / 2, 2, h / 2 - 6);
+    px(g, '#dce3ff', 8, 4, 3, h / 2 - 2); px(g, '#dce3ff', w - 11, 4, 3, h / 2 - 2); px(g, '#dce3ff', 8, h / 2, w - 16, 2);
+    px(g, '#9f8cff', 8, 4, 1, 3); px(g, '#ff4fd8', w - 9, 5, 1, 2);
+  };
+  MARK_ART.bench = function (g, w, h) {
+    px(g, OUT, 0, 5, w, 7); px(g, '#5a3a22', 1, 6, w - 2, 3); px(g, '#7a5638', 1, 6, w - 2, 1);
+    px(g, '#3a2414', 2, 9, 2, 5); px(g, '#3a2414', w - 4, 9, 2, 5);
+  };
+  MARK_ART.bars = function (g, w, h) {
+    px(g, '#4a5260', 0, 0, w, h);
+    for (var x = 2; x < w; x += 4) px(g, '#c8ccd8', x, 0, 2, h);
+    px(g, '#8a92a6', 0, 2, w, 2); px(g, '#8a92a6', 0, h - 4, w, 2);
+  };
+  MARK_ART.board = function (g, w, h) {
+    px(g, '#8a92a6', 0, 0, w, h); px(g, OUT, 3, 2, w - 6, h - 4); px(g, '#c8a878', 4, 3, w - 8, h - 6);
+    px(g, '#f4f6ff', 7, 5, 6, 7); px(g, '#f4f6ff', 17, 4, 6, 8); px(g, '#ff2a4a', 9, 6, 2, 2);
+  };
+  MARK_ART.desk = function (g, w, h) {
+    px(g, '#2a2f4a', 0, 3, w, h - 3); px(g, '#c8ccd8', 0, 3, w, 3);
+    px(g, '#7cf5ff', 6, 0, 6, 4); px(g, '#ffe97c', w - 8, 1, 2, 2);
+    for (var x = 4; x < w - 4; x += 12) px(g, '#3a4060', x, 8, 6, 5);
+  };
+  MARK_ART.shrine = function (g, w, h) {
+    px(g, '#7a2020', 0, 2, w, h - 2); px(g, '#a83030', 0, 2, w, 3); px(g, '#ffd36a', 4, 6, w - 8, 2);
+    px(g, '#5a4a40', (w >> 1) - 5, 0, 10, 4); px(g, '#ffe97c', (w >> 1) - 1, 0, 2, 2);
+  };
+  MARK_ART.lantern = function (g, w, h) {
+    px(g, OUT, 7, 0, 2, 3); px(g, OUT, 4, 3, 8, 11); px(g, '#ff6a3a', 5, 4, 6, 9); px(g, '#ffd36a', 6, 6, 4, 5);
+    px(g, '#a83030', 5, 4, 6, 1); px(g, '#a83030', 5, 12, 6, 1);
+  };
+  MARK_ART.bell = function (g, w, h) {
+    px(g, '#5a3a22', 2, 0, w - 4, 3);
+    px(g, OUT, 3, 4, w - 6, h - 8); px(g, '#b08a3a', 4, 5, w - 8, h - 10); px(g, '#e8c46a', 5, 6, 2, h - 14);
+    px(g, '#7a5a22', 2, h - 5, w - 4, 2);
+  };
+  MARK_ART.roots = function (g, w, h) {
+    px(g, '#4a2e1a', 0, 6, w, 5); px(g, '#4a2e1a', 4, 2, 4, 6); px(g, '#4a2e1a', w - 9, 3, 4, 5);
+    px(g, '#6a4a2a', 0, 6, w, 1); px(g, '#3affc8', 10, 8, 2, 1); px(g, '#b28cff', w - 6, 9, 1, 1);
+  };
+  MARK_ART.pool = function (g, w, h) {
+    px(g, OUT, 2, 2, w - 4, h - 4); px(g, '#123563', 3, 3, w - 6, h - 6); px(g, '#2a2f6a', 6, 6, w - 12, h - 12);
+    for (var i = 0; i < 8; i++) px(g, ['#f4f6ff', '#7cf5ff', '#ffe97c'][i % 3], 8 + (i * 13) % (w - 16), 8 + (i * 7) % (h - 16), 1, 1);
+  };
+  MARK_ART.shrooms = function (g, w, h) {
+    [[3, 8], [8, 5], [10, 10]].forEach(function (m, i) {
+      px(g, '#dce3ff', m[0] + 1, m[1] + 2, 2, 4); px(g, OUT, m[0] - 1, m[1] - 1, 6, 4); px(g, ['#7cf5ff', '#3affc8', '#b28cff'][i], m[0], m[1], 4, 2);
+    });
+  };
+  MARK_ART.stall = function (g, w, h) {
+    px(g, OUT, 0, 0, w, h);
+    for (var i = 0; i < w / 4; i++) px(g, i % 2 ? '#f4f6ff' : '#e8b13a', 1 + i * 4, 1, 4, 5);
+    px(g, '#5a3c26', 1, 7, w - 2, 8); px(g, '#7a5638', 1, 7, w - 2, 1);
+    px(g, '#ff8a6b', 4, 9, 3, 3); px(g, '#7cffb2', 11, 9, 3, 3); px(g, '#ffd36a', 18, 9, 3, 3); px(g, '#ff8a6b', 25, 9, 3, 3);
+  };
+  var markArt = {}, UNFRAMED = { plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
     var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
@@ -517,6 +604,7 @@
       /* walking up into your own front door lets you in */
       var hm = !inside && dir === 'up' && markAt(nx, ny);
       if (hm && hm.home && s.homes[hm.home]) goIn(hm.home);
+      else if (hm && hm.room) goIn(hm.room);
       return;
     }
     me.fx = me.x; me.fy = me.y; me.x = nx; me.y = ny; me.moving = true; me.t = 0; me.step ^= 1;
@@ -567,11 +655,11 @@
       return say([n.lines[said]]);
     }
     /* another player: they can't hear you yet, but you can see who they are */
-    if (L) {
-      var here = L.list();
-      for (i = 0; i < here.length; i++) {
-        if (here[i].x !== tx || here[i].y !== ty) continue;
-        return say([(here[i].name || 'a stranger') + ' is walking the city too.'], here[i].name || '');
+    if (L && (!inside || inside.place)) {
+      var walkers = L.list();
+      for (i = 0; i < walkers.length; i++) {
+        if (walkers[i].x !== tx || walkers[i].y !== ty) continue;
+        return say([(walkers[i].name || 'a stranger') + ' is walking the city too.'], walkers[i].name || '');
       }
     }
     /* walking into a shop's front opens it too; an apartment's door sells
@@ -579,6 +667,8 @@
     var m = markAt(tx, ty);
     if (m && m.shop && api.shop) { api.shop(m.shop); return; }
     if (m && m.home) return homeDoor(m.home);
+    if (m && m.room && !inside) return goIn(m.room);
+    if (m && m.shut) return say([m.shut]);
     if (m && m.text) {
       if (m.bed && inside) { s.wake = inside.id; if (api.save) api.save(); }
       return say([m.text]);
@@ -615,20 +705,34 @@
   function doorOf(id) {
     for (var i = 0; i < city.marks.length; i++) {
       var m = city.marks[i];
-      if (m.home === id) return { x: m.x + (m.w >> 1), y: m.y + m.h };
+      if (m.home !== id && m.room !== id) continue;
+      var y = m.y + m.h, mid = m.x + (m.w >> 1);
+      /* the middle of the front, unless someone's standing there (hex is, at the arcade) */
+      for (var o = 0; o < m.w * 2; o++) {
+        var x = mid + (o % 2 ? -((o + 1) >> 1) : o >> 1);
+        if (x < m.x || x >= m.x + m.w || M.solid(city, x, y)) continue;
+        if (cityNpcs.some(function (n) { return n.still && n.x === x && n.y === y; })) continue;
+        return { x: x, y: y };
+      }
+      return { x: mid, y: y };
     }
     return { x: city.spawn.x, y: city.spawn.y };
   }
+  /* a room you can be in: a public building, or an apartment you hold the key to */
+  function canBeIn(id) { var r = id && M.room(id); return !!r && (!r.home || !!s.homes[r.home]); }
+  /* public rooms have their own street channel; apartments are private */
+  function lobbyRoom() { return inside ? (inside.place ? 'in-' + inside.id : '') : district >= 0 ? D[district].id : ''; }
   function here() { return { x: me.x, y: me.y, d: me.dir, v: M.V, in: inside ? inside.id : undefined }; }
   function goIn(id, at) {
     var r = M.room(id);
     if (!r) return;
-    inside = { id: id };
-    world = r; deco = decorate(r); npcs = [];
+    inside = { id: id, place: !!r.place };
+    world = r; deco = decorate(r);
+    npcs = r.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
     me.x = at ? at.x : r.spawn.x; me.y = at ? at.y : r.spawn.y; me.dir = at ? at.d || 'up' : r.spawn.dir;
     me.moving = false; held = {};
-    /* indoors is private: off the street's channel until they come back out */
-    if (L) L.setRoom('');
+    /* an apartment is private: off the street's channel until they come back out */
+    if (L) { L.setRoom(lobbyRoom()); L.moved(me.x, me.y, me.dir); }
     s.world = here();
     if (api.save) api.save();
   }
@@ -637,7 +741,7 @@
     inside = null;
     world = city; deco = cityDeco; npcs = cityNpcs;
     me.x = d.x; me.y = d.y; me.dir = 'down'; me.moving = false;
-    if (L && district >= 0) L.setRoom(D[district].id);
+    if (L) L.setRoom(lobbyRoom());
     if (L) L.moved(me.x, me.y, me.dir);
     s.world = here();
     if (api.save) api.save();
@@ -759,7 +863,7 @@
     for (y = y0; y <= y0 + VH; y++) for (x = x0; x <= x0 + VW; x++) {
       if (x >= world.W || y >= world.H) continue;
       var k = y * world.W + x, t = world.tile[k], di = world.dist[k];
-      if (t === T.LANDMARK) { if (!inside) continue; t = y ? T.FLOOR : T.WALL; }
+      if (t === T.LANDMARK) { if (!inside) continue; t = y ? world.floor || T.FLOOR : world.edge || T.WALL; }
       var v = Math.floor(hash(x, y) * 32), m = 0, rv = 0, dr = 0;
       var nb = [at(x, y - 1), at(x + 1, y), at(x, y + 1), at(x - 1, y)];
       for (var b = 0; b < 4; b++) {
@@ -791,7 +895,7 @@
     /* people, back to front */
     var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1 });
-    if (L && !inside) L.list().forEach(function (o) {
+    if (L && (!inside || inside.place)) L.list().forEach(function (o) {
       var ox = (o.t < 1 ? o.fx + (o.x - o.fx) * o.t : o.x) * TS, oy = (o.t < 1 ? o.fy + (o.y - o.fy) * o.t : o.y) * TS;
       if (ox - cx < -TS || oy - cy < -TS || ox - cx > VW * TS || oy - cy > VH * TS) return;
       who.push({ x: ox, y: oy, img: sprite(lookOf(o.look), o.dir, o.t > 0.25 && o.t < 0.75 ? 1 : 0), them: 1 });
@@ -891,7 +995,7 @@
     var wake = s.wake && s.homes[s.wake] ? doorOf(s.wake) : null;
     /* back where they stood, unless something is standing there now; else
        outside the apartment they last slept in; else the spawn */
-    if (at && at.x >= 0 && at.v === M.V && at.in && s.homes[at.in]) { var dd = doorOf(at.in); me.x = dd.x; me.y = dd.y; me.dir = 'down'; }
+    if (at && at.x >= 0 && at.v === M.V && at.in && canBeIn(at.in)) { var dd = doorOf(at.in); me.x = dd.x; me.y = dd.y; me.dir = 'down'; }
     else if (at && at.x >= 0 && at.v === M.V && !at.in && !M.solid(world, at.x, at.y) && !npcs.some(function (n) { return n.x === at.x && n.y === at.y; })) { me.x = at.x; me.y = at.y; me.dir = at.d || 'down'; }
     else if (wake) { me.x = wake.x; me.y = wake.y; me.dir = 'down'; }
     else { me.x = world.spawn.x; me.y = world.spawn.y; me.dir = world.spawn.dir; }
@@ -903,7 +1007,7 @@
     wallet();
     goOnline();
     /* they saved indoors: back inside, where they stood if it still makes sense */
-    if (at && at.in && s.homes[at.in] && at.v === M.V) {
+    if (at && at.in && canBeIn(at.in) && at.v === M.V) {
       var r = M.room(at.in), ok = r && at.x > 0 && at.y > 0 && at.x < r.W && at.y < r.H && !M.solid(r, at.x, at.y) && r.tile[at.y * r.W + at.x] !== T.MAT;
       goIn(at.in, ok ? at : null);
     }
@@ -932,13 +1036,13 @@
     if (!L) return;
     if (offline() || document.hidden) { L.stop(); return; }
     if (L.on) { L.restyle(A ? A.normalize(s.player.look) : s.player.look); return; }
-    L.start({ handle: s.player.handle, look: A ? A.normalize(s.player.look) : s.player.look, x: me.x, y: me.y, d: me.dir }, district >= 0 && !inside ? D[district].id : '');
+    L.start({ handle: s.player.handle, look: A ? A.normalize(s.player.look) : s.player.look, x: me.x, y: me.y, d: me.dir }, lobbyRoom());
   }
   var onShown = -1, onT = 0;
   function online(now) {
     if (now - onT < 500) return;
     onT = now;
-    var n = L.on && L.live && !inside ? L.list().length : -1;
+    var n = L.on && L.live && (!inside || inside.place) ? L.list().length : -1;
     if (n === onShown) return;
     onShown = n;
     var el = $('wOn');

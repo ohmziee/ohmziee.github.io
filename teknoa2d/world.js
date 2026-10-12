@@ -10,14 +10,14 @@
 
    Tiles:  0 deep water  1 shallow  2 sand  3 ground  4 road  5 building
            6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall
-           indoors: 12 floor  13 wall  14 door mat */
+           indoors: 12 floor  13 wall  14 door mat  15 tiled floor */
 (function (root) {
   var W = 260, H = 200;
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
   var VERSION = 2;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
-            GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14 };
+            GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14, CHECK: 15 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
 
   /* r is in tiles: sqrt(area) scaled, so the islands keep their real
@@ -185,22 +185,26 @@
       return door;
     }
     var W0 = byId.worldwood, Y0 = byId.yucayeque, N0 = byId.naturia, H0 = byId.haven, M0 = byId.majinryu, R0 = byId.redrum;
-    landmark(W0, 'tower', 'the tuned tower', -6, -9, 3, 5, 'a replica of a tower from earth.\nretuned. it hums in colours.');
+    /* the big buildings: walk up to the front and you go in (ROOMS, below).
+       the sapphire stays shut, and so does noorborj */
+    function walkIn(id) { marks[marks.length - 1].room = id; }
+    landmark(W0, 'tower', 'the tuned tower', -6, -9, 3, 5, 'a replica of a tower from earth.\nretuned. it hums in colours.'); walkIn('tower');
     landmark(W0, 'sapphire', 'the sapphire', 3, 2, 5, 3, 'THE SAPPHIRE\na gallery. closed tonight.');
-    landmark(H0, 'ncpd', 'NCPD', -3, -6, 6, 3, 'NOVA CITY POLICE DEPARTMENT\nthe steps are very clean.');
-    var hospDoor = landmark(M0, 'hospital', 'nova city hospital', -2, -7, 5, 4, 'NOVA CITY HOSPITAL\nthe lights never go off up there.\ncosmetic wing: talk to the medic out front.');
-    /* its cosmetic wing is a shop (shops.js: nova-hospital) */
-    marks[marks.length - 1].shop = 'nova-hospital';
-    landmark(M0, 'pagoda', 'pagoda', 4, 1, 3, 3, 'an old gate. older than the hospital,\nor built to look it.');
-    landmark(N0, 'greattree', 'the great tree', -2, -6, 4, 4, 'NOVA CITY PARK\nthe tree is warm to the touch.');
-    landmark(Y0, 'market', 'the market hall', -3, -3, 6, 2, 'the market. fruit, records, gossip.\neverything is a little cheaper if you smile.');
-    var arcadeDoor = landmark(R0, 'arcade', 'arcade', -3, -1, 4, 2, 'ARCADE\nthe sign is a knife. the high score is "HEX".');
+    marks[marks.length - 1].shut = 'locked. a note taped to the glass:\nclosed tonight. the tape is sun-faded.';
+    landmark(H0, 'ncpd', 'NCPD', -3, -6, 6, 3, 'NOVA CITY POLICE DEPARTMENT\nthe steps are very clean.'); walkIn('ncpd');
+    /* its cosmetic wing is a shop (shops.js: nova-hospital), at a desk inside */
+    landmark(M0, 'hospital', 'nova city hospital', -2, -7, 5, 4, 'NOVA CITY HOSPITAL\nthe lights never go off up there.\ncosmetic wing: inside, at the desk.'); walkIn('hospital');
+    landmark(M0, 'pagoda', 'pagoda', 4, 1, 3, 3, 'an old gate. older than the hospital,\nor built to look it.'); walkIn('pagoda');
+    landmark(N0, 'greattree', 'the great tree', -2, -6, 4, 4, 'NOVA CITY PARK\nthe tree is warm to the touch.'); walkIn('greattree');
+    landmark(Y0, 'market', 'the market hall', -3, -3, 6, 2, 'the market. fruit, records, gossip.\neverything is a little cheaper if you smile.'); walkIn('market');
+    var arcadeDoor = landmark(R0, 'arcade', 'arcade', -3, -1, 4, 2, 'ARCADE\nthe sign is a knife. the high score is "HEX".'); walkIn('arcade');
 
     /* noorborj: the lighthouse on redrum's northern tip */
     /* the tip is wherever redrum reaches furthest north, not always above its centre */
     var top = R0.cy, tipX = R0.cx;
     for (var ty = 0; ty < H && top === R0.cy; ty++) for (var tx = 0; tx < W; tx++) if (dist[at(tx, ty)] === R0.index) { top = ty; tipX = tx; break; }
     landmark(R0, 'noorborj', 'noorborj', tipX - R0.cx - 1, top - R0.cy + 1, 3, 4, 'NOORBORJ\na lighthouse. the door does not have a handle on this side.', true);
+    marks[marks.length - 1].shut = 'no handle. no keyhole.\nyou knock anyway. nothing knocks back.';
 
     /* shops: a front the size of the place, the keeper outside the door.
        names and prices live in shops.js; this only says where */
@@ -210,7 +214,7 @@
                    { id: 'static-threads', d: W0, dx: 6, dy: -7, art: 'threads' },
                    { id: 'el-trapo', d: Y0, dx: -9, dy: -8, art: 'threads' },
                    { id: 'back-alley', d: R0, dx: 1, dy: 2, art: 'threads' }];
-    var shopKeepers = [{ id: 'shop-nova-hospital', x: hospDoor.x + 1, y: hospDoor.y, dir: 'down', look: 'medic', shop: 'nova-hospital', still: true }];
+    var shopKeepers = [];
     SHOP_AT.forEach(function (sp) {
       var info = root.MFShops && root.MFShops.SHOPS[sp.id], kind = info && root.MFShops.KINDS[info.kind];
       var door = landmark(sp.d, sp.art, info ? info.name : sp.id, sp.dx, sp.dy, 3, 2,
@@ -353,20 +357,182 @@
     { id: 'sofa', x: 2, y: 4, w: 3, h: 1, text: 'the sofa remembers whoever had it before.\nit\'s getting used to you.' },
     { id: 'tv', x: 6, y: 4, w: 1, h: 1, text: 'static on every channel.\nyou leave it on anyway. it\'s company.' }
   ];
+  /* the big buildings, one room each. same map letters, plus : tiled
+     floor, " moss, T tree. people: look, lines, and a shop if they keep one.
+     PLACEHOLDER lines, flavour only, in the crowd's voice: nothing in here
+     is canon until it is written down */
+  var ROOMS = {
+    arcade: { d: 'redrum', floor: T.CHECK, map: [
+      '##############',
+      '#::::::::::::#',
+      '#::::::::::::#',
+      '#::::::::::::#',
+      '#::::::::::::#',
+      '#::::::::::::#',
+      '#::::::::::::#',
+      '#::::::::::::#',
+      '######==######'],
+      things: [
+        { id: 'cabinet', x: 2, y: 1, w: 1, h: 1, text: 'KNIFE FIGHT II\nhigh score: HEX. second: HEX. third: HEX.' },
+        { id: 'cabinet', x: 4, y: 1, w: 1, h: 1, text: 'NEON DRIFT\nthe seat is still warm.' },
+        { id: 'cabinet', x: 6, y: 1, w: 1, h: 1, text: 'out of order.\nsomeone wrote "ask hex" on the tape.' },
+        { id: 'claw', x: 9, y: 1, w: 2, h: 1, text: 'a claw machine full of plush ghosts.\nnobody has ever won one. nobody.' },
+        { id: 'cabinet', x: 2, y: 5, w: 1, h: 1, text: 'a dance machine.\nthe arrows are worn white.' },
+        { id: 'cabinet', x: 4, y: 5, w: 1, h: 1, text: 'a shooting game.\nthe guns are chained down. good.' },
+        { id: 'prize', x: 9, y: 5, w: 3, h: 1, text: 'the prize counter. tokens for a keychain,\nor ten thousand for the big plush.\nnobody has ten thousand.' }],
+      people: [
+        { x: 7, y: 3, look: 'gen', seed: 6601, lines: ['the arcade is neutral ground. mostly.', 'a year i\'ve been trying for that high score.\nit\'s not happening.'] },
+        { x: 11, y: 7, look: 'merc', lines: ['no fighting in here.\noutside is different.'] }] },
+    tower: { d: 'worldwood', map: [
+      '##########',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '####==####'],
+      things: [
+        { id: 'lift', x: 4, y: 0, w: 2, h: 1, text: 'the lift says OUT OF TUNE.\nsomeone is fixing it. someone always is.' },
+        { id: 'glass', x: 1, y: 2, w: 1, h: 3, text: 'coloured glass, floor to ceiling.\nput a hand on it and it hums back.' },
+        { id: 'glass', x: 8, y: 2, w: 1, h: 3, text: 'the colours drift when nobody\'s looking.\nyou looked. they stopped.' },
+        { id: 'fork', x: 4, y: 4, w: 2, h: 2, text: 'a tuning fork the size of a person.\nthe plaque says which note. the plaque is scratched off.' },
+        { id: 'bench', x: 1, y: 8, w: 2, h: 1, text: 'a bench. sit long enough\nand you start humming along.' },
+        { id: 'bench', x: 7, y: 8, w: 2, h: 1, text: 'someone carved a tune into the bench.\njust the notes. no words.' }],
+      people: [
+        { x: 7, y: 6, look: 'clerk', still: true, lines: ['they tuned it to a song.\nsix years i\'ve worked here, still can\'t hum it.', 'the top floors are closed for tuning.\nthey\'re always closed for tuning.'] }] },
+    ncpd: { d: 'haven', map: [
+      '##############',
+      '#....#.......#',
+      '#....#.......#',
+      '#....#.......#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '######==######'],
+      things: [
+        { id: 'bars', x: 1, y: 3, w: 4, h: 1, text: 'a holding cell. empty. spotless.\nthe cleanest cell in teknoa.' },
+        { id: 'board', x: 7, y: 0, w: 2, h: 1, text: 'WANTED: nobody.\nhaven has no crime.' },
+        { id: 'desk', x: 8, y: 2, w: 3, h: 1, text: 'the front desk. a bell, a pen on a chain,\na sign: TAKE A NUMBER. there are no numbers.' },
+        { id: 'tv', x: 6, y: 4, w: 1, h: 1, text: 'security monitors. every screen shows this room.\none of them shows it a second late.' },
+        { id: 'bench', x: 1, y: 6, w: 3, h: 1, text: 'a bench bolted to the floor.\nso is the pen. so is everything.' },
+        { id: 'bench', x: 10, y: 6, w: 3, h: 1, text: 'you sit. a camera turns to look at you.\nyou stand up.' }],
+      people: [
+        { x: 12, y: 1, look: 'clerk', still: true, lines: ['do you have an appointment to report a crime?', 'haven has no crime. we checked.\ntwice. in triplicate.'] }] },
+    hospital: { d: 'majinryu', floor: T.CHECK, map: [
+      '##############',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '######==######'],
+      things: [
+        { id: 'desk', x: 5, y: 2, w: 4, h: 1, text: 'reception. take a number.\nthe screen says NOW SERVING: 0.' },
+        { id: 'bed', x: 11, y: 1, w: 2, h: 2, text: 'a bed behind a curtain. someone left flowers.\nnobody\'s in it.' },
+        { id: 'bench', x: 1, y: 5, w: 3, h: 1, text: 'the waiting room chairs are joined together.\nso, eventually, are you.' },
+        { id: 'bench', x: 1, y: 7, w: 3, h: 1, text: 'the number hasn\'t changed\nsince you sat down.' },
+        { id: 'plant', x: 12, y: 4, w: 1, h: 1, text: 'a plant. plastic.\nthe only thing in here that isn\'t clean.' },
+        { id: 'desk', x: 10, y: 8, w: 3, h: 1, text: 'COSMETIC WING\nskin, eyes, marks. talk to the medic.' }],
+      people: [
+        { x: 11, y: 7, look: 'medic', still: true, shop: 'nova-hospital', dir: 'down' },
+        { x: 4, y: 3, look: 'gen', seed: 6602, lines: ['the hospital patched my arm.\nworks better than the old one.'] }] },
+    pagoda: { d: 'majinryu', map: [
+      '#########',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '####=####'],
+      things: [
+        { id: 'shrine', x: 3, y: 1, w: 3, h: 1, text: 'an offering bowl. someone left a joule.\nyou leave it there.' },
+        { id: 'lantern', x: 1, y: 2, w: 1, h: 1, text: 'every lantern is lit by hand.\nevery single one.' },
+        { id: 'lantern', x: 7, y: 2, w: 1, h: 1, text: 'this one is paper.\nthe flame inside isn\'t quite fire.' },
+        { id: 'lantern', x: 1, y: 6, w: 1, h: 1, text: 'a lantern, burning low.\nsomeone will be by to tend it. someone always is.' },
+        { id: 'bell', x: 7, y: 5, w: 1, h: 2, text: 'a bronze bell. you don\'t ring it.\nit hums anyway.' }],
+      people: [
+        { x: 5, y: 4, look: 'local', lines: ['we keep it painted.\nnobody remembers what colour it was first.', 'older than the hospital, or built to look it.\ni\'m not telling you which.'] }] },
+    greattree: { d: 'naturia', floor: T.GRASS, edge: T.TREE, map: [
+      'TTTTTTTTTTTT',
+      'TT""""""""TT',
+      'T""""""""""T',
+      'T""""""""""T',
+      'T""""""""""T',
+      'T""""""""""T',
+      'T""""""""""T',
+      'T""""""""""T',
+      'TT""""""""TT',
+      'TTTTT==TTTTT'],
+      things: [
+        { id: 'roots', x: 2, y: 1, w: 2, h: 1, text: 'the roots are warm.\nlike something asleep under them.' },
+        { id: 'pool', x: 4, y: 3, w: 4, h: 3, text: 'a pool inside the tree. it doesn\'t reflect you.\nit reflects a sky. there isn\'t one in here.' },
+        { id: 'shrooms', x: 9, y: 2, w: 1, h: 1, text: 'mushrooms that glow when you talk.\nyou whisper. they glow anyway.' },
+        { id: 'shrooms', x: 2, y: 7, w: 1, h: 1, text: 'don\'t pick the blue ones.\nthey don\'t like it.' }],
+      people: [
+        { x: 9, y: 6, look: 'ape', lines: ['...', 'the tree likes quiet.\nso do i.'] }] },
+    market: { d: 'yucayeque', map: [
+      '##############',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '#............#',
+      '######==######'],
+      things: [
+        { id: 'stall', x: 1, y: 2, w: 2, h: 1, text: 'mangoes, three for a joule.\ntwo if you can carry a tune.' },
+        { id: 'stall', x: 5, y: 2, w: 2, h: 1, text: 'a crate of records with no labels.\nthe seller says that\'s how you know they\'re good.' },
+        { id: 'stall', x: 9, y: 2, w: 2, h: 1, text: 'spices in jars. one jar just says "abuela".\nnot for sale.' },
+        { id: 'stall', x: 1, y: 5, w: 2, h: 1, text: 'patties. the good ones.\nthey charge more if you say who sent you.' },
+        { id: 'stall', x: 9, y: 5, w: 2, h: 1, text: 'old radios, all on the same station.\nit\'s playing the drums from outside.' }],
+      people: [
+        { x: 2, y: 1, look: 'local', still: true, dir: 'down', lines: ['haggle. it\'s rude not to.'] },
+        { x: 10, y: 1, look: 'local', still: true, dir: 'down', lines: ['everything\'s a little cheaper if you smile.\nnot that cheap.'] },
+        { x: 6, y: 6, look: 'gen', seed: 6603, lines: ['everyone here is somebody\'s cousin.\ngive it a week.'] }] }
+  };
+
+  /* any room: an apartment (by district id) or a big building (ROOMS).
+     marks are the furniture, people are whoever is in tonight */
   function room(id) {
-    var di = -1;
-    DISTRICTS.forEach(function (d, i) { if (d.id === id) di = i; });
+    var def = ROOMS.hasOwnProperty(id) ? ROOMS[id] : null, di = -1, info = null;
+    var did = def ? def.d : id;
+    DISTRICTS.forEach(function (d, i) { if (d.id === did) di = i; });
     if (di < 0) return null;
-    var info = root.MFShops && root.MFShops.HOMES[id];
-    var w = ROOM[0].length, h = ROOM.length, tile = new Uint8Array(w * h), dist = new Int8Array(w * h).fill(di), marks = [];
-    ROOM.forEach(function (r, y) {
-      for (var x = 0; x < w; x++) tile[y * w + x] = r.charAt(x) === '#' ? T.WALL : r.charAt(x) === '=' ? T.MAT : T.FLOOR;
+    if (!def) {
+      info = root.MFShops && root.MFShops.HOMES[id];
+      def = { map: ROOM, things: FURNITURE, people: [], spawn: { x: 4, y: 6, dir: 'up' } };
+    }
+    var map = def.map, w = map[0].length, h = map.length, tile = new Uint8Array(w * h), dist = new Int8Array(w * h).fill(di), marks = [], npcs = [];
+    var floor = def.floor || T.FLOOR, edge = def.edge || T.WALL, mat = [];
+    map.forEach(function (r, y) {
+      for (var x = 0; x < w; x++) {
+        var c = r.charAt(x);
+        tile[y * w + x] = c === '#' ? T.WALL : c === 'T' ? T.TREE : c === '=' ? T.MAT : c === '"' ? T.GRASS : c === ':' ? T.CHECK : floor;
+        if (c === '=') mat.push(x);
+      }
     });
-    FURNITURE.forEach(function (f) {
+    def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
-      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: id, bed: !!f.bed, text: f.view ? (info ? info.view : 'the city.') : f.text });
+      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text });
     });
-    return { W: w, H: h, tile: tile, dist: dist, marks: marks, signs: [], npcs: [], home: id, spawn: { x: 4, y: 6, dir: 'up' } };
+    (def.people || []).forEach(function (p, i) {
+      npcs.push({ id: id + '-' + i, x: p.x, y: p.y, dir: p.dir || 'down', look: p.look, seed: p.seed, lines: p.lines, shop: p.shop, still: !!p.still, roam: 2 });
+    });
+    /* you come in standing just inside the mat, facing in */
+    var spawn = def.spawn || { x: mat[0], y: h - 2, dir: 'up' };
+    return { W: w, H: h, tile: tile, dist: dist, marks: marks, signs: [], npcs: npcs, spawn: spawn, floor: floor, edge: edge,
+             home: ROOMS.hasOwnProperty(id) ? '' : id, place: ROOMS.hasOwnProperty(id) ? id : '' };
   }
 
   function solid(world, x, y) {
@@ -416,5 +582,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, room: room, solid: solid, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, room: room, ROOMS: ROOMS, solid: solid, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);
