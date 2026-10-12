@@ -401,7 +401,18 @@
       $('opJ').textContent = MF.fmtJ(MF.joules(s));
       inv.innerHTML = ''; met.innerHTML = '';
       var SH = window.MFShops, gd = function (k) { return SH && SH.goods ? SH.goods(k) : null; };
-      Object.keys(s.items).forEach(function (k) { var g = gd(k); inv.appendChild(li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : ''), g ? g.what : D.items[k])); });
+      Object.keys(s.items).forEach(function (k) {
+        var g = gd(k), row = li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : ''), g ? g.what : D.items[k]);
+        /* take-away food: eat or drink it from here */
+        if (SH && SH.FOODS && SH.FOODS[k]) {
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'eat';
+          b.textContent = SH.FOODS[k].food ? 'EAT' : 'DRINK';
+          b.addEventListener('click', function () { if (SH.eat(MF, s, k).ok) { if (store) MF.save(s, store); $('invBtn').click(); $('invBtn').click(); } });
+          row.appendChild(b);
+        }
+        inv.appendChild(row);
+      });
+      if (s.body) inv.insertBefore(li('food ' + Math.round(s.body.food) + '% · drink ' + Math.round(s.body.drink) + '%', s.body.buff && s.body.buffT > 0 ? s.body.buff + ', ' + Math.ceil(s.body.buffT / 60) + ' more minutes' : ''), inv.firstChild);
       if (SH && SH.FISH && Object.keys(s.fishlog || {}).length) inv.appendChild(li('fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds', Object.keys(s.fishlog).map(function (k) { return SH.FISH[k] ? SH.FISH[k].name.replace(/^(a|an) /, '') : k; }).join(', ') + '.'));
       var RS = (window.MFShops && window.MFShops.RES) || {};
       Object.keys(s.res || {}).forEach(function (k) { if (RS[k]) inv.appendChild(li(RS[k].name + ' x' + s.res[k], RS[k].what)); });

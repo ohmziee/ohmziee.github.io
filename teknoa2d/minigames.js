@@ -44,6 +44,8 @@
   };
   function create(kind, rng, opts) {
     var g = (MAKE[kind] || MAKE.timber)(rng, opts);
+    /* tired hands: everything a little faster, a little meaner */
+    if (opts && opts.harder) { if (g.speed) g.speed *= opts.harder; if (g.kind === 'scrap') g.zone = [g.zone[0] + 3, g.zone[1] - 3]; }
     g.done = false; g.score = 0; g.perfect = false; g.t = 0;
     return g;
   }

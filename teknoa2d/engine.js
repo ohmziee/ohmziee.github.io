@@ -27,6 +27,7 @@
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
+             body: { food: 100, drink: 100, buff: '', buffT: 0 },  /* hunger and thirst (100 = full), a dish's perk and its seconds left */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -169,6 +170,8 @@
     if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
+    var b = s.body, num = function (v, d) { v = +v; return isFinite(v) ? Math.max(0, Math.min(100, v)) : d; };
+    s.body = { food: num(b.food, 100), drink: num(b.drink, 100), buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0) };
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
@@ -189,7 +192,32 @@
   }
   function wipe(store) { try { store.removeItem(SAVE_KEY); } catch (e) {} }
 
+  /* ── hunger and thirst ───────────────────────────────────────
+     they drain only while the game is being played (overworld.js calls
+     drain with the seconds that passed). running drains faster. under WEAK
+     you can't run and the games get harder; at 0 you faint */
+  var FOOD_SECS = 45 * 60, DRINK_SECS = 30 * 60, WEAK = 20, WAKE = 40;
+  function drain(s, secs, factor) {
+    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0);
+    b.food = Math.max(0, b.food - 100 * f / FOOD_SECS);
+    b.drink = Math.max(0, b.drink - 100 * f / DRINK_SECS);
+    if (b.buffT > 0) { b.buffT = Math.max(0, b.buffT - (+secs || 0)); if (!b.buffT) b.buff = ''; }
+    return b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) ? 'weak' : '';
+  }
+  function weak(s) { return s.body.food < WEAK || s.body.drink < WEAK; }
+  /* after a faint: back on your feet, not full */
+  function revive(s) { s.body.food = Math.max(s.body.food, WAKE); s.body.drink = Math.max(s.body.drink, WAKE); s.body.buff = ''; s.body.buffT = 0; }
+  /* eating or drinking: food/drink points, and maybe a perk for some seconds */
+  function consume(s, food, drink, buff, secs) {
+    s.body.food = Math.min(100, s.body.food + (food || 0));
+    s.body.drink = Math.min(100, s.body.drink + (drink || 0));
+    if (buff) { s.body.buff = buff; s.body.buffT = secs || 300; }
+    return s.body;
+  }
+  function buff(s, name) { return s.body.buff === name && s.body.buffT > 0; }
+
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
+              FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
               cleanHandle: cleanHandle, chippedIn: chippedIn, answer: answer, normalAnswer: normalAnswer,
               enter: enter, view: view, next: next, choose: choose,

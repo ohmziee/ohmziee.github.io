@@ -134,6 +134,7 @@ a{color:var(--lavender)}
 .panel h2{font-family:var(--font-display);font-size:.95rem;letter-spacing:.2em;color:var(--lavender);margin:1rem 0 .5rem}
 .panel ul{list-style:none;margin:0;padding:0}
 .panel li{padding:.35rem 0;border-bottom:1px dashed var(--violet)}
+.panel li .eat{float:right;margin-left:.5rem;font:inherit;font-size:.75rem;background:#141a2e;color:#7cffb2;border:1px solid #7cffb2;padding:.1rem .4rem;cursor:pointer}
 .panel li .d{display:block;color:var(--rain);font-size:.85rem}
 .panel .dim,.panel .empty{color:var(--rain);font-size:.85rem}
 .panel textarea{width:100%;background:var(--void);color:var(--ice);border:1px solid var(--violet);font:inherit;font-size:.75rem;padding:.4rem;resize:vertical;word-break:break-all}
@@ -271,6 +272,17 @@ a{color:var(--lavender)}
 .mlanes{position:relative;height:80px;border:2px solid #dce3ff;background:linear-gradient(90deg,#141a2e 33%,#10162a 33% 66%,#141a2e 66%)}
 .mlanes .fr{position:absolute;width:12px;height:12px;margin-left:-2px;background:#ff8a3a;border:2px solid #0b0d1a}
 .mlanes .bk{position:absolute;bottom:2px;width:25%;height:8px;background:#c8a878;border:2px solid #0b0d1a}
+/* hunger and thirst: two little bars under the joules */
+.wbody{position:absolute;top:2.6rem;right:.4rem;display:grid;grid-template-columns:auto 4.5rem;gap:.2rem .35rem;align-items:center;padding:.3rem .45rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#dce3ff;font:clamp(.42rem,1.2vw,.52rem)/1 var(--font-pixel);pointer-events:none}
+.wbody .bar{display:block;height:6px;background:#141a2e;border:1px solid #3a3150}
+.wbody .bar i{display:block;height:100%;background:#ff8a3a;transition:width .4s}
+.wbody .bar i.dr{background:#7cf5ff}
+.wbody.low{border-color:#ff4f5e;animation:lowpulse 1.2s ease-in-out infinite}
+@keyframes lowpulse{50%{border-color:#dce3ff}}
+.wbody .bf{grid-column:1/-1;color:#7cffb2}
+.wbody .bf:empty{display:none}
+.world.fainted .wscreen canvas{filter:brightness(0);transition:filter 1.2s}
+@media (prefers-reduced-motion:reduce){.wbody.low{animation:none}}
 .wj .gain{position:absolute;right:.4rem;top:100%;color:#ffe97c;opacity:0;white-space:nowrap;text-shadow:0 0 6px rgba(255,233,124,.6)}
 .wj .gain.on{animation:jgain 1.4s ease-out forwards}
 @keyframes jgain{0%{opacity:0;transform:translateY(.6rem)}15%{opacity:1}100%{opacity:0;transform:translateY(-.4rem)}}

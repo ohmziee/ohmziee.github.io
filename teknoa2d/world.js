@@ -324,6 +324,19 @@
       }
       return null;
     }
+    /* food carts: one per district, on the street (shops.js VENDORS) */
+    [['patty-cart', Y0, 2, 5], ['noodle-cart', W0, -2, 4], ['dumpling-cart', M0, 3, -2], ['juice-stand', N0, 4, 1], ['tea-stall', H0, 2, -3], ['skewer-guy', R0, -1, 2]].forEach(function (c) {
+      var at2 = standIn(c[1], c[2], c[3]), v = root.MFShops && root.MFShops.VENDORS[c[0]];
+      if (at2) npcs.push({ id: c[0], x: at2[0], y: at2[1], dir: 'down', look: c[0] === 'juice-stand' ? 'ape' : 'cook', name: v ? v.name : c[0], vend: c[0], still: true });
+    });
+    /* restaurants: a front somewhere clear, a room behind it */
+    var nbAt = clearSpot(W0, 3, 2, 3, -4);
+    if (nbAt) { landmark(W0, 'noodlebar', 'no sign', nbAt[0], nbAt[1], 3, 2, '...\nthere is no sign. that is the sign.', true); walkIn('noodlebar'); }
+    var thAt = clearSpot(M0, 3, 2, -3, 5);
+    if (thAt) { landmark(M0, 'teahouse', 'the tea house', thAt[0], thAt[1], 3, 2, 'THE TEA HOUSE\nask for the house blend.\ndon\'t ask what\'s in it.', true); walkIn('teahouse'); }
+    /* haven's fountain: filtered three times. you could drink it */
+    var ftAt = clearSpot(H0, 2, 2, 0, 1);
+    if (ftAt) { landmark(H0, 'fountain', 'fountain', ftAt[0], ftAt[1], 2, 2, 'A HAVEN FOUNTAIN\nfiltered three times. please do not drink from the fountain.', true); marks[marks.length - 1].fountain = 1; }
     var hustle = standIn(R0, 2, 4), runner = standIn(R0, -3, -2);
     if (hustle) npcs.push({ id: 'hustler', x: hustle[0], y: hustle[1], dir: 'down', look: 'merc', name: 'DICE', game: 'dice', house: 'street', still: true });
     if (runner) npcs.push({ id: 'numbers', x: runner[0], y: runner[1], dir: 'down', look: 'gen', seed: 8801, name: 'NUMBERS', game: 'lotto', house: 'street', still: true });
@@ -740,6 +753,37 @@
         { id: 'shrooms', x: 2, y: 7, w: 1, h: 1, text: 'don\'t pick the blue ones.\nthey don\'t like it.' }],
       people: [
         { x: 9, y: 6, look: 'ape', lines: ['...', 'the tree likes quiet.\nso do i.'] }] },
+    /* restaurants: a counter that serves (vend), a cook, people eating */
+    noodlebar: { d: 'worldwood', map: [
+      '##########',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '####==####'],
+      things: [
+        { id: 'counter', x: 2, y: 1, w: 3, h: 1, vend: 'noodle-bar', text: 'the counter. steam, and a menu written on the wall in marker.' },
+        { id: 'bench', x: 1, y: 4, w: 3, h: 1, text: 'a bench. everyone sits too close. nobody minds.' },
+        { id: 'bench', x: 6, y: 4, w: 3, h: 1, text: 'someone carved a bowl into the wood.\nand a face. the face is eating.' }],
+      people: [
+        { x: 6, y: 1, look: 'cook', name: 'COOK', still: true, lines: ['the broth? been going since the crossing.\nso they tell me. i got here tuesday.', 'sit anywhere. the counter, if you\'re hungry.'] },
+        { x: 2, y: 3, look: 'gen', seed: 9901, lines: ['best noodles in worldwood.\ndon\'t tell anyone. there\'s already a queue.'] }] },
+    teahouse: { d: 'majinryu', map: [
+      '#########',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '#.......#',
+      '####=####'],
+      things: [
+        { id: 'counter', x: 2, y: 1, w: 3, h: 1, vend: 'tea-house', text: 'the tea counter. a hundred jars. none labelled.' },
+        { id: 'lantern', x: 7, y: 1, w: 1, h: 1, text: 'a paper lantern. it smells like tea.' },
+        { id: 'bench', x: 1, y: 4, w: 2, h: 1, text: 'low cushions. very soft. dangerously soft.' }],
+      people: [
+        { x: 5, y: 1, look: 'local', name: 'TEA MASTER', still: true, lines: ['the house blend steadies the hands.\nwhat\'s in it is between me and the leaves.', 'interns from the labs drink it before exams.\nthey never say which exams.'] },
+        { x: 5, y: 4, look: 'android', lines: ['i cannot taste the tea.\ni come for the steam.'] }] },
     /* the back room: redrum's own casino. no door, no dress code, small change */
     backroom: { d: 'redrum', house: 'dive', map: [
       '############',
@@ -803,10 +847,10 @@
       '#............#',
       '######==######'],
       things: [
-        { id: 'stall', x: 1, y: 2, w: 2, h: 1, text: 'mangoes, three for a joule.\ntwo if you can carry a tune.' },
+        { id: 'stall', x: 1, y: 2, w: 2, h: 1, vend: 'market-mangoes', text: 'mangoes, three for a joule.\ntwo if you can carry a tune.' },
         { id: 'stall', x: 5, y: 2, w: 2, h: 1, text: 'a crate of records with no labels.\nthe seller says that\'s how you know they\'re good.' },
         { id: 'stall', x: 9, y: 2, w: 2, h: 1, text: 'spices in jars. one jar just says "abuela".\nnot for sale.' },
-        { id: 'stall', x: 1, y: 5, w: 2, h: 1, text: 'patties. the good ones.\nthey charge more if you say who sent you.' },
+        { id: 'stall', x: 1, y: 5, w: 2, h: 1, vend: 'market-patties', text: 'patties. the good ones.\nthey charge more if you say who sent you.' },
         { id: 'stall', x: 9, y: 5, w: 2, h: 1, text: 'old radios, all on the same station.\nit\'s playing the drums from outside.' }],
       people: [
         { x: 2, y: 1, look: 'local', still: true, dir: 'down', lines: ['haggle. it\'s rude not to.'] },
@@ -837,7 +881,7 @@
     def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
       marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
-                   game: f.game, house: f.game ? f.house || def.house : undefined });
+                   game: f.game, house: f.game ? f.house || def.house : undefined, vend: f.vend });
     });
     (def.people || []).forEach(function (p, i) {
       npcs.push({ id: id + '-' + i, x: p.x, y: p.y, dir: p.dir || 'down', look: p.look, seed: p.seed, lines: p.lines, shop: p.shop, name: p.name, still: !!p.still, roam: 2 });

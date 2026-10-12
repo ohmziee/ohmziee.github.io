@@ -333,6 +333,24 @@
     px(g, OUT, 2, 0, 12, 16); px(g, '#8a1a2a', 3, 1, 10, 14); px(g, '#f2c94c', 3, 1, 10, 2);
     px(g, '#f4f6ff', 4, 5, 8, 4); px(g, '#c4473a', 5, 6, 2, 2); px(g, '#f2c94c', 9, 6, 2, 2); px(g, '#9aa0b8', 13, 4, 2, 6);
   };
+  /* no sign: a steamy window, a red lantern, nothing else */
+  MARK_ART.noodlebar = function (g, w, h) {
+    px(g, '#1c1736', 0, 0, w, h); px(g, '#2a1d5e', 0, 0, w, 3);
+    px(g, OUT, 4, 8, 22, 14); px(g, '#c8ccd8', 5, 9, 20, 12); for (var i = 0; i < 4; i++) px(g, '#f4f6ff', 7 + i * 5, 11 + (i % 2) * 3, 3, 2);
+    px(g, '#c4473a', w - 12, 5, 6, 8); px(g, '#ffd36a', w - 11, 7, 4, 4);
+    px(g, OUT, w - 14, 16, 10, 16); px(g, '#c4473a', w - 13, 17, 8, 15);
+  };
+  MARK_ART.teahouse = function (g, w, h) {
+    px(g, '#2a1e22', 0, 0, w, h); px(g, '#a83030', 0, 0, w, 5); px(g, '#7a2020', 2, 5, w - 4, 2);
+    px(g, '#3a5a3a', 6, 10, 12, 10); px(g, '#ffd36a', 8, 12, 8, 1); px(g, '#ffd36a', 8, 15, 8, 1);
+    px(g, OUT, w - 14, 14, 10, h - 14); px(g, '#5a3a22', w - 13, 15, 8, h - 15);
+    px(g, '#ff6a3a', 22, 8, 3, 4);
+  };
+  MARK_ART.fountain = function (g, w, h) {
+    px(g, '#8a92a6', 0, h - 10, w, 10); px(g, '#c8ccd8', 1, h - 10, w - 2, 2); px(g, '#2f69a0', 3, h - 8, w - 6, 5);
+    px(g, '#c8ccd8', (w >> 1) - 3, 6, 6, h - 14); px(g, '#7cf5ff', (w >> 1) - 1, 1, 2, 8);
+    for (var i = 0; i < 4; i++) px(g, '#bfe4ff', 6 + i * 6, h - 7, 2, 1);
+  };
   /* the back room's door: no sign, a light under it */
   MARK_ART.backroom = function (g, w, h) {
     px(g, '#1a080c', 0, 0, w, h); px(g, '#2a1014', 0, 0, w, 3);
@@ -543,6 +561,7 @@
     koga:    { H: '#14100c', B: '#14100c', S: '#8a6a54', C: '#2f6a3a', c: '#1f4a2a', P: '#2a2018', k: '#1a1410', A: '#c4473a', marks: 'scar', fur: 1 },
     /* enzo: classic grey suit and tie, slightly balding (vault: Enzo) */
     enzo:    { H: '#5a4a3a', B: '#5a4a3a', S: '#e8c0a0', C: '#6a6a72', c: '#4a4a52', P: '#4a4a52', k: '#111', hair: 'buzz', acc: 'choker', A: '#8a1a2a' },
+    cook:    { H: '#f4f6ff', B: '#2a2018', S: '#c88a64', C: '#f4f6ff', c: '#c8ccd8', P: '#2a2f4a', k: '#111', hair: 'buzz' },
     bouncer: { H: '#111', B: '#111', S: '#7a4a30', C: '#111118', c: '#08080c', P: '#111118', k: '#000', hair: 'buzz', acc: 'glasses', A: '#222' },
     shipwright: { H: '#9aa0a8', B: '#9aa0a8', S: '#b07a52', C: '#2f5a6a', c: '#1f3a48', P: '#3a3020', k: '#1a1410', hair: 'buzz', beard: 'full', A: '#f2c94c', acc: 'cap' },
     barber:  { H: '#14121c', B: '#14121c', S: '#a06a48', C: '#dce3ff', c: '#9aa0b8', P: '#2a2f4a', k: '#111', hair: 'buzz', beard: 'full' }
@@ -795,6 +814,7 @@
       }
       /* someone running a game on the street */
       if (n.game) return openTable(n.game, n.house || 'street');
+      if (n.vend) return openCounter(n.vend);
       if (n.name && n.lines) { n.said = ((n.said || 0) + 1) % n.lines.length; return say([n.lines[n.said]], n.name); }
       if (n.koga) { n.said = ((n.said || 0) + 1) % M.KOGA.length; return say([M.KOGA[n.said]], 'Koga'); }
       if (n.pool !== undefined && n.kind) return say([chatter(n)]);
@@ -829,6 +849,13 @@
       return goIn(m.room);
     }
     if (m && m.game) return openTable(m.game, m.house || 'grand');
+    if (m && m.vend) return openCounter(m.vend);
+    if (m && m.fountain) {
+      window.MF.consume(s, 0, 20);
+      if (api.save) api.save();
+      drawBody();
+      return say(['you drink from the fountain anyway.\nit tastes like a permit.']);
+    }
     if (m && m.shut) return say([m.shut]);
     if (m && m.text) {
       if (m.bed && inside) { s.wake = inside.id; if (api.save) api.save(); }
@@ -989,7 +1016,7 @@
      sell at a pawn shop, B leaves. rows can be tapped too */
   var counter = null, cPrev = {};
   function openCounter(id) {
-    var st = window.MFShops.STORES[id];
+    var st = window.MFShops.place(id);
     if (!st) return;
     counter = { id: id, tab: 'buy', sel: 0, msg: st.line };
     cPrev = { up: !!held.up, down: !!held.down, left: !!held.left, right: !!held.right, b: !!held.b };
@@ -1004,7 +1031,12 @@
     if (!r) return;
     counter.sel = i;
     var t = window.MFShops.trade(window.MF, s, counter.id, counter.tab, r.key);
-    if (t.ok) {
+    if (t.ok && t.ate) {
+      counter.msg = 'you have ' + t.name + '.' + (t.buff ? ' ' + t.buff + '!' : '');
+      wallet('-' + window.MF.fmtJ(t.price));
+      drawBody();
+      if (api.save) api.save();
+    } else if (t.ok) {
       counter.msg = (counter.tab === 'buy' ? 'bought ' : 'sold ') + t.name + ' for ' + window.MF.fmtJ(t.price) + '.';
       wallet((counter.tab === 'buy' ? '-' : '+') + window.MF.fmtJ(t.price));
       if (api.save) api.save();
@@ -1014,7 +1046,7 @@
     drawCounter();
   }
   function tickCounter() {
-    var st = window.MFShops.STORES[counter.id];
+    var st = window.MFShops.place(counter.id);
     function edge(k) { var e = !!held[k] && !cPrev[k]; cPrev[k] = !!held[k]; return e; }
     var up = edge('up'), down = edge('down'), lf = edge('left'), rt = edge('right'), b = edge('b'), a = pressedA;
     pressedA = false;
@@ -1026,7 +1058,7 @@
     if (a) counterAct(counter.sel);
   }
   function drawCounter() {
-    var st = window.MFShops.STORES[counter.id], rows = counterRows(), list = $('wCounterList');
+    var st = window.MFShops.place(counter.id), rows = counterRows(), list = $('wCounterList');
     $('wCounterT').textContent = st.name;
     $('wCounterTabs').hidden = st.kind !== 'pawn';
     [].forEach.call($('wCounterTabs').children, function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === counter.tab ? 'true' : 'false'); });
@@ -1042,6 +1074,52 @@
     });
     if (!rows.length) { var p = document.createElement('p'); p.className = 'cnone'; p.textContent = counter.tab === 'sell' ? 'nothing they want. go gather something.' : 'sold out.'; list.appendChild(p); }
     $('wCounterM').textContent = counter.msg;
+  }
+
+  /* ── hunger and thirst (engine.js drain): the hud, tired, fainting ── */
+  var tired = false, bodyT = 0, fainting = 0, warned = false;
+  function body(dt, now) {
+    var MF = window.MF;
+    if (!MF.drain || fainting) { if (fainting && now > fainting) wakeUp(); return; }
+    var state = MF.drain(s, dt, held.b && me.moving && !me.sail ? 1.5 : 1);
+    tired = state !== '';
+    if (state === 'faint') return faint(now);
+    if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
+    if (!tired) warned = false;
+    if (now - bodyT > 400) { bodyT = now; drawBody(); }
+  }
+  function drawBody() {
+    var b = s.body, f = Math.round(b.food), d = Math.round(b.drink);
+    $('wFood').style.width = f + '%'; $('wDrink').style.width = d + '%';
+    $('wBody').classList.toggle('low', f < window.MF.WEAK || d < window.MF.WEAK);
+    $('wBuff').textContent = b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
+  }
+  function faint(now) {
+    if (mini) closeMini(); if (counter) closeCounter(); if (table && !(table.hand && !table.hand.done)) closeTable();
+    talkBox = null; $('wTalk').hidden = true; me.moving = false; held = {};
+    fainting = now + 1800;
+    $('world').classList.add('fainted');
+  }
+  /* you come round in your own bed, or the hospital's (and it isn't free) */
+  function wakeUp() {
+    var MF = window.MF, home = s.wake && s.homes[s.wake] ? s.wake : Object.keys(s.homes || {})[0], line;
+    fainting = 0;
+    $('world').classList.remove('fainted');
+    MF.revive(s);
+    me.sail = false;
+    if (inside) goOut();
+    if (home) { goIn(home); line = ['you come round on your own floor.\nsomeone left a glass of water by the door. you don\'t ask who.']; }
+    else {
+      var bill = Math.min(300, Math.floor(MF.joules(s) * 0.1));
+      MF.spend(s, bill);
+      goIn('hospital');
+      wallet(bill ? '-' + MF.fmtJ(bill) : '');
+      line = ['you wake up in nova city hospital.\na medic is already writing the bill.', bill ? 'treatment: ' + MF.fmtJ(bill) + '. eat something. drink something.\nwe\'d rather not see you again tonight.' : 'no charge. you didn\'t have anything.\neat something. please.'];
+    }
+    warned = false;
+    if (api.save) api.save();
+    drawBody();
+    say(line, home ? '' : 'MEDIC');
   }
 
   /* ── the tables: casino.js plays, this deals ──────────────
@@ -1173,7 +1251,7 @@
   /* ── the gathering games ─────────────────────────────────── */
   var mini = null, prevL = false, prevR = false, prevB = false;
   function startMini(p) {
-    mini = { pile: p, g: window.MFMini.create(p.kind), end: 0 };
+    mini = { pile: p, g: window.MFMini.create(p.kind, null, tired ? { harder: 1.25 } : null), end: 0 };
     prevL = !!held.left; prevR = !!held.right; prevB = !!held.b; pressedA = false;
     $('wMini').hidden = false; $('wMini').className = 'wmini k-' + p.kind;
     $('wMiniT').textContent = mini.g.title;
@@ -1183,7 +1261,7 @@
   function cast(tx, ty, rod) {
     var SH = window.MFShops, zone = M.fishZone(world, tx, ty), lvl = SH.TOOLS[rod].level;
     var id = SH.pickFish(zone, Math.random, lvl, new Date().getHours()), f = SH.FISH[id];
-    mini = { fish: id, zone: zone, g: window.MFMini.create('fish', null, { hard: SH.TIER_HARD[f.tier], ease: lvl ? 0.85 : 1 }), end: 0 };
+    mini = { fish: id, zone: zone, g: window.MFMini.create('fish', null, { hard: SH.TIER_HARD[f.tier] * (tired ? 1.2 : 1), ease: (lvl ? 0.85 : 1) * (window.MF.buff(s, 'steady line') ? 0.75 : 1) }), end: 0 };
     prevL = !!held.left; prevR = !!held.right; prevB = !!held.b; pressedA = false;
     $('wMini').hidden = false; $('wMini').className = 'wmini k-fish';
     $('wMiniT').textContent = 'FISH · ' + SH.ZONES[zone].name;
@@ -1212,7 +1290,7 @@
     drawMini();
     if (!mini.g.done) return;
     if (mini.fish) return landFish(now);
-    var n = window.MFMini.amount(mini.pile.n, mini.g);
+    var n = window.MFMini.amount(mini.pile.n, mini.g) + (window.MF.buff(s, 'sharp eye') ? 1 : 0);
     collect(mini.pile, n, mini.g.perfect ? 'PERFECT' : mini.g.score >= 1 ? 'NICE' : mini.g.score > 0.4 ? 'OK' : '');
     $('wMiniH').textContent = (mini.g.perfect ? 'perfect! ' : mini.g.score >= 1 ? 'nice. ' : mini.g.score > 0.4 ? 'not bad. ' : 'rough. ') + '+' + n;
     mini.end = now + 1100;
@@ -1320,6 +1398,8 @@
   function update(now) {
     var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
+    body(dt, now);
+    if (fainting) return;
     if (mini) { tickMini(dt, now); return; }
     if (counter) { tickCounter(); return; }
     if (table) { tickTable(); return; }
@@ -1333,7 +1413,7 @@
     if (L) { L.step(dt, SPEED); online(now); }
     if (talkBox) return;
     if (me.moving) {
-      me.t += dt * SPEED * (me.sail ? 1.4 : held.b ? 2 : 1);
+      me.t += dt * SPEED * (me.sail ? 1.4 : held.b && !tired ? (window.MF.buff(s, 'fast feet') ? 2.5 : 2) : 1);
       if (me.t >= 1) {
         me.moving = false; me.t = 0;
         if (inside) {
@@ -1541,6 +1621,7 @@
     fit();
     district = -3; enterDistrict(world.dist[me.y * world.W + me.x]);
     wallet();
+    drawBody();
     goOnline();
     /* they saved indoors: back inside, where they stood if it still makes sense */
     if (at && at.in && canBeIn(at.in) && at.v === M.V) {
