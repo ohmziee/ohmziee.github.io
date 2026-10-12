@@ -378,7 +378,15 @@
   function code() { if (store) MF.save(s, store); return B && store ? B.pack(store) : MF.exportCode(s); }
   function backedUp() { try { store.setItem('exiled.backupAt', String(Date.now())); } catch (e) {} }
   $('sysBtn').addEventListener('click', function () {
-    toggle('sys', function () { $('code').value = code(); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; });
+    toggle('sys', function () { $('code').value = code(); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; onlineLabel(); });
+  });
+  /* the shared streets: on unless they say otherwise */
+  function onlineLabel() { $('onlineBtn').textContent = window.MFWorld && window.MFWorld.offline ? 'GO ONLINE' : 'GO OFFLINE'; }
+  $('onlineBtn').addEventListener('click', function () {
+    if (!window.MFWorld) return;
+    window.MFWorld.setOffline(!window.MFWorld.offline);
+    onlineLabel();
+    msg(window.MFWorld.offline ? 'offline. nobody sees you, you see nobody.' : 'online. say hi to the strangers.');
   });
   $('copyBtn').addEventListener('click', function () {
     var t = $('code').value;

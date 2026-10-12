@@ -217,6 +217,7 @@ a{color:var(--lavender)}
 
 /* the wallet: top right of the street, a gain floats up out of it */
 .wj{position:absolute;top:.4rem;right:.4rem;padding:.35rem .5rem .3rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#ffe97c;font:clamp(.48rem,1.4vw,.62rem)/1.2 var(--font-pixel);pointer-events:none}
+.won{position:absolute;top:.4rem;left:.4rem;padding:.35rem .5rem .3rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#b9a8ff;font:clamp(.48rem,1.4vw,.62rem)/1.2 var(--font-pixel);pointer-events:none}
 .wj .gain{position:absolute;right:.4rem;top:100%;color:#ffe97c;opacity:0;white-space:nowrap;text-shadow:0 0 6px rgba(255,233,124,.6)}
 .wj .gain.on{animation:jgain 1.4s ease-out forwards}
 @keyframes jgain{0%{opacity:0;transform:translateY(.6rem)}15%{opacity:1}100%{opacity:0;transform:translateY(-.4rem)}}

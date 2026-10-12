@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co wss://jmksgecmpzrsivujutma.supabase.co; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TEKNOA 2D // EXiLED</title>
 <meta name="description" content="nova city, from above.">
@@ -20,6 +20,7 @@
 <script src="shops.js" defer></script>
 <script src="world.js" defer></script>
 <script src="backup.js" defer></script>
+<script src="lobby.js" defer></script>
 <script src="overworld.js" defer></script>
 <script src="scenes.js" defer></script>
 <script src="../wiki/seal.js" defer></script>
@@ -85,6 +86,7 @@
     <div class="wscreen">
       <canvas id="wCanvas" aria-label="nova city, seen from above"></canvas>
       <div class="wj" aria-label="teknoan joules"><span id="wJ">⚡0</span><span class="gain" id="wJGain" aria-live="polite"></span></div>
+      <div class="won" id="wOn" hidden aria-live="polite"></div>
       <div class="wcard" id="wCard" hidden><img id="wCardImg" alt="" decoding="async"><div class="wcard-t"><b id="wCardName"></b><span id="wCardSub"></span></div></div>
       <div class="wtalk" id="wTalk" hidden><b id="wWho"></b><p id="wLine"></p><span class="more" aria-hidden="true">&#9660;</span></div>
     </div>
@@ -140,6 +142,9 @@
     <button type="button" id="fileBtn">LOAD A FILE</button>
     <input type="file" id="fileIn" accept=".save,.txt,text/plain" hidden>
     <p class="msg" id="sysMsg" role="status"></p>
+    <h2>STREETS</h2>
+    <p class="dim">other players walking nova city right now show up around you, and you show up for them: your handle, your look, where you stand. nothing else leaves this browser.</p>
+    <button type="button" id="onlineBtn">GO OFFLINE</button>
     <h2>WIPE</h2>
     <button type="button" id="wipeBtn" class="danger">WIPE THIS RUN</button>
   </aside>

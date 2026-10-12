@@ -10,7 +10,7 @@
    Keys: arrows / WASD move, Z / Enter / Space is A (talk, read), X / Shift
    held is B (run). Touch: the pad under the screen. */
 (function () {
-  var M = window.MFWorldMap, A = window.MFAvatar;
+  var M = window.MFWorldMap, A = window.MFAvatar, L = window.MFLobby;
   if (!M) return;
   var TS = 16, VW = 20, VH = 12;                       /* tile size, view in tiles */
   var T = M.T, D = M.DISTRICTS;
@@ -449,8 +449,9 @@
   function tryMove(dir) {
     me.dir = dir;
     var d = DIRS[dir], nx = me.x + d[0], ny = me.y + d[1];
-    if (occupied(nx, ny)) return;
+    if (occupied(nx, ny)) { if (L) L.moved(me.x, me.y, dir); return; }
     me.fx = me.x; me.fy = me.y; me.x = nx; me.y = ny; me.moving = true; me.t = 0; me.step ^= 1;
+    if (L) L.moved(nx, ny, dir);
   }
 
   /* ── talking ─────────────────────────────────────────────── */
@@ -484,6 +485,14 @@
       var said = n.said || 0;
       n.said = (said + 1) % n.lines.length;
       return say([n.lines[said]]);
+    }
+    /* another player: they can't hear you yet, but you can see who they are */
+    if (L) {
+      var here = L.list();
+      for (i = 0; i < here.length; i++) {
+        if (here[i].x !== tx || here[i].y !== ty) continue;
+        return say([(here[i].name || 'a stranger') + ' is walking the city too.'], here[i].name || '');
+      }
     }
     /* walking into a shop's front opens it too */
     for (i = 0; i < world.marks.length; i++) {
@@ -545,6 +554,7 @@
     if (di < 0 || di === district) return;
     district = di;
     var d = D[di], c = $('wCard');
+    if (L) L.setRoom(d.id);
     $('wCardImg').setAttribute('src', 'places/' + d.id + '.jpg');
     $('wCardImg').setAttribute('alt', d.name);
     $('wCardName').textContent = d.name; $('wCardSub').textContent = d.sub;
@@ -559,6 +569,7 @@
     var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
     if (pressedA) { pressedA = false; if (talkBox) nextLine(); else if (!me.moving) interact(); }
+    if (L) { L.step(dt, SPEED); online(now); }
     if (talkBox) return;
     if (me.moving) {
       me.t += dt * SPEED * (held.b ? 2 : 1);
@@ -630,10 +641,17 @@
     /* people, back to front */
     var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1 });
+    if (L) L.list().forEach(function (o) {
+      var ox = (o.t < 1 ? o.fx + (o.x - o.fx) * o.t : o.x) * TS, oy = (o.t < 1 ? o.fy + (o.y - o.fy) * o.t : o.y) * TS;
+      if (ox - cx < -TS || oy - cy < -TS || ox - cx > VW * TS || oy - cy > VH * TS) return;
+      who.push({ x: ox, y: oy, img: sprite(lookOf(o.look), o.dir, o.t > 0.25 && o.t < 0.75 ? 1 : 0), them: 1 });
+    });
     who.sort(function (a, b) { return a.y - b.y; });
     who.forEach(function (p) {
       ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(Math.round(p.x - cx) + 4, Math.round(p.y - cy) + 14, 8, 2);
       ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2);
+      /* a real person: a little violet pip over their head */
+      if (p.them) { px(ctx, OUT, Math.round(p.x - cx) + 6, Math.round(p.y - cy) - 7, 4, 4); px(ctx, '#b9a8ff', Math.round(p.x - cx) + 7, Math.round(p.y - cy) - 6, 2, 2); }
     });
     /* a little night over everything, and the rain the main page has */
     ctx.fillStyle = 'rgba(5,6,11,.14)'; ctx.fillRect(0, 0, VW * TS, VH * TS);
@@ -724,6 +742,7 @@
     district = -2; enterDistrict(world.dist[me.y * world.W + me.x]);
     wallet();
     nudge();
+    goOnline();
     if (!active) { active = true; last = 0; raf = requestAnimationFrame(loop); }
     try { $('world').focus(); } catch (e) {}
   }
@@ -741,7 +760,33 @@
       say(['your run only lives in this browser. clear the site data and it is gone.\nback it up: SYS, top right.']);
     }, 3200);
   }
+  /* ── the shared streets (lobby.js) ───────────────────────── */
+  function offline() { try { return localStorage.getItem('exiled.t2d.offline') === '1'; } catch (e) { return false; } }
+  function goOnline() {
+    if (!L) return;
+    if (offline() || document.hidden) { L.stop(); return; }
+    if (L.on) { L.restyle(A ? A.normalize(s.player.look) : s.player.look); return; }
+    L.start({ handle: s.player.handle, look: A ? A.normalize(s.player.look) : s.player.look, x: me.x, y: me.y, d: me.dir }, district >= 0 ? D[district].id : '');
+  }
+  var onShown = -1, onT = 0;
+  function online(now) {
+    if (now - onT < 500) return;
+    onT = now;
+    var n = L.on && L.live ? L.list().length : -1;
+    if (n === onShown) return;
+    onShown = n;
+    var el = $('wOn');
+    el.hidden = n < 0;
+    el.textContent = n === 0 ? 'just you here' : n === 1 ? '1 other here' : n + ' others here';
+  }
+  /* a hidden tab doesn't hold a seat in the street */
+  document.addEventListener('visibilitychange', function () { if (active) goOnline(); });
+  function setOffline(off) {
+    try { if (off) localStorage.setItem('exiled.t2d.offline', '1'); else localStorage.removeItem('exiled.t2d.offline'); } catch (e) {}
+    if (active) goOnline();
+  }
   function hide() {
+    if (L) L.stop();
     active = false; cancelAnimationFrame(raf); held = {};
     $('world').hidden = true;
   }
@@ -751,5 +796,5 @@
     var g = big.getContext('2d'); g.drawImage(sprite(lookOf(look), dir, step), 0, 0);
     return big;
   }
-  window.MFWorld = { show: show, hide: hide, preview: preview, get active() { return active; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, setOffline: setOffline, get offline() { return offline(); }, get active() { return active; } };
 })();
