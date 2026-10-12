@@ -451,7 +451,8 @@
   var STEP = { down: ['....PPP..PPP....', '....PPP...PP....', '....kkk...kk....'], up: ['....PPP..PPP....', '....PP...PPP....', '....kk...kkk....'],
                left: ['.....PPPPP......', '....PP..PP......', '....kk...kk.....'] };
   var LOOKS = {
-    hex:     { H: '#b14cff', h: '#ff4fd8', S: '#e8b48a', C: '#1a1a22', P: '#2a2a3a', k: '#0b0b10' },
+    /* magenta on the left, violet on the right, like her portrait */
+    hex:     { H: '#ff4fd8', h: '#b14cff', S: '#e8b48a', C: '#1a1a22', P: '#2a2a3a', k: '#0b0b10', A: '#c8ccd8', hair: 'hex', acc: 'choker' },
     reveler: { H: '#7cf5ff', S: '#c88a64', C: '#ff4fd8', P: '#2a2f4a', k: '#111' },
     local:   { H: '#1a1010', S: '#7a4a30', C: '#e8b13a', P: '#2f6f5e', k: '#111' },
     ape:     { H: '#2a2420', S: '#5a4a40', C: '#3a5a3a', P: '#2a2420', k: '#1a1410' },
@@ -483,6 +484,21 @@
         break;
       case 'spiky': [5, 7, 9, 11].forEach(function (sx) { put(0, side ? sx - 1 : sx, 'H'); }); break;
       case 'undercut': if (dir === 'down') { put(4, 4, 'S'); put(4, 11, 'S'); } break;
+      /* hex's: two high bunches, and the tails fall past her shoulders to her waist */
+      case 'hex':
+        if (side) {
+          for (y = 0; y <= 2; y++) { put(y, 11, 'H'); put(y, 12, 'H'); }
+          for (y = 3; y <= 12; y++) { put(y, 11, 'H'); put(y, 12, 'H'); }
+          put(13, 12, 'H');
+        } else {
+          for (y = 0; y <= 2; y++) { put(y, 2, 'H'); put(y, 3, 'H'); put(y, 12, 'H'); put(y, 13, 'H'); }
+          for (y = 3; y <= 12; y++) { put(y, 2, 'H'); put(y, 13, 'H'); }
+          for (y = 3; y <= 9; y++) { put(y, 3, 'H'); put(y, 12, 'H'); }
+          put(13, 2, 'H'); put(13, 13, 'H');
+          /* from behind, it hangs down her back too */
+          if (dir === 'up') for (y = 8; y <= 11; y++) for (x = 5; x <= 10; x++) put(y, x, 'H');
+        }
+        break;
     }
     /* facial hair, at walking size: a few pixels round the mouth */
     var bd = look.beard;
