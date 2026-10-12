@@ -228,7 +228,7 @@
     /* its cosmetic wing is a shop (shops.js: nova-hospital), at a desk inside */
     landmark(M0, 'hospital', 'nova city hospital', -2, -7, 5, 4, 'NOVA CITY HOSPITAL\nthe lights never go off up there.\ncosmetic wing: inside, at the desk.'); walkIn('hospital');
     landmark(M0, 'pagoda', 'pagoda', 4, 1, 3, 3, 'an old gate. older than the hospital,\nor built to look it.'); walkIn('pagoda');
-    landmark(N0, 'greattree', 'the great tree', -2, -6, 4, 4, 'NOVA CITY PARK\nthe tree is warm to the touch.'); walkIn('greattree');
+    var treeDoor = landmark(N0, 'greattree', 'the great tree', -2, -6, 4, 4, 'NOVA CITY PARK\nthe tree is warm to the touch.'); walkIn('greattree');
     landmark(Y0, 'market', 'the market hall', -3, -3, 6, 2, 'the market. fruit, records, gossip.\neverything is a little cheaper if you smile.'); walkIn('market');
     var arcadeDoor = landmark(R0, 'arcade', 'arcade', -3, -1, 4, 2, 'ARCADE\nthe sign is a knife. the high score is "HEX".'); walkIn('arcade');
 
@@ -329,7 +329,7 @@
       var sgx = sx + l.dir[0] * 2 + (l.dir[1] ? 1 : 0), sgy = sy + l.dir[1] * 2 + (l.dir[0] ? 1 : 0);
       set(sgx, sgy, T.GRASS, -2);
       signs.push({ x: sgx, y: sgy, text: l.name.toUpperCase() + '\n' + l.sign });
-      npcs.push({ id: 'landing-' + l.id, x: cx + 2, y: cy, dir: 'down', look: l.look, lines: l.lines, roam: 3 });
+      npcs.push({ id: 'landing-' + l.id, x: cx + 2, y: cy, dir: 'down', look: l.look, lines: l.lines, pool: '', kind: 'novan', coast: true, roam: 3 });
       landings2.push({ id: l.id, name: l.name, x: sx, y: sy, cx: cx, cy: cy });
     });
 
@@ -354,6 +354,9 @@
     person(Y0, 0, 6, 'local', ['you hungry? the patties two stalls down.\ntell them i sent you. they will charge you more.']);
     person(Y0, 5, -6, 'local', ['the music starts when the sun goes.\nit stops when the sun comes back. mostly.']);
     person(N0, 3, 4, 'ape', ['...', 'the plants glow because they are happy.\nbe quiet and they glow more.']);
+    /* koga: naturia's council representative, by the great tree (vault: Koga) */
+    carve(treeDoor.x + 3, treeDoor.y + 1, treeDoor.x, treeDoor.y, T.ROAD, { 9: 1 });
+    npcs.push({ id: 'koga', x: treeDoor.x + 3, y: treeDoor.y + 1, dir: 'down', look: 'koga', koga: true, still: true });
     person(H0, 4, 2, 'clerk', ['haven has no crime. we checked.\ntwice. in triplicate.']);
     person(M0, 1, 4, 'medic', ['the hospital is the best on teknoa.\nthe streets around it are not.']);
     person(R0, 3, 2, 'merc', ['redrum is not on any map the council prints.\nwe like it that way.', 'the lighthouse? do not go knocking.']);
@@ -383,6 +386,11 @@
       return out;
     }
 
+    /* near the water: the coast people call him the ferryman */
+    function coastal(x, y) {
+      for (var oy = -6; oy <= 6; oy++) for (var ox = -6; ox <= 6; ox++) { var t = get(x + ox, y + oy); if (t === T.SHALLOW || t === T.DEEP) return true; }
+      return false;
+    }
     /* the crowd: people through every district, each with a look of their
        own and something to say about where they live. PLACEHOLDER lines,
        flavour only: nothing here is canon until it is written down */
@@ -403,8 +411,14 @@
         for (var j = 0; j < npcs.length && !near; j++) if (Math.abs(npcs[j].x - cx) + Math.abs(npcs[j].y - cy) < 6) near = true;
         if (near || busy[c]) continue;
         var a = lines[(placed * 2) % lines.length], b = lines[(placed * 2 + 1) % lines.length];
+        /* who they are: most are novans; apes everywhere (naturia is mostly apes),
+           androids, and here and there someone with a past (KINDS) */
+        var roll = hash(d.seed * 31 + placed, 4441), kind = 'novan', acc = 0, mix = KIND_MIX[d.id] || {};
+        Object.keys(mix).some(function (kd) { acc += mix[kd]; if (roll < acc) { kind = kd; return true; } return false; });
+        /* each district's own people turn up at least once, whatever the dice say */
+        if (KIND_FIRST[d.id] && KIND_FIRST[d.id][placed]) kind = KIND_FIRST[d.id][placed];
         npcs.push({ id: d.id + '-' + placed, x: cx, y: cy, dir: ['down', 'left', 'right', 'up'][placed % 4], look: 'gen', seed: d.seed * 1000 + placed,
-                    lines: a === b ? [a] : [a, b], pool: d.id, roam: 3 });
+                    lines: a === b ? [a] : [a, b], pool: d.id, kind: kind, coast: coastal(cx, cy), roam: 3 });
         placed++;
       }
     });
@@ -483,6 +497,55 @@
                 'i saw your face before. no i didn\'t.\nforget i said that.', 'redrum doesn\'t have a mayor.\nit has a mood.']
   };
   Object.keys(MORE).forEach(function (k) { CROWD[k] = CROWD[k].concat(MORE[k]); });
+
+  /* who's in the crowd, per district (the rest are novans). PLACEHOLDER mix */
+  var KIND_MIX = {
+    naturia:   { ape: 0.70, android: 0.04 },
+    worldwood: { android: 0.15, ape: 0.10, sleeper: 0.03, tweaker: 0.03 },
+    yucayeque: { ape: 0.10, android: 0.05 },
+    haven:     { android: 0.10, ape: 0.08, sleeper: 0.05 },
+    majinryu:  { android: 0.20, ape: 0.10, hashshashin: 0.05, tweaker: 0.02 },
+    redrum:    { tweaker: 0.12, ape: 0.10, hashshashin: 0.06, android: 0.05 }
+  };
+  var KIND_FIRST = { naturia: ['ape', 'ape'], worldwood: ['android', 'sleeper', 'tweaker'], yucayeque: ['ape'], haven: ['android', 'sleeper'],
+                     majinryu: ['android', 'hashshashin'], redrum: ['tweaker', 'hashshashin', 'ape'] };
+  /* what each kind talks about, besides him. PLACEHOLDER */
+  var KIND_TALK = {
+    ape:         ['the glow is brighter since we came.\nwe think it likes us.', 'people stare. that\'s fine.\nwe stare back. politely.', 'i was born on teknoa.\nmy mother wasn\'t.',
+                  'someone told me i speak human very well.\ni said, so do you.', 'naturia grows everything we eat.\nthe rest of the city could learn.', 'we remember earth.\nwe don\'t miss all of it.'],
+    android:     ['i don\'t sleep. i defragment.\nit\'s similar.', 'cyberia is cold. the city is warm.\ni prefer warm.', 'the rain is very loud to me.\ni like it anyway.',
+                  'people ask if i\'m real.\ni ask them the same. it evens out.', 'i came down from frostfalls for the noise.\nthe quiet up there is a lot.', 'my chassis is second hand.\nmy opinions are all mine.'],
+    tweaker:     ['they\'re IN the rain.\ndon\'t drink the rain.', 'i haven\'t slept since the crossing.\nor before that.', 'the colours talk here.\ndo they talk to you? they talk to me.',
+                  'don\'t look at the lighthouse.\nit looks back. it LOOKS BACK.'],
+    sleeper:     ['lovely evening. are you local?\nno reason.', 'i work in... logistics.', 'keep your receipts.\nsomeone\'s always counting.', 'nice city. very open.\nalmost no records at all.'],
+    hashshashin: ['walk softer.\nthe floor is listening.', 'we came down from the mountains.\nsome of us didn\'t.', 'patience is a blade too.\nthe longest one.']
+  };
+  /* him. nobody says his name: each kind has its handles (Oms set these,
+     2026-10-12; see the vault). supporters and doubters both. PLACEHOLDER lines */
+  var HANDLES = {
+    ape:         ['the cagebreaker opened every door in that place.\nwe walked out on our own feet.', 'they call him chainsmasher in naturia.\nthe chains are in the park. we keep them polished.',
+                  'some say the cagebreaker is gone.\napes don\'t say that.', 'we owe the chainsmasher our names.\nthey only ever gave us numbers.'],
+    novan:       ['the chief got us here.\nthen nobody saw him again.', 'dadash wouldn\'t want us moping.\nso we don\'t. mostly.', 'my mother lights a candle for dadash every friday.',
+                  'the chief? gone. that\'s what the council says.\nthe council says a lot.', 'the chief left us here and vanished.\nhero or not, that\'s what happened.'],
+    coast:       ['the ferryman brought my family over.\nme too, i was the small one.', 'on calm nights the old ones watch the water\nfor the ferryman.',
+                  'the ferryman made the last crossing alone.\nnobody saw the boat come back.'],
+    android:     ['in cyberia we call him the anomaly.\nhe never fit any model.', 'an anomaly can\'t be deleted.\nonly misplaced.',
+                  'i ran the numbers on the anomaly coming back.\nthe numbers disagree with each other.'],
+    haven:       ['the commander\'s portrait is still in the hall.\nnobody\'s allowed to move it.', 'the founder\'s chair is empty at every session.\nthey still set out a glass of water.',
+                  'if the commander walked in now i\'d salute.\nthen i\'d faint.'],
+    redrum:      ['the hunter used to walk these roofs.\nnobody\'s seen that shadow since.', 'you hear the hunter\'s still out there.\nyou hear a lot of things in redrum.',
+                  'the hunter? good riddance.\nbad for business, that one.'],
+    sleeper:     ['the subject was never recovered.\n...sorry. wrong person.', 'a product like that doesn\'t just disappear.\nit gets misplaced. good evening.'],
+    hashshashin: ['the captain taught us to walk without a sound.\nwe still do. out of respect.', 'if the captain is gone, he chose it.\ncaptains choose.'],
+    tweaker:     ['LUCIFER\'S BASTARD. i saw him.\nin the rain. he looked right at me.', 'demonblood. demonblood.\nthey cut him and it wasn\'t red.',
+                  'the demidemon isn\'t dead.\nyou can\'t kill what\'s only half of something.']
+  };
+  /* koga speaks like nobody else in the city (vault: Koga). PLACEHOLDER lines */
+  var KOGA = ['Ah. A new face. Naturia welcomes you,\nthough the moss may take some convincing.',
+              'My old friend would have liked you, I think.\nHe liked most people who didn\'t put him in a cage.',
+              'We grow everything we eat here.\nTake only fallen timber, if you please. The standing trees are listening.',
+              'I am told I fight better after a drink.\nI am told this by people who have never fought me sober.',
+              'Brother... forgive me. You reminded me of someone.\nIt passes.'];
 
   /* what people say about you, when it fits. PLACEHOLDER */
   var TALK = {
@@ -794,5 +857,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);

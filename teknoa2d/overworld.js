@@ -496,11 +496,13 @@
     hex:     { H: '#ff4fd8', h: '#b14cff', S: '#e8b48a', C: '#1a1a22', P: '#2a2a3a', k: '#0b0b10', A: '#c8ccd8', hair: 'hex', acc: 'choker' },
     reveler: { H: '#7cf5ff', S: '#c88a64', C: '#ff4fd8', P: '#2a2f4a', k: '#111' },
     local:   { H: '#1a1010', S: '#7a4a30', C: '#e8b13a', P: '#2f6f5e', k: '#111' },
-    ape:     { H: '#2a2420', S: '#5a4a40', C: '#3a5a3a', P: '#2a2420', k: '#1a1410' },
+    ape:     { H: '#2a2420', S: '#8a6a54', C: '#3a5a3a', P: '#2a2420', k: '#1a1410', fur: 1 },
     clerk:   { H: '#c8ccd8', S: '#e0b090', C: '#2a3a6a', P: '#2a2f4a', k: '#111' },
     medic:   { H: '#1a1a1a', S: '#e0b48a', C: '#e6e8f0', P: '#8ad0b0', k: '#111' },
     merc:    { H: '#3a1218', S: '#b07a5a', C: '#3a1218', P: '#1a080c', k: '#111' },
     tailor:  { H: '#c9a25a', S: '#e8b796', C: '#5a1e3c', c: '#3a1428', A: '#f2c94c', P: '#14121c', k: '#111', hair: 'bob', acc: 'glasses' },
+    /* koga: dark hair, the green robes his people make, war paint (vault: Koga) */
+    koga:    { H: '#14100c', B: '#14100c', S: '#8a6a54', C: '#2f6a3a', c: '#1f4a2a', P: '#2a2018', k: '#1a1410', A: '#c4473a', marks: 'scar', fur: 1 },
     shipwright: { H: '#9aa0a8', B: '#9aa0a8', S: '#b07a52', C: '#2f5a6a', c: '#1f3a48', P: '#3a3020', k: '#1a1410', hair: 'buzz', beard: 'full', A: '#f2c94c', acc: 'cap' },
     barber:  { H: '#14121c', B: '#14121c', S: '#a06a48', C: '#dce3ff', c: '#9aa0b8', P: '#2a2f4a', k: '#111', hair: 'buzz', beard: 'full' }
   };
@@ -541,6 +543,12 @@
           if (dir === 'up') for (y = 8; y <= 11; y++) for (x = 5; x <= 10; x++) put(y, x, 'H');
         }
         break;
+    }
+    /* apes: fur round a lighter muzzle, fur down the arms */
+    if (look.fur) {
+      if (dir === 'down') { for (y = 4; y <= 6; y++) { put(y, 4, 'H'); put(y, 11, 'H'); } put(7, 5, 'H'); put(7, 10, 'H'); put(8, 6, 'H'); put(8, 9, 'H'); }
+      else if (side) { put(4, 7, 'H'); put(4, 6, 'H'); put(8, 8, 'H'); }
+      for (y = 10; y <= 11; y++) { put(y, 3, 'H'); put(y, 12, 'H'); if (side) put(y, 6, 'H'); }
     }
     /* facial hair, at walking size: a few pixels round the mouth */
     var bd = look.beard;
@@ -606,7 +614,7 @@
     var g = c.getContext('2d'), flip = dir === 'right', rows = BODY[flip ? 'left' : dir].slice();
     if (step) { var st = STEP[flip ? 'left' : dir]; rows[13] = st[0]; rows[14] = st[1]; rows[15] = st[2]; }
     rows = styled(rows, flip ? 'left' : dir, look);
-    var colours = { H: look.H, h: look.h || look.H, B: look.B || look.H, S: look.S, f: shade(look.S || '#c88a64', 0.62), r: '#d48a8a', G: '#7cf5ff', E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C,
+    var colours = { H: look.H, h: look.h || look.H, B: look.B || look.H, S: look.S, f: shade(look.S || '#c88a64', 0.62), r: '#d48a8a', G: '#7cf5ff', E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C, E: look.E || '#0b0d1a', m: look.m || '#7a3a3a',
                     A: look.A || '#d8dce8', P: look.P || '#2a2f4a', k: look.k || '#111' };
     rows.forEach(function (r, y) {
       for (var x = 0; x < TS; x++) {
@@ -625,6 +633,17 @@
     if (crowdLooks[n.seed]) return crowdLooks[n.seed];
     var a = n.seed >>> 0;
     function rng() { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    function pick(list) { return list[Math.floor(rng() * list.length)]; }
+    /* apes: fur, face, and what their people make them wear */
+    if (n.kind === 'ape') {
+      var fur = pick(['#1a1410', '#2a2018', '#3a2a1c', '#4a3a2a', '#5a4a3a']);
+      return (crowdLooks[n.seed] = { H: fur, B: fur, S: pick(['#8a6a54', '#9a7a60', '#7a5a48']), C: pick(['#3a5a3a', '#2f6f5e', '#5a4a2a', '#4a6a3a']), P: fur, k: '#1a1410', fur: 1 });
+    }
+    /* androids: chrome, a seam of light for eyes */
+    if (n.kind === 'android') {
+      var chrome = pick(['#c8ccd8', '#9aa0b8', '#d8dce8', '#8a92a6']);
+      return (crowdLooks[n.seed] = { H: shade(chrome, 0.8), S: chrome, C: pick(['#1c1736', '#2a2f4a', '#14121c']), P: '#2a2f4a', k: '#111', E: pick(['#7cf5ff', '#ff4fd8', '#7cffb2']), m: shade(chrome, 0.7), hair: 'buzz' });
+    }
     return (crowdLooks[n.seed] = lookOf(A ? A.random(rng) : {}));
   }
   /* the player looks like their Chippin' In face */
@@ -732,7 +751,8 @@
         var after = s.flags['hex-closed'] ? HEX_COLD : HEX_AFTER;
         return say([after[Math.floor(Math.random() * after.length)]], 'Hex');
       }
-      if (n.pool) return say([chatter(n)]);
+      if (n.koga) { n.said = ((n.said || 0) + 1) % M.KOGA.length; return say([M.KOGA[n.said]], 'Koga'); }
+      if (n.pool !== undefined && n.kind) return say([chatter(n)]);
       var said = n.said || 0;
       n.said = (said + 1) % n.lines.length;
       return say([n.lines[said]]);
@@ -790,12 +810,18 @@
     if (window.MF.joules(s) >= 2000) ctx.push('rich');
     if (hour < 5) ctx.push('late');
     if (Object.keys(s.homes || {}).length) ctx.push('home');
-    var said = n.said = (n.said || 0) + 1, seed = (n.seed || 7) >>> 0;
-    if (ctx.length && hash(seed, said) < 0.35) {
+    var said = n.said = (n.said || 0) + 1, seed = (n.seed || 7) >>> 0, roll = hash(seed, said);
+    if (ctx.length && roll < 0.25) {
       var talk = M.TALK[ctx[(seed + said) % ctx.length]];
       return talk[(seed + said * 3) % talk.length];
     }
-    var pool = M.CROWD[n.pool] || n.lines;
+    /* him, by whatever their people call him */
+    if (roll < 0.5) {
+      var h = n.kind !== 'novan' ? n.kind : n.coast ? 'coast' : n.pool === 'redrum' ? 'redrum' : n.pool === 'haven' ? 'haven' : 'novan';
+      var said2 = M.HANDLES[h] || M.HANDLES.novan;
+      return said2[(seed + said * 5) % said2.length];
+    }
+    var pool = n.kind !== 'novan' && M.KIND_TALK[n.kind] && roll < 0.8 ? M.KIND_TALK[n.kind] : M.CROWD[n.pool] || n.lines;
     return pool[(seed + said * 7) % pool.length];
   }
   function markAt(x, y) {
