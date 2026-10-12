@@ -120,6 +120,57 @@
     return { ok: true };
   }
 
+  /* stores: general stores sell materials; pawn shops buy them, and sell
+     curios (and buy those back at half). world.js puts them on the map;
+     overworld.js runs the counter. PLACEHOLDER names, lines and prices */
+  var CURIOS = {
+    snowglobe: { name: 'a snow globe of earth', what: 'a city under glass. shake it and it snows. it never snows here.', price: 120 },
+    pager:     { name: 'a dead pager', what: 'it buzzed once in the shop. the screen said nothing.', price: 60 },
+    compass:   { name: 'a compass', what: 'points at the jörmun, whichever way you hold it.', price: 90 },
+    cassette:  { name: 'an unlabelled cassette', what: 'somebody humming. it might be the tower\'s song.', price: 45 },
+    shell:     { name: 'a big shell', what: 'from vistadelsol. hold it up and you hear the nova sea.', price: 30 },
+    lighter:   { name: 'a scratched zippo', what: 'the lid has a knife engraved on it. the hinge squeaks.', price: 80 }
+  };
+  var STORES = {
+    'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 } },
+    'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 } },
+    'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 } },
+    'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'] },
+    'lantern-loans':    { kind: 'pawn', name: 'LANTERN LOANS', district: 'majinryu', line: 'everything here was somebody\'s once. now it\'s nobody\'s. could be yours.', buys: { timber: 9, fibre: 7, scrap: 12, fruit: 6 }, curios: ['compass', 'cassette', 'shell'] }
+  };
+  function nameOf(key) { return RES[key] ? RES[key].name : CURIOS[key] ? CURIOS[key].name : key; }
+  /* the counter's rows for a tab: what you can buy here, or what they'll buy off you */
+  function storeRows(MF, s, id, tab) {
+    var st = STORES[id], rows = [], res = s.res || {}, items = s.items || {};
+    if (!st) return rows;
+    if (tab === 'buy') {
+      if (st.sells) Object.keys(st.sells).forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: st.sells[k], have: res[k] || 0 }); });
+      if (st.curios) st.curios.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: CURIOS[k].price, have: items[k] || 0 }); });
+      rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
+    } else if (st.kind === 'pawn') {
+      Object.keys(st.buys).forEach(function (k) { if (res[k]) rows.push({ key: k, label: nameOf(k), price: st.buys[k], have: res[k], ok: true }); });
+      Object.keys(CURIOS).forEach(function (k) { if (items[k]) rows.push({ key: k, label: nameOf(k), price: Math.floor(CURIOS[k].price / 2), have: items[k], ok: true }); });
+    }
+    return rows;
+  }
+  /* one of something, either way. all or nothing */
+  function trade(MF, s, id, tab, key) {
+    var row = storeRows(MF, s, id, tab).filter(function (r) { return r.key === key; })[0];
+    if (!row) return { ok: false, why: tab === 'buy' ? 'not sold here' : 'nothing to sell' };
+    if (!s.res) s.res = {};
+    if (!s.items) s.items = {};
+    var into = RES[key] ? s.res : s.items;
+    if (tab === 'buy') {
+      if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
+      into[key] = (into[key] || 0) + 1;
+      return { ok: true, price: row.price, name: row.label };
+    }
+    into[key]--; if (!into[key]) delete into[key];
+    MF.earn(s, row.price);
+    return { ok: true, price: row.price, name: row.label };
+  }
+
   root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, boatShort: boatShort, buildBoat: buildBoat,
+                   CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade,
                    price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

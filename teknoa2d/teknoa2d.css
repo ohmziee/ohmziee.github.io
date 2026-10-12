@@ -236,6 +236,32 @@ a{color:var(--lavender)}
 /* the wallet: top right of the street, a gain floats up out of it */
 .wj{position:absolute;top:.4rem;right:.4rem;padding:.35rem .5rem .3rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#ffe97c;font:clamp(.48rem,1.4vw,.62rem)/1.2 var(--font-pixel);pointer-events:none}
 .won{position:absolute;top:.4rem;left:.4rem;padding:.35rem .5rem .3rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#b9a8ff;font:clamp(.48rem,1.4vw,.62rem)/1.2 var(--font-pixel);pointer-events:none}
+/* a store's counter: the same box, taller, a list of things */
+.wcounter{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;max-height:calc(100% - 1.2rem);overflow:auto;padding:.6rem .8rem .5rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;color:#f4f6ff;font:clamp(.5rem,1.5vw,.66rem)/1.5 var(--font-pixel)}
+.wcounter b{display:block;margin-bottom:.45rem;color:#7CFFB2;letter-spacing:.2em}
+.ctabs{display:flex;gap:.4rem;margin-bottom:.45rem}
+.ctabs button,.cleave{font:inherit;background:#141a2e;color:#b9a8ff;border:2px solid #3a3150;padding:.25rem .6rem;cursor:pointer}
+.ctabs button[aria-selected="true"]{color:#7CFFB2;border-color:#7CFFB2}
+.clist{display:flex;flex-direction:column;gap:.2rem}
+.crow{display:flex;justify-content:flex-start;gap:.3rem;font:inherit;text-align:left;background:none;color:#f4f6ff;border:2px solid transparent;padding:.25rem .45rem;cursor:pointer}
+.crow.sel{border-color:#dce3ff;background:#1c1736}
+.crow.sel::before{content:'▶ ';color:#7CFFB2}
+.crow.no{color:#6a6a8a}
+.crow span{margin-left:auto;padding-left:1rem;color:#ffe97c}
+.wcounter p{margin:.45rem 0;color:#b9a8ff}
+.cnone{color:#6a6a8a}
+/* the gathering games: a box over the bottom of the screen */
+.wmini{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;padding:.6rem .8rem .5rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;color:#f4f6ff;font:clamp(.5rem,1.5vw,.66rem)/1.5 var(--font-pixel)}
+.wmini b{display:block;margin-bottom:.45rem;color:#7CFFB2;letter-spacing:.2em}
+.wmini.k-fibre b{color:#e8d898}.wmini.k-scrap b{color:#c8ccd8}.wmini.k-fruit b{color:#ff8a3a}
+.wmini p{margin:.45rem 0 0;color:#b9a8ff}
+.mtrack{position:relative;height:14px;border:2px solid #dce3ff;background:#141a2e}
+.mzone{position:absolute;top:0;bottom:0;background:#3a9a5a}
+.wmini.k-fibre .mzone{background:#c8b878}
+.mmark{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1px;background:#f4f6ff;box-shadow:0 0 6px #fff}
+.mlanes{position:relative;height:80px;border:2px solid #dce3ff;background:linear-gradient(90deg,#141a2e 33%,#10162a 33% 66%,#141a2e 66%)}
+.mlanes .fr{position:absolute;width:12px;height:12px;margin-left:-2px;background:#ff8a3a;border:2px solid #0b0d1a}
+.mlanes .bk{position:absolute;bottom:2px;width:25%;height:8px;background:#c8a878;border:2px solid #0b0d1a}
 .wj .gain{position:absolute;right:.4rem;top:100%;color:#ffe97c;opacity:0;white-space:nowrap;text-shadow:0 0 6px rgba(255,233,124,.6)}
 .wj .gain.on{animation:jgain 1.4s ease-out forwards}
 @keyframes jgain{0%{opacity:0;transform:translateY(.6rem)}15%{opacity:1}100%{opacity:0;transform:translateY(-.4rem)}}

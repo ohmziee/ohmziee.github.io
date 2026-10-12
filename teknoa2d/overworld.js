@@ -320,6 +320,21 @@
     px(g, OUT, (w >> 1) - 5, h - 12, 10, 12); px(g, '#1a1426', (w >> 1) - 4, h - 11, 8, 11); px(g, '#ff4fd8', (w >> 1) - 4, h - 11, 8, 1);
     px(g, '#7cf5ff', (w >> 1) + 6, h - 8, 2, 3);
   };
+  /* a corner store: a lit sign, glass doors, a fridge glowing inside */
+  MARK_ART.mart = function (g, w, h) {
+    px(g, '#1c1736', 0, 0, w, h); px(g, '#7cffb2', 0, 2, w, 5); px(g, '#0b0d1a', 4, 3, w - 8, 3);
+    for (var x = 6; x < w - 6; x += 5) px(g, '#7cffb2', x, 4, 3, 1);
+    px(g, '#0b0d1a', 4, 10, 22, 16); px(g, '#2a3a5a', 5, 11, 20, 14); px(g, '#9fd0ff', 6, 12, 6, 12); px(g, '#ffe97c', 14, 14, 3, 3); px(g, '#ff8a6b', 19, 14, 3, 3);
+    px(g, '#0b0d1a', w - 14, 14, 10, h - 14); px(g, '#7cffb2', w - 14, 14, 10, 1); px(g, '#9fd0ff', w - 12, 16, 2, h - 18);
+  };
+  /* a pawn shop: three gold balls, a barred window, a heavy door */
+  MARK_ART.pawn = function (g, w, h) {
+    px(g, '#2a1014', 0, 0, w, h); px(g, '#3a1218', 0, 0, w, 4);
+    [[6, 4], [11, 9], [16, 4]].forEach(function (b) { px(g, OUT, b[0] - 1, b[1] - 1, 6, 6); px(g, '#f2c94c', b[0], b[1], 4, 4); px(g, '#fff3b0', b[0], b[1], 1, 1); });
+    px(g, '#0b0d1a', 22, 8, 14, 14); px(g, '#3a2a10', 23, 9, 12, 12);
+    for (var x = 24; x < 36; x += 3) px(g, '#8a92a6', x, 9, 1, 12);
+    px(g, '#0b0d1a', w - 10, 14, 8, h - 14); px(g, '#f2c94c', w - 4, 22, 1, 2);
+  };
   /* the boatyard: planks, a hull up on blocks, rope */
   MARK_ART.boatyard = function (g, w, h) {
     px(g, '#3a2a1c', 0, 0, w, h);
@@ -711,11 +726,13 @@
       n.dir = { up: 'down', down: 'up', left: 'right', right: 'left' }[me.dir];
       if (n.shop && api.shop) { api.shop(n.shop); return; }
       if (n.wright) return shipwright();
+      if (n.store) return openCounter(n.store);
       if (n.scene === 'hex') {
         if (!s.met.hex && api.talk) { api.talk(); return; }
         var after = s.flags['hex-closed'] ? HEX_COLD : HEX_AFTER;
         return say([after[Math.floor(Math.random() * after.length)]], 'Hex');
       }
+      if (n.pool) return say([chatter(n)]);
       var said = n.said || 0;
       n.said = (said + 1) % n.lines.length;
       return say([n.lines[said]]);
@@ -733,6 +750,7 @@
        itself or lets you in; furniture has something to say */
     var m = markAt(tx, ty);
     if (m && m.shop && api.shop) { api.shop(m.shop); return; }
+    if (m && m.store) return openCounter(m.store);
     if (m && m.home) return homeDoor(m.home);
     if (m && m.room && !inside) return goIn(m.room);
     if (m && m.shut) return say([m.shut]);
@@ -762,6 +780,23 @@
       if (api.save) api.save();
       say(['sawing. hammering. a lot of swearing.', 'done. she\'s moored at the end of the pier.\nface the water anywhere and press A to set sail.'], 'SHIPWRIGHT');
     });
+  }
+  /* the crowd: their district's pool, in their own order, and now and then
+     something about you, if there's something to say (world.js TALK) */
+  function chatter(n) {
+    var ctx = [], hour = new Date().getHours();
+    if (s.boat) ctx.push('boat');
+    if (s.flags['hex-closed']) ctx.push('cold'); else if (s.met.hex) ctx.push('hex');
+    if (window.MF.joules(s) >= 2000) ctx.push('rich');
+    if (hour < 5) ctx.push('late');
+    if (Object.keys(s.homes || {}).length) ctx.push('home');
+    var said = n.said = (n.said || 0) + 1, seed = (n.seed || 7) >>> 0;
+    if (ctx.length && hash(seed, said) < 0.35) {
+      var talk = M.TALK[ctx[(seed + said) % ctx.length]];
+      return talk[(seed + said * 3) % talk.length];
+    }
+    var pool = M.CROWD[n.pool] || n.lines;
+    return pool[(seed + said * 7) % pool.length];
   }
   function markAt(x, y) {
     for (var i = 0; i < world.marks.length; i++) {
@@ -847,18 +882,135 @@
     if (!piles.day || piles.day !== day) { piles = M.nodes(city, day); piles.day = day; }
     return piles.filter(function (j) { return !s.gathered.got[j.id]; });
   }
+  /* stepping on a pile starts its game (minigames.js); the pile is only
+     used up once the game is played, so B walks away and leaves it */
   function gather() {
-    var left = pilesNow(), RS = (window.MFShops && window.MFShops.RES) || {};
+    var left = pilesNow();
     for (var i = 0; i < left.length; i++) {
       var p = left[i];
       if (p.x !== me.x || p.y !== me.y) continue;
-      s.gathered.got[p.id] = 1;
-      if (!s.res) s.res = {};
-      s.res[p.kind] = (s.res[p.kind] || 0) + p.n;
-      wallet('+' + p.n + ' ' + (RS[p.kind] ? RS[p.kind].name : p.kind));
-      if (api && api.save) api.save();
-      return;
+      if (window.MFMini) return startMini(p);
+      return collect(p, p.n, '');
     }
+  }
+  function collect(p, n, how) {
+    var RS = (window.MFShops && window.MFShops.RES) || {};
+    s.gathered.got[p.id] = 1;
+    if (!s.res) s.res = {};
+    s.res[p.kind] = (s.res[p.kind] || 0) + n;
+    wallet((how ? how + ' ' : '') + '+' + n + ' ' + (RS[p.kind] ? RS[p.kind].name : p.kind));
+    if (api && api.save) api.save();
+  }
+
+  /* ── the counter: general stores and pawn shops ────────────
+     up/down picks a row, A buys or sells one, left/right switches buy and
+     sell at a pawn shop, B leaves. rows can be tapped too */
+  var counter = null, cPrev = {};
+  function openCounter(id) {
+    var st = window.MFShops.STORES[id];
+    if (!st) return;
+    counter = { id: id, tab: 'buy', sel: 0, msg: st.line };
+    cPrev = { up: !!held.up, down: !!held.down, left: !!held.left, right: !!held.right, b: !!held.b };
+    pressedA = false;
+    $('wCounter').hidden = false;
+    drawCounter();
+  }
+  function closeCounter() { counter = null; $('wCounter').hidden = true; }
+  function counterRows() { return window.MFShops.storeRows(window.MF, s, counter.id, counter.tab); }
+  function counterAct(i) {
+    var rows = counterRows(), r = rows[i];
+    if (!r) return;
+    counter.sel = i;
+    var t = window.MFShops.trade(window.MF, s, counter.id, counter.tab, r.key);
+    if (t.ok) {
+      counter.msg = (counter.tab === 'buy' ? 'bought ' : 'sold ') + t.name + ' for ' + window.MF.fmtJ(t.price) + '.';
+      wallet((counter.tab === 'buy' ? '-' : '+') + window.MF.fmtJ(t.price));
+      if (api.save) api.save();
+    } else counter.msg = t.why === 'not enough joules' ? 'not enough joules for that.' : t.why + '.';
+    var left = counterRows().length;
+    if (counter.sel >= left) counter.sel = Math.max(0, left - 1);
+    drawCounter();
+  }
+  function tickCounter() {
+    var st = window.MFShops.STORES[counter.id];
+    function edge(k) { var e = !!held[k] && !cPrev[k]; cPrev[k] = !!held[k]; return e; }
+    var up = edge('up'), down = edge('down'), lf = edge('left'), rt = edge('right'), b = edge('b'), a = pressedA;
+    pressedA = false;
+    if (b) return closeCounter();
+    var n = counterRows().length;
+    if (up && n) { counter.sel = (counter.sel + n - 1) % n; drawCounter(); }
+    if (down && n) { counter.sel = (counter.sel + 1) % n; drawCounter(); }
+    if ((lf || rt) && st.kind === 'pawn') { counter.tab = counter.tab === 'buy' ? 'sell' : 'buy'; counter.sel = 0; drawCounter(); }
+    if (a) counterAct(counter.sel);
+  }
+  function drawCounter() {
+    var st = window.MFShops.STORES[counter.id], rows = counterRows(), list = $('wCounterList');
+    $('wCounterT').textContent = st.name;
+    $('wCounterTabs').hidden = st.kind !== 'pawn';
+    [].forEach.call($('wCounterTabs').children, function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === counter.tab ? 'true' : 'false'); });
+    list.innerHTML = '';
+    rows.forEach(function (r, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'crow' + (i === counter.sel ? ' sel' : '') + (r.ok ? '' : ' no');
+      b.textContent = r.label + (r.have ? ' (' + r.have + ')' : '');
+      var pr = document.createElement('span'); pr.textContent = window.MF.fmtJ(r.price); b.appendChild(pr);
+      b.addEventListener('click', function (e) { e.preventDefault(); counterAct(i); });
+      list.appendChild(b);
+    });
+    if (!rows.length) { var p = document.createElement('p'); p.className = 'cnone'; p.textContent = counter.tab === 'sell' ? 'nothing they want. go gather something.' : 'sold out.'; list.appendChild(p); }
+    $('wCounterM').textContent = counter.msg;
+  }
+
+  /* ── the gathering games ─────────────────────────────────── */
+  var mini = null, prevL = false, prevR = false, prevB = false;
+  function startMini(p) {
+    mini = { pile: p, g: window.MFMini.create(p.kind), end: 0 };
+    prevL = !!held.left; prevR = !!held.right; prevB = !!held.b; pressedA = false;
+    $('wMini').hidden = false; $('wMini').className = 'wmini k-' + p.kind;
+    $('wMiniT').textContent = mini.g.title;
+    drawMini();
+  }
+  function closeMini() { mini = null; $('wMini').hidden = true; }
+  function tickMini(dt, now) {
+    var inp = { a: pressedA, hold: !!held.a, left: !!held.left && !prevL, right: !!held.right && !prevR }, b = !!held.b && !prevB;
+    pressedA = false; prevL = !!held.left; prevR = !!held.right; prevB = !!held.b;
+    if (mini.end) { if (now > mini.end) closeMini(); return; }
+    if (b) { closeMini(); return; }
+    window.MFMini.step(mini.g, dt, inp);
+    drawMini();
+    if (!mini.g.done) return;
+    var n = window.MFMini.amount(mini.pile.n, mini.g);
+    collect(mini.pile, n, mini.g.perfect ? 'PERFECT' : mini.g.score >= 1 ? 'NICE' : mini.g.score > 0.4 ? 'OK' : '');
+    $('wMiniH').textContent = (mini.g.perfect ? 'perfect! ' : mini.g.score >= 1 ? 'nice. ' : mini.g.score > 0.4 ? 'not bad. ' : 'rough. ') + '+' + n;
+    mini.end = now + 1100;
+  }
+  function drawMini() {
+    var g = mini.g, zone = $('wMiniZone'), mark = $('wMiniMark'), track = $('wMiniTrack'), lanes = $('wMiniLanes');
+    track.hidden = g.kind === 'fruit'; lanes.hidden = g.kind !== 'fruit';
+    var hint = g.hint + '  ·  B: leave it';
+    if (g.kind === 'timber') {
+      zone.style.left = g.zone[0] + '%'; zone.style.width = (g.zone[1] - g.zone[0]) + '%';
+      mark.hidden = false; mark.style.left = g.pos + '%';
+      hint = 'swing ' + Math.min(g.swings + 1, g.of) + ' of ' + g.of + '  ·  ' + hint;
+    } else if (g.kind === 'fibre') {
+      zone.style.left = '0%'; zone.style.width = g.meter + '%'; mark.hidden = true;
+      hint = Math.max(0, g.time).toFixed(1) + 's  ·  ' + hint;
+    } else if (g.kind === 'scrap') {
+      zone.style.left = g.zone[0] + '%'; zone.style.width = (g.zone[1] - g.zone[0]) + '%';
+      mark.hidden = false; mark.style.left = Math.min(100, g.meter) + '%';
+      hint = 'tries ' + g.tries + '  ·  ' + hint;
+    } else {
+      var html = '';
+      g.drops.forEach(function (d) {
+        if (d.done || d.y < 0) return;
+        html += '<span class="fr" style="left:' + (d.lane * 33.3 + 12) + '%;top:' + d.y + '%"></span>';
+      });
+      html += '<span class="bk" style="left:' + (g.basket * 33.3 + 4) + '%"></span>';
+      lanes.innerHTML = html;
+      hint = g.caught + ' caught  ·  ' + hint;
+    }
+    if (!mini.end) $('wMiniH').textContent = hint;
   }
   var PILE = {
     timber: function (g, x, y) { px(g, OUT, x + 2, y + 7, 12, 7); px(g, '#8a5a32', x + 3, y + 8, 10, 2); px(g, '#6a4422', x + 3, y + 11, 10, 2); px(g, '#c8a878', x + 3, y + 8, 2, 2); px(g, '#c8a878', x + 3, y + 11, 2, 2); },
@@ -928,6 +1080,8 @@
   function update(now) {
     var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
+    if (mini) { tickMini(dt, now); return; }
+    if (counter) { tickCounter(); return; }
     if (talkBox && talkBox.yes && talkBox.lines.length === 1 && held.b) { held.b = false; answer(false); }
     if (pressedA) {
       pressedA = false;
@@ -1053,7 +1207,7 @@
   function onKey(e, down) {
     if (!active) return;
     if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
-    if (down && (e.key === 'z' || e.key === 'Z' || e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (!e.repeat) pressedA = true; return; }
+    if (e.key === 'z' || e.key === 'Z' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); held.a = down; if (down && !e.repeat) pressedA = true; return; }
     var k = KEYS[e.key];
     if (!k) return;
     e.preventDefault();
@@ -1064,11 +1218,18 @@
   window.addEventListener('blur', function () { held = {}; });
 
   /* the on-screen pad: hold a direction, tap A, hold B */
+  /* the counter's buttons, for touch */
+  function counterButtons() {
+    $('wCounterX').addEventListener('click', function () { if (counter) closeCounter(); });
+    [].forEach.call($('wCounterTabs').children, function (b) {
+      b.addEventListener('click', function () { if (!counter) return; counter.tab = b.getAttribute('data-tab'); counter.sel = 0; drawCounter(); });
+    });
+  }
   function pad() {
     [].forEach.call(document.querySelectorAll('#wPad [data-k]'), function (b) {
       var k = b.getAttribute('data-k');
-      function on(e) { e.preventDefault(); if (k === 'a') pressedA = true; else held[k] = true; b.classList.add('down'); }
-      function off(e) { if (e) e.preventDefault(); if (k !== 'a') held[k] = false; b.classList.remove('down'); }
+      function on(e) { e.preventDefault(); if (k === 'a') pressedA = true; held[k] = true; b.classList.add('down'); }
+      function off(e) { if (e) e.preventDefault(); held[k] = false; b.classList.remove('down'); }
       b.addEventListener('pointerdown', on);
       b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
       b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
@@ -1106,6 +1267,7 @@
       window.addEventListener('resize', function () { if (active) fit(); });
       npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
       pad();
+      counterButtons();
     }
     var at = s.world;
     if (!s.homes) s.homes = {};

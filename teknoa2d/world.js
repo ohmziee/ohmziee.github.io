@@ -12,10 +12,10 @@
            6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall
            indoors: 12 floor  13 wall  14 door mat  15 tiled floor */
 (function (root) {
-  var W = 380, H = 300;
+  var W = 460, H = 370;
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
-  var VERSION = 3;
+  var VERSION = 4;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
             GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14, CHECK: 15 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
@@ -31,7 +31,11 @@
     { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, at: [-1, 1], style: 'grid', block: 4, seed: 53, wobble: 0.12 },
     { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 22 }
   ];
-  var CENTRE = [190, 150], GAP = 4, SCALE = 2.45;
+  var CENTRE = [232, 185], GAP = 4, SCALE = 3.0;
+  /* the bay round the city was laid out at SCALE 2.45; K grows it with the city.
+     at(ox, oy) is a point that far from the centre, at the first layout's scale */
+  var K = SCALE / 2.45;
+  function atK(ox, oy) { return [Math.round(CENTRE[0] + ox * K), Math.round(CENTRE[1] + oy * K)]; }
   /* hand-placed offsets (landmarks, shops, people) were laid out at the
      first draft's scale; F spreads them out to match */
   var F = SCALE / 1.55;
@@ -67,13 +71,13 @@
        the east and along the south. the bay opens north, and a strait opens
        west onto the jörmun ocean. dist -2 is vistadelsol: not a district */
     function coast(x, y) {
-      var n = 4 * Math.sin(y / 7) + 3 * Math.sin(x / 5 + y / 11);
-      if (x + n < 72 && y + n < 112) return true;                /* the north-west land */
-      if (y + n < 20 && x < 175) return true;                    /* its north shore */
-      if (x + n < 70 && y - n > 162) return true;                /* the south-west peninsula */
-      if (y - n > 264) return true;                              /* the south coast */
-      if (x - n > 320) return true;                              /* the east coast */
-      if (y + n < 22 && x > 255) return true;                    /* the north-east */
+      var n = 4 * Math.sin(y / 7) + 3 * Math.sin(x / 5 + y / 11), rx = (x - CENTRE[0]) / K, ry = (y - CENTRE[1]) / K;
+      if (rx + n < -118 && ry + n < -38) return true;            /* the north-west land */
+      if (ry + n < -130 && rx < -15) return true;                /* its north shore */
+      if (rx + n < -120 && ry - n > 12) return true;             /* the south-west peninsula */
+      if (ry - n > 114) return true;                             /* the south coast */
+      if (rx - n > 130) return true;                             /* the east coast */
+      if (ry + n < -128 && rx > 65) return true;                 /* the north-east */
       return false;
     }
     for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) if (coast(x, y)) set(x, y, T.MAINLAND, -2);
@@ -263,6 +267,33 @@
       marks[marks.length - 1].home = h.d.id;
     });
 
+    /* stores (shops.js STORES): a front on clear ground near a corner of the
+       district, the keeper at the door. the spot is searched for, so the
+       store never lands on another building */
+    function clearSpot(d, w, h, dx0, dy0) {
+      for (var r = 0; r < 14; r++) for (var oy = -r; oy <= r; oy++) for (var ox = -r; ox <= r; ox++) {
+        if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
+        var x0 = d.cx + Math.round(dx0 * F) + ox, y0 = d.cy + Math.round(dy0 * F) + oy, ok = true;
+        for (var y = y0 - 2; y <= y0 + h + 1 && ok; y++) for (var x = x0 - 2; x <= x0 + w + 1 && ok; x++) {
+          var t = get(x, y);
+          if (dist[at(x, y)] !== d.index || t === T.LANDMARK || t === T.BRIDGE || t === T.STALL || t === T.SAND) ok = false;
+        }
+        if (ok && !npcs.some(function (n) { return n.x >= x0 - 2 && n.x <= x0 + w + 1 && n.y >= y0 - 2 && n.y <= y0 + h + 1; })) return [x0 - d.cx, y0 - d.cy];
+      }
+      return null;
+    }
+    var STORE_AT = [{ id: 'neon-mart', d: W0, dx: 6, dy: 6, art: 'mart' }, { id: 'la-bodega', d: Y0, dx: -6, dy: 6, art: 'mart' },
+                    { id: 'haven-provisions', d: H0, dx: -4, dy: 5, art: 'mart' }, { id: 'redrum-pawn', d: R0, dx: 3, dy: -2, art: 'pawn' },
+                    { id: 'lantern-loans', d: M0, dx: 5, dy: 6, art: 'pawn' }];
+    STORE_AT.forEach(function (sp) {
+      var info = root.MFShops && root.MFShops.STORES[sp.id], spot = clearSpot(sp.d, 3, 2, sp.dx, sp.dy);
+      if (!spot) return;
+      var door = landmark(sp.d, sp.art, info ? info.name : sp.id, spot[0], spot[1], 3, 2,
+        (info ? info.name : sp.id) + '\n' + (info ? info.line : ''), true);
+      marks[marks.length - 1].store = sp.id;
+      npcs.push({ id: 'store-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art === 'pawn' ? 'merc' : 'local', store: sp.id, still: true });
+    });
+
     /* the boatyard: yucayeque's east shore, a pier out into the bay, the
        shipwright at the door (shops.js BOAT) */
     var by = Y0.cy, bx = Y0.cx;
@@ -295,7 +326,9 @@
       carve(sx, sy, cx, cy, T.GRASS);
       for (var k = 0; k <= 8; k++) dist[at(sx + l.dir[0] * k, sy + l.dir[1] * k)] = -2;
       set(sx, sy, T.SAND, -2);
-      signs.push({ x: sx + l.dir[0] * 2 + (l.dir[1] ? 1 : 0), y: sy + l.dir[1] * 2 + (l.dir[0] ? 1 : 0), text: l.name.toUpperCase() + '\n' + l.sign });
+      var sgx = sx + l.dir[0] * 2 + (l.dir[1] ? 1 : 0), sgy = sy + l.dir[1] * 2 + (l.dir[0] ? 1 : 0);
+      set(sgx, sgy, T.GRASS, -2);
+      signs.push({ x: sgx, y: sgy, text: l.name.toUpperCase() + '\n' + l.sign });
       npcs.push({ id: 'landing-' + l.id, x: cx + 2, y: cy, dir: 'down', look: l.look, lines: l.lines, roam: 3 });
       landings2.push({ id: l.id, name: l.name, x: sx, y: sy, cx: cx, cy: cy });
     });
@@ -356,20 +389,22 @@
     var busy = {};
     npcs.forEach(function (n) { busy[n.y * W + n.x] = 1; });
     signs.forEach(function (sg) { busy[sg.y * W + sg.x] = 1; });
+    /* and nobody starts out standing on a building's front step */
+    marks.forEach(function (m) { for (var fx = m.x; fx < m.x + m.w; fx++) busy[(m.y + m.h) * W + fx] = 1; });
     DISTRICTS.forEach(function (d) {
       var open = [];
       for (var k = 0; k < W * H; k++) {
         var t = tile[k];
         if (dist[k] === d.index && seen[k] && (t === T.ROAD || t === T.GROUND || t === T.GRASS)) open.push(k);
       }
-      var want = Math.max(2, Math.round(open.length / 140)), lines = CROWD[d.id] || [], placed = 0;
+      var want = Math.max(3, Math.round(open.length / 100)), lines = CROWD[d.id] || [], placed = 0;
       for (var tries = 0; placed < want && tries < want * 40; tries++) {
         var c = open[Math.floor(hash(d.seed * 7 + tries, 991) * open.length)], cx = c % W, cy = (c / W) | 0, near = false;
         for (var j = 0; j < npcs.length && !near; j++) if (Math.abs(npcs[j].x - cx) + Math.abs(npcs[j].y - cy) < 6) near = true;
         if (near || busy[c]) continue;
         var a = lines[(placed * 2) % lines.length], b = lines[(placed * 2 + 1) % lines.length];
         npcs.push({ id: d.id + '-' + placed, x: cx, y: cy, dir: ['down', 'left', 'right', 'up'][placed % 4], look: 'gen', seed: d.seed * 1000 + placed,
-                    lines: a === b ? [a] : [a, b], roam: 3 });
+                    lines: a === b ? [a] : [a, b], pool: d.id, roam: 3 });
         placed++;
       }
     });
@@ -378,15 +413,15 @@
   }
 
   /* vistadelsol, past the shore (placed in map tiles, not by district) */
-  var ISLETS = [{ x: 212, y: 44, r: 7 }, { x: 46, y: 138, r: 5 }, { x: 300, y: 250, r: 7 }, { x: 140, y: 246, r: 6 }];
+  var ISLETS = [[22, -106, 7], [-144, -12, 5], [110, 100, 7], [-50, 96, 6]].map(function (o) { var p = atK(o[0], o[1]); return { x: p[0], y: p[1], r: Math.round(o[2] * K) }; });
   var LANDINGS = [
-    { id: 'fort-freyja', name: 'Fort Freyja', from: [90, 112], dir: [-1, 0], look: 'local',
+    { id: 'fort-freyja', name: 'Fort Freyja', from: atK(-100, -38), dir: [-1, 0], look: 'local',
       sign: 'vistadelsol. the fort is up the hill.\nthe gate is shut tonight.', lines: ['the fort? old. older than the city.\nnobody goes up there after dark.', 'mangoes fall on your head here.\nit counts as lunch.'] },
-    { id: 'port-tropics', name: 'Port Tropics', from: [86, 168], dir: [-1, 0], look: 'reveler',
+    { id: 'port-tropics', name: 'Port Tropics', from: atK(-104, 18), dir: [-1, 0], look: 'reveler',
       sign: 'vistadelsol. the fair comes through in summer.\nthe town is up the beach. not open yet.', lines: ['the fair\'s gone till summer.\nthe carousel\'s still out there, under a sheet.', 'you sailed here? from the city?\nbrave. or bored.'] },
-    { id: 'folkvangr', name: 'Fólkvangr', from: [130, 40], dir: [0, -1], look: 'local',
+    { id: 'folkvangr', name: 'Fólkvangr', from: atK(-60, -110), dir: [0, -1], look: 'local',
       sign: 'vistadelsol. fields, then more fields.\nthe road inland isn\'t open yet.', lines: ['the fields go on further than you\'d think.\nso does the quiet.', 'north of here it all turns to ash, they say.\nashenreach. i\'ve never been.'] },
-    { id: 'persepolis', name: 'Persepolis', from: [300, 150], dir: [1, 0], look: 'clerk',
+    { id: 'persepolis', name: 'Persepolis', from: atK(110, 0), dir: [1, 0], look: 'clerk',
       sign: 'vistadelsol. the old road to persepolis.\nclosed for repairs. since forever.', lines: ['the city\'s up the road. was. is.\ndepends who you ask.', 'the crabs here are friendly.\ndon\'t test that.'] }
   ];
 
@@ -413,6 +448,54 @@
                 'the night market moves.\nfollow the lanterns.', 'interns from the labs eat here.\nthey never say what they work on.'],
     redrum:    ['you lost? good. stay lost.', 'nobody here saw anything. including me.', 'the arcade is neutral ground. mostly.',
                 'keep your joules in your shoe.', 'red lights mean go here. figure it out.', 'they say the lighthouse is empty.\nthey say a lot of things.']
+  };
+  /* more of the same voices: the crowd works through its district's whole
+     pool, each person in their own order (overworld.js chatter). PLACEHOLDER */
+  var MORE = {
+    worldwood: ['there\'s a club under the club.\ni\'m not saying which club.', 'the tower changes key at midnight.\nlisten for it.',
+                'my landlord is a hologram.\nhe\'s still a landlord.', 'every sign here is trying to sell me something.\nexcept that one. that one just says HI.',
+                'i work two jobs and a side thing.\nthe side thing pays best.', 'the sapphire\'s been closed tonight for about a year.',
+                'don\'t stand still too long.\nsomeone will put an ad on you.', 'the rain\'s warm here. nobody knows why.\nnobody asks.',
+                'i saw a guy pay for noodles with a song.\nthey took it.', 'worldwood\'s loud so you don\'t have to be.'],
+    yucayeque: ['my tía runs the third stall.\ntell her you\'re my friend. you\'re my friend now.', 'the boatyard\'s down by the water.\nthe shipwright swears at wood. lovingly.',
+                'palm fibre? the yards are full of it.\nthe palms don\'t mind. much.', 'everyone sings at weddings here.\neveryone. no exceptions.',
+                'domino night is serious.\ndo not laugh at domino night.', 'the sea comes right up to the houses on the east side.\nwe like it close.',
+                'you look hungry. everyone looks hungry to me.\nit\'s a gift.', 'there\'s a song for leaving and a song for coming back.\nwe sing the second one more.',
+                'the market hall used to be a church.\nor a warehouse. depends on your abuela.', 'come back on a sunday.\nbring nothing. leave full.'],
+    naturia:   ['the timber here falls on its own.\nwe just pick it up. it\'s polite.', 'the great tree has a door.\nit\'s always been open. go in.',
+                'there\'s a moth out here the size of a hand.\nit\'s fine. it likes people.', 'sit still long enough and the moss starts on you.\nkidding. mostly.',
+                'i was a programmer. now i count frogs.\nbetter hours.', 'the paths glow brighter where people walk.\nthe forest keeps score.',
+                'something sang last night. not a bird.\nnot a person. pretty, though.', 'take timber from the fallen ones.\nnever the standing ones. that\'s the rule.',
+                'the city\'s right there and you can\'t hear it.\nthat\'s the trick.', 'if you get lost, follow the blue glow.\nor don\'t. it\'s nice either way.'],
+    haven:     ['the council building has four hundred windows.\nall of them are clean.', 'i got fined for whistling.\nthe wrong song.',
+                'the police here say thank you when they stop you.', 'everyone in haven waters their lawn at seven.\nexactly seven.',
+                'the meridian\'s got a waiting list.\nthe waiting list has a waiting list.', 'i like it here. i think. it\'s hard to tell.\neverything is so quiet.',
+                'there\'s a barber who\'ll give you a council cut.\nit\'s just a normal cut. but they call it that.', 'the fountains turn off at ten.\nthe silence after is loud.',
+                'if you see litter, report it.\nyou won\'t see litter.', 'my neighbour has lived here thirty years.\ni have never heard his voice.'],
+    majinryu:  ['the labs throw out good scrap.\nbrackets, wire. the bins round back.', 'the pagoda keeper\'s been there longer than the hospital.\nask her about it. she won\'t answer.',
+                'my cousin had his eyes done at the hospital.\nthey\'re green now. they were brown.', 'don\'t buy dumplings from the cart that moves.\nbuy from the one that doesn\'t.',
+                'the lanterns go out one by one at dawn.\nnobody blows them. they just know.', 'somebody here is always awake.\nthat\'s majinryū.',
+                'the hospital lights hum in a key.\nthe tower in worldwood hums back. i swear.', 'there\'s a tea that makes you remember a dream.\ntwo cups and you remember someone else\'s.',
+                'the interns walk in pairs.\nnever asked why. not going to.', 'old gate, new labs.\nthe old gate wins every argument.'],
+    redrum:    ['the scrap round here is free if you\'re quick.\nthe dogs are quicker.', 'the arcade\'s owner? never met them.\nhex acts like she owns it. maybe she does.',
+                'you didn\'t see me. i didn\'t see you.\nwe\'re both doing great.', 'the lighthouse light goes on sometimes.\nnobody goes up to turn it on.',
+                'the walk-ups out back are cheap.\nyou get what you pay for. you get some extra.', 'causeway\'s the only way in on foot.\nthat\'s how we like it.',
+                'i saw your face before. no i didn\'t.\nforget i said that.', 'redrum doesn\'t have a mayor.\nit has a mood.']
+  };
+  Object.keys(MORE).forEach(function (k) { CROWD[k] = CROWD[k].concat(MORE[k]); });
+
+  /* what people say about you, when it fits. PLACEHOLDER */
+  var TALK = {
+    boat:  ['that your boat at the pier?\nnice lines. bit small.', 'you\'ve been out on the water? past the shore?\nwhat\'s out there?',
+            'a boat. look at you.\ntake me to vistadelsol sometime. i\'ll bring snacks.', 'careful past the strait.\nthe jörmun doesn\'t care who you are.'],
+    hex:   ['you know hex? everyone knows hex.\nnot everyone admits it.', 'hex said your name earlier. i think.\nit was fast. she talks fast.',
+            'if hex likes you, you\'re fine here.\nif she doesn\'t, also fine. just quieter.', 'hex owes me money.\ndon\'t tell her i said that.'],
+    cold:  ['hex walked right past you earlier.\ndidn\'t even pop her gum. what\'d you do?', 'you and hex fall out?\nshe\'s been quiet. hex is never quiet.'],
+    rich:  ['you\'re walking like someone with joules on them.\nwalk different.', 'that\'s a lot of joules to carry around.\nthe pawn shop\'ll hold nothing for you. just saying.',
+            'you look like you could buy this whole street.\ndon\'t. we like it.'],
+    late:  ['it\'s late. why are you up?\nme? i\'m always up.', 'the city\'s different at this hour.\nhonest, kind of.',
+            'nobody\'s out this late but us and the rain.'],
+    home:  ['you got a place now? good.\neveryone needs a door that\'s theirs.', 'how\'s the new place? the pipes sing, right?\nall the pipes sing.']
   };
 
   /* ── indoors ──────────────────────────────────────────────────
@@ -645,10 +728,10 @@
      and round majinryū's labs, fruit out in vistadelsol. shops.js RES
      names them; item 2 turns picking them up into minigames */
   var NODE_KINDS = [
-    { kind: 'timber', where: ['naturia'], per: 5, near: T.TREE },
-    { kind: 'fibre', where: ['yucayeque'], per: 5 },
-    { kind: 'scrap', where: ['redrum', 'majinryu'], per: 3 },
-    { kind: 'fruit', where: ['vistadelsol'], per: 8 }
+    { kind: 'timber', where: ['naturia'], per: 7, near: T.TREE },
+    { kind: 'fibre', where: ['yucayeque'], per: 7 },
+    { kind: 'scrap', where: ['redrum', 'majinryu'], per: 5 },
+    { kind: 'fruit', where: ['vistadelsol'], per: 10 }
   ];
   function nodes(world, day) {
     if (!world.nodeOpen) {
@@ -687,7 +770,7 @@
      Picked from open ground the player can actually reach, never on a
      sign or where someone stands, so they survive the map changing. The
      same day gives the same spots on every device. */
-  var LOOSE_PER = 3;
+  var LOOSE_PER = 4;
   function loose(world, day) {
     if (!world.open) {
       var r = reach(world, world.spawn.x, world.spawn.y), busy = {};
@@ -711,5 +794,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);

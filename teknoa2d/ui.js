@@ -400,7 +400,8 @@
       $('opOrigin').textContent = o ? o.title : '';
       $('opJ').textContent = MF.fmtJ(MF.joules(s));
       inv.innerHTML = ''; met.innerHTML = '';
-      Object.keys(s.items).forEach(function (k) { inv.appendChild(li(k + (s.items[k] > 1 ? ' x' + s.items[k] : ''), D.items[k])); });
+      var CU = (window.MFShops && window.MFShops.CURIOS) || {};
+      Object.keys(s.items).forEach(function (k) { inv.appendChild(li((CU[k] ? CU[k].name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : ''), CU[k] ? CU[k].what : D.items[k])); });
       var RS = (window.MFShops && window.MFShops.RES) || {};
       Object.keys(s.res || {}).forEach(function (k) { if (RS[k]) inv.appendChild(li(RS[k].name + ' x' + s.res[k], RS[k].what)); });
       if (s.boat) inv.appendChild(li('a boat', 'moored wherever you left the water. face the sea and press A to sail.'));
