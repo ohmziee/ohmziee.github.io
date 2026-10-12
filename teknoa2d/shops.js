@@ -93,5 +93,33 @@
                  sign: 'luxury living. the rent is a crime.', view: 'neon, all the way down.\nthe tower hums a colour at you. it might be yours.' }
   };
 
-  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, price: price, quote: quote, allowed: allowed, buy: buy };
+  /* materials, picked up round the city (world.js nodes), and the boat the
+     shipwright builds out of them. PLACEHOLDER numbers */
+  var RES = {
+    timber: { name: 'timber', what: 'fallen wood from naturia\'s groves.' },
+    fibre:  { name: 'palm fibre', what: 'twisted from yucayeque\'s palms. it makes rope.' },
+    scrap:  { name: 'scrap metal', what: 'nails, brackets, a hinge. redrum and majinryū throw away good stuff.' },
+    fruit:  { name: 'fruit', what: 'vistadelsol grows most things you can eat.' }
+  };
+  var BOAT = { joules: 1500, need: { timber: 12, fibre: 8, scrap: 6 } };
+  /* what's still missing for the boat: [] when it can be built */
+  function boatShort(MF, s) {
+    var out = [], res = s.res || {};
+    Object.keys(BOAT.need).forEach(function (k) { if ((res[k] || 0) < BOAT.need[k]) out.push({ kind: k, have: res[k] || 0, need: BOAT.need[k] }); });
+    if (MF.joules(s) < BOAT.joules) out.push({ kind: 'joules', have: MF.joules(s), need: BOAT.joules });
+    return out;
+  }
+  /* all or nothing, like a shop */
+  function buildBoat(MF, s) {
+    if (s.boat) return { ok: false, why: 'already have one' };
+    var short = boatShort(MF, s);
+    if (short.length) return { ok: false, why: 'short', short: short };
+    if (!MF.spend(s, BOAT.joules)) return { ok: false, why: 'short' };
+    Object.keys(BOAT.need).forEach(function (k) { s.res[k] -= BOAT.need[k]; if (!s.res[k]) delete s.res[k]; });
+    s.boat = 1;
+    return { ok: true };
+  }
+
+  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, boatShort: boatShort, buildBoat: buildBoat,
+                   price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

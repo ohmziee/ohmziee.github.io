@@ -32,6 +32,7 @@
     <a class="back" href="../index.html">&lt;&lt; EXiLED</a>
     <span class="chan">TEKNOA 2D</span>
     <span class="tools" hidden>
+      <button type="button" id="mapBtn" aria-controls="map" aria-expanded="false">MAP</button>
       <button type="button" id="invBtn" aria-controls="inv" aria-expanded="false">INV</button>
       <button type="button" id="sysBtn" aria-controls="sys" aria-expanded="false">SYS</button>
     </span>
@@ -128,6 +129,17 @@
     <ul id="invList"></ul>
     <h2>CONTACTS</h2>
     <ul id="metList"></ul>
+  </aside>
+
+  <aside class="panel mappanel" id="map" hidden aria-label="map of terranova">
+    <h2>TERRANOVA</h2>
+    <div class="maptabs" role="tablist">
+      <button type="button" data-map="biomes" role="tab">BIOMES</button>
+      <button type="button" data-map="states" role="tab">STATES</button>
+      <button type="button" data-map="nova" role="tab">NOVA SEA</button>
+    </div>
+    <div class="mapview" id="mapView"><img id="mapImg" alt="" decoding="async"><span class="here" id="mapHere" aria-hidden="true"></span></div>
+    <p class="dim" id="mapNote"></p>
   </aside>
 
   <aside class="panel" id="sys" hidden aria-label="system">

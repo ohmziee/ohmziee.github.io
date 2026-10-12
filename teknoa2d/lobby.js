@@ -56,10 +56,11 @@
   /* ── the others ────────────────────────────────────────────── */
   function cell(v) { v = Math.floor(+v); return v >= 0 && v < 4096 ? v : -1; }
   var FACE = { up: 1, down: 1, left: 1, right: 1 };
-  function place(o, x, y, d) {
+  function place(o, x, y, d, b) {
     x = cell(x); y = cell(y);
     if (x < 0 || y < 0) return;
     if (FACE[d]) o.dir = d;
+    o.boat = !!b;
     /* far off (they ran, or this is the first word): just put them there */
     if (o.x < 0 || Math.abs(x - o.x) + Math.abs(y - o.y) > 8) { o.x = o.tx = x; o.y = o.ty = y; o.fx = x; o.fy = y; o.t = 1; return; }
     o.tx = x; o.ty = y;
@@ -69,7 +70,7 @@
     if (!others[id] && Object.keys(others).length >= MAX_SHOWN) return;
     var o = others[id] || (others[id] = { id: id, x: -1, y: -1, tx: -1, ty: -1, fx: 0, fy: 0, t: 1, dir: 'down', step: 0, name: '', look: {} });
     o.look = meta.l && typeof meta.l === 'object' ? meta.l : {};
-    place(o, meta.x, meta.y, meta.d);
+    place(o, meta.x, meta.y, meta.d, meta.b);
     nameOf(meta.pass, id).then(function (n) { o.name = n; });
   }
   function onPresence(state, leaves) {
@@ -91,7 +92,7 @@
   }
 
   /* ── me ────────────────────────────────────────────────────── */
-  function meta() { return { pass: pass, l: me.look, x: me.x, y: me.y, d: me.d }; }
+  function meta() { return { pass: pass, l: me.look, x: me.x, y: me.y, d: me.d, b: me.b ? 1 : 0 }; }
   /* where i stand goes out at most every SEND_MS; force answers a newcomer */
   function say(force) {
     if (!me || !ws || ws.readyState !== 1 || !room) return;
@@ -99,7 +100,7 @@
     if (!force && now - lastSent < SEND_MS) { if (!sendT) sendT = setTimeout(function () { sendT = 0; say(); }, SEND_MS - (now - lastSent)); return; }
     lastSent = now;
     send({ topic: topic(), event: 'broadcast', ref: String(++ref), join_ref: String(joinRef),
-           payload: { type: 'broadcast', event: 'at', payload: { s: sid, x: me.x, y: me.y, d: me.d } } });
+           payload: { type: 'broadcast', event: 'at', payload: { s: sid, x: me.x, y: me.y, d: me.d, b: me.b ? 1 : 0 } } });
   }
   function track() {
     send({ topic: topic(), event: 'presence', ref: String(++ref), join_ref: String(joinRef),
@@ -125,7 +126,7 @@
     if (m.event === 'presence_diff') return onPresence(m.payload && m.payload.joins, m.payload && m.payload.leaves);
     if (m.event === 'broadcast' && m.payload && m.payload.event === 'at') {
       var p = m.payload.payload || {}, o = others[p.s];
-      if (o) place(o, p.x, p.y, p.d);
+      if (o) place(o, p.x, p.y, p.d, p.b);
     }
   }
   function open() {
@@ -165,9 +166,10 @@
     if (r === room) return;
     leave(); room = r; join();
   }
-  function moved(x, y, d) {
+  /* b: they're in a boat */
+  function moved(x, y, d, b) {
     if (!me) return;
-    me.x = x; me.y = y; me.d = d;
+    me.x = x; me.y = y; me.d = d; me.b = !!b;
     say();
   }
   function restyle(look) { if (me) { me.look = look; track(); } }

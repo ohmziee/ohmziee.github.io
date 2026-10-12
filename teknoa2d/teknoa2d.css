@@ -121,6 +121,16 @@ a{color:var(--lavender)}
 
 .panel{position:fixed;top:3.4rem;right:1rem;width:min(22rem,calc(100vw - 2rem));max-height:calc(100vh - 4.4rem);overflow:auto;
   background:var(--deep);border:1px solid var(--lavender);padding:.4rem 1rem 1rem;z-index:5}
+/* the map: the terranova map, with a dot where nova city is */
+.mappanel{width:min(34rem,calc(100vw - 2rem))}
+.maptabs{display:flex;gap:.4rem;margin-bottom:.6rem}
+.maptabs button{flex:1}
+.maptabs button[aria-selected="true"]{border-color:#7CFFB2;color:#7CFFB2}
+.mapview{position:relative;line-height:0;border:1px solid var(--violet);background:#466eab}
+.mapview img{width:100%;height:auto;display:block}
+.mapview .here{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#ff4fd8;box-shadow:0 0 0 2px #0b0d1a,0 0 12px 4px #ff4fd8;animation:here 1.4s ease-in-out infinite}
+@keyframes here{50%{transform:scale(1.6);opacity:.6}}
+@media (prefers-reduced-motion:reduce){.mapview .here{animation:none}}
 .panel h2{font-family:var(--font-display);font-size:.95rem;letter-spacing:.2em;color:var(--lavender);margin:1rem 0 .5rem}
 .panel ul{list-style:none;margin:0;padding:0}
 .panel li{padding:.35rem 0;border-bottom:1px dashed var(--violet)}

@@ -377,7 +377,7 @@
 
   /* ── panels ─────────────────────────────────────────────── */
   function closePanels() {
-    ['inv', 'sys'].forEach(function (p) { $(p).hidden = true; $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
+    ['map', 'inv', 'sys'].forEach(function (p) { $(p).hidden = true; $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
   }
   function toggle(p, fillIt) {
     var was = !$(p).hidden;
@@ -401,6 +401,9 @@
       $('opJ').textContent = MF.fmtJ(MF.joules(s));
       inv.innerHTML = ''; met.innerHTML = '';
       Object.keys(s.items).forEach(function (k) { inv.appendChild(li(k + (s.items[k] > 1 ? ' x' + s.items[k] : ''), D.items[k])); });
+      var RS = (window.MFShops && window.MFShops.RES) || {};
+      Object.keys(s.res || {}).forEach(function (k) { if (RS[k]) inv.appendChild(li(RS[k].name + ' x' + s.res[k], RS[k].what)); });
+      if (s.boat) inv.appendChild(li('a boat', 'moored wherever you left the water. face the sea and press A to sail.'));
       var HM = (window.MFShops && window.MFShops.HOMES) || {};
       Object.keys(s.homes || {}).forEach(function (k) { if (HM[k]) inv.appendChild(li('key: ' + HM[k].name, HM[k].where + (s.wake === k ? '. you wake up here.' : '.'))); });
       if (!inv.children.length) inv.appendChild(empty('nothing yet.'));
@@ -408,6 +411,27 @@
       if (!met.children.length) met.appendChild(empty('no one yet.'));
     });
   });
+
+  /* the map of terranova, from the vault's azgaar map. here = where nova
+     city is on each picture, as a fraction of its width and height */
+  var MAPS = {
+    biomes: { src: 'maps/biomes.png', here: [0.629, 0.797], note: 'terranova, by the land. nova city is the dot, in the south, in vistadelsol.' },
+    states: { src: 'maps/states.png', here: [0.629, 0.797], note: 'terranova, by who holds it. vistadelsol is the teknoan council\'s.' },
+    nova:   { src: 'maps/nova.png', here: [0.5, 0.36], note: 'the nova sea. vistadelsol all round the bay. a boat gets you out there.' }
+  };
+  var mapShown = 'nova';
+  function showMap(k) {
+    mapShown = k;
+    var m = MAPS[k];
+    $('mapImg').setAttribute('src', m.src); $('mapImg').setAttribute('alt', 'map of terranova: ' + k);
+    $('mapHere').style.left = (m.here[0] * 100) + '%'; $('mapHere').style.top = (m.here[1] * 100) + '%';
+    $('mapNote').textContent = m.note;
+    [].forEach.call(document.querySelectorAll('.maptabs button'), function (b) { b.setAttribute('aria-selected', b.getAttribute('data-map') === k ? 'true' : 'false'); });
+  }
+  [].forEach.call(document.querySelectorAll('.maptabs button'), function (b) {
+    b.addEventListener('click', function () { showMap(b.getAttribute('data-map')); });
+  });
+  $('mapBtn').addEventListener('click', function () { toggle('map', function () { showMap(mapShown); }); });
 
   /* the backup: the whole site's progress (backup.js), not just this run.
      Old game-only MF1 codes still load. */

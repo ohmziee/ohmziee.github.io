@@ -26,9 +26,10 @@
     haven:     { ground: '#4a5260', road: '#6a7282', line: '#d8dce8', roof: '#c8ccd8', roof2: '#e6e8f0', wall: '#8a92a6', glow: ['#bfe4ff', '#ffffff', '#9fd0ff', '#ffffff'], tree: '#2a5a3a', leaf: '#6ad08a', grass: '#3a6a4a' },
     majinryu:  { ground: '#2a1e22', road: '#3a2c30', line: '#5a3a3a', roof: '#7a2020', roof2: '#a83030', wall: '#2a2a30', glow: ['#ff6a3a', '#ffd36a', '#7cffb2', '#ff4f6a'], tree: '#2a3a2a', leaf: '#6aa060', grass: '#24302a' },
     redrum:    { ground: '#2a1014', road: '#3a161c', line: '#5a1a24', roof: '#3a1218', roof2: '#4a1820', wall: '#1a080c', glow: ['#ff2a4a', '#ff4fd8', '#ff6a3a', '#ff2a4a'], tree: '#2a1a1a', leaf: '#6a2a2a', grass: '#2a1418' },
+    vistadelsol: { ground: '#3a3a26', road: '#4a4630', line: '#6a6440', roof: '#4a6a3a', roof2: '#5a7a4a', wall: '#3a4a2a', glow: ['#ffd36a', '#7cffb2', '#ff8a6b', '#ffe97c'], tree: '#1f5a2e', leaf: '#7cd06a', grass: '#25452a' },
     none:      { ground: '#20283a', road: '#2a3248', line: '#3a4460', roof: '#2a3248', roof2: '#3a4460', wall: '#1a2030', glow: ['#9f8cff'], tree: '#1a3a30', leaf: '#3a8a6a', grass: '#1a3a2a' }
   };
-  function pal(di) { return PAL[di >= 0 ? D[di].id : 'none']; }
+  function pal(di) { return PAL[di >= 0 ? D[di].id : di === -2 ? 'vistadelsol' : 'none']; }
 
   function hash(a, b) {
     var h = (a * 374761393 + b * 668265263) | 0;
@@ -68,10 +69,13 @@
       return;
     }
     if (t === T.MAINLAND) {
-      /* distant cliffs: rows of rock, staggered like brick */
-      px(g, '#18261f', 0, 0, TS, TS);
-      px(g, '#22362c', 0, 7, TS, 1); px(g, '#22362c', 0, 15, TS, 1);
-      px(g, '#22362c', 4, 0, 1, 7); px(g, '#22362c', 12, 8, 1, 7);
+      /* vistadelsol's bush: too thick to walk through, palms poking out */
+      px(g, '#14301c', 0, 0, TS, TS);
+      [[1, 1, 6], [8, 4, 7], [2, 9, 6], [10, 11, 5]].forEach(function (c, j) {
+        if ((v >> j) & 1 && j > 1) return;
+        px(g, OUT, c[0], c[1], c[2], c[2] - 1); px(g, j % 2 ? '#1f5a2e' : '#2a6a34', c[0] + 1, c[1] + 1, c[2] - 2, c[2] - 3);
+        px(g, '#7cd06a', c[0] + 1, c[1] + 1, 2, 1);
+      });
       return;
     }
     if (t === T.SAND) {
@@ -316,6 +320,15 @@
     px(g, OUT, (w >> 1) - 5, h - 12, 10, 12); px(g, '#1a1426', (w >> 1) - 4, h - 11, 8, 11); px(g, '#ff4fd8', (w >> 1) - 4, h - 11, 8, 1);
     px(g, '#7cf5ff', (w >> 1) + 6, h - 8, 2, 3);
   };
+  /* the boatyard: planks, a hull up on blocks, rope */
+  MARK_ART.boatyard = function (g, w, h) {
+    px(g, '#3a2a1c', 0, 0, w, h);
+    for (var y = 3; y < h; y += 5) px(g, '#4e3a28', 0, y, w, 1);
+    px(g, OUT, 6, 8, w - 24, 12); px(g, '#8a5a32', 7, 9, w - 26, 6); px(g, '#c8a878', 7, 9, w - 26, 1); px(g, '#2f5a6a', 9, 15, w - 30, 3);
+    px(g, '#5a4a40', 10, 20, 4, 6); px(g, '#5a4a40', w - 26, 20, 4, 6);
+    px(g, OUT, w - 14, h - 14, 10, 14); px(g, '#1a1426', w - 13, h - 13, 8, 13); px(g, '#ffd36a', w - 13, h - 13, 8, 1);
+    for (var i = 0; i < 4; i++) px(g, '#c8a878', w - 12 + (i % 2), 3 + i * 2, 4, 1);
+  };
   /* indoors */
   MARK_ART.window = function (g, w, h) {
     px(g, '#3a3150', 0, 0, w, h); px(g, OUT, 3, 2, w - 6, h - 5); px(g, '#141a2e', 4, 3, w - 8, h - 7);
@@ -436,6 +449,19 @@
     return (markArt[m.id] = c);
   }
 
+  /* the boat, drawn over the lower half of whoever is in it */
+  var hullCanvas = null;
+  function hull() {
+    if (hullCanvas) return hullCanvas;
+    var c = document.createElement('canvas'); c.width = c.height = TS;
+    var g = c.getContext('2d');
+    px(g, OUT, 0, 8, 16, 6); px(g, OUT, 1, 14, 14, 1);
+    px(g, '#8a5a32', 1, 9, 14, 4); px(g, '#c8a878', 1, 9, 14, 1); px(g, '#6a4422', 2, 13, 12, 1);
+    px(g, '#2f5a6a', 3, 11, 10, 1);
+    px(g, 'rgba(220,240,255,.7)', 0, 15, 3, 1); px(g, 'rgba(220,240,255,.7)', 13, 15, 3, 1);
+    return (hullCanvas = c);
+  }
+
   /* ── people: 16x16, four directions, two frames ───────────── */
   var BODY = {
     down: ['................', '.....HHHHHH.....', '....HHHHHHHH....', '....HHHHHHHH....', '....HSSSSSSH....', '....SEESSEES....',
@@ -460,6 +486,7 @@
     medic:   { H: '#1a1a1a', S: '#e0b48a', C: '#e6e8f0', P: '#8ad0b0', k: '#111' },
     merc:    { H: '#3a1218', S: '#b07a5a', C: '#3a1218', P: '#1a080c', k: '#111' },
     tailor:  { H: '#c9a25a', S: '#e8b796', C: '#5a1e3c', c: '#3a1428', A: '#f2c94c', P: '#14121c', k: '#111', hair: 'bob', acc: 'glasses' },
+    shipwright: { H: '#9aa0a8', B: '#9aa0a8', S: '#b07a52', C: '#2f5a6a', c: '#1f3a48', P: '#3a3020', k: '#1a1410', hair: 'buzz', beard: 'full', A: '#f2c94c', acc: 'cap' },
     barber:  { H: '#14121c', B: '#14121c', S: '#a06a48', C: '#dce3ff', c: '#9aa0b8', P: '#2a2f4a', k: '#111', hair: 'buzz', beard: 'full' }
   };
   /* the Chippin' In parts, at walking size: hair shape, what they wear, the
@@ -599,8 +626,8 @@
   function playerLook() { return lookOf(s.player.look); }
 
   /* ── state ─────────────────────────────────────────────────── */
-  var me = { x: 0, y: 0, dir: 'down', moving: false, fx: 0, fy: 0, t: 0, step: 0 };
-  var npcs = [], held = {}, pressedA = false, talkBox = null, district = -2, card = { until: 0 };
+  var me = { x: 0, y: 0, dir: 'down', moving: false, fx: 0, fy: 0, t: 0, step: 0, sail: false };
+  var npcs = [], held = {}, pressedA = false, talkBox = null, district = -3, card = { until: 0 };
   var loose = [], toastT = 0;
   /* the city, kept while the player is indoors; inside is the apartment they're in */
   var city = null, cityDeco = null, cityNpcs = null, inside = null, H = (window.MFShops && window.MFShops.HOMES) || {};
@@ -615,6 +642,15 @@
   function tryMove(dir) {
     me.dir = dir;
     var d = DIRS[dir], nx = me.x + d[0], ny = me.y + d[1];
+    if (me.sail) {
+      if (nx < 0 || ny < 0 || nx >= world.W || ny >= world.H) { edgeOfTheWorld(); return; }
+      var crewed = npcs.some(function (n) { return n.x === nx && n.y === ny; });
+      if (M.water(world, nx, ny) && !crewed) { step(nx, ny, dir); return; }
+      /* run aground: step ashore, if there's ground to step on */
+      if (!occupied(nx, ny)) { me.sail = false; step(nx, ny, dir); return; }
+      if (L) L.moved(me.x, me.y, dir, 1);
+      return;
+    }
     if (occupied(nx, ny)) {
       if (L) L.moved(me.x, me.y, dir);
       /* walking up into your own front door lets you in */
@@ -623,8 +659,21 @@
       else if (hm && hm.room) goIn(hm.room);
       return;
     }
+    step(nx, ny, dir);
+  }
+  function step(nx, ny, dir) {
     me.fx = me.x; me.fy = me.y; me.x = nx; me.y = ny; me.moving = true; me.t = 0; me.step ^= 1;
-    if (L) L.moved(nx, ny, dir);
+    if (L) L.moved(nx, ny, dir, me.sail ? 1 : 0);
+  }
+  var edgeAt = 0;
+  function edgeOfTheWorld() {
+    if (Date.now() - edgeAt < 20000) return;
+    edgeAt = Date.now();
+    say(['the jörmun ocean goes on and on.\nthey say it wraps all the way round. not today.']);
+  }
+  /* into the boat: facing open water, with a boat to your name */
+  function setSail(tx, ty) {
+    ask(['the water\'s right there. set sail?'], function () { me.sail = true; step(tx, ty, me.dir); });
   }
 
   /* ── talking ─────────────────────────────────────────────── */
@@ -661,6 +710,7 @@
       if (n.x !== tx || n.y !== ty) continue;
       n.dir = { up: 'down', down: 'up', left: 'right', right: 'left' }[me.dir];
       if (n.shop && api.shop) { api.shop(n.shop); return; }
+      if (n.wright) return shipwright();
       if (n.scene === 'hex') {
         if (!s.met.hex && api.talk) { api.talk(); return; }
         var after = s.flags['hex-closed'] ? HEX_COLD : HEX_AFTER;
@@ -678,6 +728,7 @@
         return say([(walkers[i].name || 'a stranger') + ' is walking the city too.'], walkers[i].name || '');
       }
     }
+    if (!inside && !me.sail && s.boat && M.water(world, tx, ty) && !npcs.some(function (n) { return n.x === tx && n.y === ty; })) return setSail(tx, ty);
     /* walking into a shop's front opens it too; an apartment's door sells
        itself or lets you in; furniture has something to say */
     var m = markAt(tx, ty);
@@ -696,6 +747,22 @@
     }
   }
 
+  /* the shipwright: says what a boat takes, and builds it when it's all there */
+  function shipwright() {
+    var SH = window.MFShops, MF = window.MF;
+    if (s.boat) return say(['she\'s yours. face the water anywhere\nand press A to set sail.', 'mind the east coast. the reef\'s further out than it looks.'], 'SHIPWRIGHT');
+    var short = SH.boatShort(MF, s), need = SH.BOAT.need, res = s.res || {};
+    var list = Object.keys(need).map(function (k) { return SH.RES[k].name + ' ' + (res[k] || 0) + '/' + need[k]; }).join('\n') + '\n' + MF.fmtJ(MF.joules(s)) + ' of ' + MF.fmtJ(SH.BOAT.joules);
+    var pitch = 'a boat? i can build you one. it gets you past the shore:\nvistadelsol, the islands, the whole nova sea.';
+    if (short.length) return say([pitch, 'bring me ' + need.timber + ' timber, ' + need.fibre + ' palm fibre,\n' + need.scrap + ' scrap metal, and ' + MF.fmtJ(SH.BOAT.joules) + ' for my time.', 'what you\'ve got:\n' + list, 'timber\'s in naturia, by the trees. fibre in yucayeque.\nscrap in redrum and round the labs.'], 'SHIPWRIGHT');
+    ask([pitch, 'that\'s everything. ' + need.timber + ' timber, ' + need.fibre + ' fibre, ' + need.scrap + ' scrap and ' + MF.fmtJ(SH.BOAT.joules) + '.\nbuild it?'], function () {
+      var r = SH.buildBoat(MF, s);
+      if (!r.ok) return say(['short of something. check your pockets.'], 'SHIPWRIGHT');
+      wallet('-' + MF.fmtJ(SH.BOAT.joules));
+      if (api.save) api.save();
+      say(['sawing. hammering. a lot of swearing.', 'done. she\'s moored at the end of the pier.\nface the water anywhere and press A to set sail.'], 'SHIPWRIGHT');
+    });
+  }
   function markAt(x, y) {
     for (var i = 0; i < world.marks.length; i++) {
       var m = world.marks[i];
@@ -737,8 +804,8 @@
   /* a room you can be in: a public building, or an apartment you hold the key to */
   function canBeIn(id) { var r = id && M.room(id); return !!r && (!r.home || !!s.homes[r.home]); }
   /* public rooms have their own street channel; apartments are private */
-  function lobbyRoom() { return inside ? (inside.place ? 'in-' + inside.id : '') : district >= 0 ? D[district].id : ''; }
-  function here() { return { x: me.x, y: me.y, d: me.dir, v: M.V, in: inside ? inside.id : undefined }; }
+  function lobbyRoom() { return inside ? (inside.place ? 'in-' + inside.id : '') : district >= 0 ? D[district].id : district === -2 ? 'vistadelsol' : ''; }
+  function here() { return { x: me.x, y: me.y, d: me.dir, v: M.V, in: inside ? inside.id : undefined, sail: me.sail ? 1 : undefined }; }
   function goIn(id, at) {
     var r = M.room(id);
     if (!r) return;
@@ -773,7 +840,41 @@
     if (!loose.day || loose.day !== day) { loose = M.loose(world, day); loose.day = day; }
     return loose.filter(function (j) { return !s.found.got[j.id]; });
   }
+  var piles = [];
+  function pilesNow() {
+    var day = today();
+    if (!s.gathered || s.gathered.day !== day) s.gathered = { day: day, got: {} };
+    if (!piles.day || piles.day !== day) { piles = M.nodes(city, day); piles.day = day; }
+    return piles.filter(function (j) { return !s.gathered.got[j.id]; });
+  }
+  function gather() {
+    var left = pilesNow(), RS = (window.MFShops && window.MFShops.RES) || {};
+    for (var i = 0; i < left.length; i++) {
+      var p = left[i];
+      if (p.x !== me.x || p.y !== me.y) continue;
+      s.gathered.got[p.id] = 1;
+      if (!s.res) s.res = {};
+      s.res[p.kind] = (s.res[p.kind] || 0) + p.n;
+      wallet('+' + p.n + ' ' + (RS[p.kind] ? RS[p.kind].name : p.kind));
+      if (api && api.save) api.save();
+      return;
+    }
+  }
+  var PILE = {
+    timber: function (g, x, y) { px(g, OUT, x + 2, y + 7, 12, 7); px(g, '#8a5a32', x + 3, y + 8, 10, 2); px(g, '#6a4422', x + 3, y + 11, 10, 2); px(g, '#c8a878', x + 3, y + 8, 2, 2); px(g, '#c8a878', x + 3, y + 11, 2, 2); },
+    fibre:  function (g, x, y) { px(g, OUT, x + 4, y + 4, 8, 11); px(g, '#c8b878', x + 5, y + 5, 6, 9); px(g, '#8a7a48', x + 5, y + 9, 6, 1); px(g, '#e8d898', x + 6, y + 5, 1, 4); },
+    scrap:  function (g, x, y) { px(g, OUT, x + 3, y + 7, 10, 7); px(g, '#8a92a6', x + 4, y + 8, 4, 3); px(g, '#5a6070', x + 8, y + 9, 4, 4); px(g, '#c8ccd8', x + 5, y + 8, 1, 1); px(g, '#c4473a', x + 9, y + 10, 2, 1); },
+    fruit:  function (g, x, y) { px(g, OUT, x + 4, y + 6, 8, 8); px(g, '#ff8a3a', x + 5, y + 7, 6, 6); px(g, '#ffd36a', x + 6, y + 8, 2, 2); px(g, '#3fd06a', x + 7, y + 4, 2, 3); }
+  };
+  function drawPiles(cx, cy, now) {
+    pilesNow().forEach(function (p) {
+      var sx = p.x * TS - cx, sy = p.y * TS - cy;
+      if (sx < -TS || sy < -TS || sx > VW * TS || sy > VH * TS) return;
+      (PILE[p.kind] || PILE.scrap)(ctx, sx, sy - (Math.floor(now / 500 + p.x) % 2));
+    });
+  }
   function pickUp() {
+    gather();
     var left = looseNow();
     for (var i = 0; i < left.length; i++) {
       if (left[i].x !== me.x || left[i].y !== me.y) continue;
@@ -807,12 +908,14 @@
   }
 
   /* ── district cards ──────────────────────────────────────── */
+  var VDS = { id: 'vistadelsol', name: 'VISTADELSOL', sub: 'the beaches and islands // past the shore' };
   function enterDistrict(di) {
-    if (di < 0 || di === district) return;
+    if ((di < 0 && di !== -2) || di === district) return;
     district = di;
-    var d = D[di], c = $('wCard');
+    var d = di === -2 ? VDS : D[di], c = $('wCard');
     if (L) L.setRoom(d.id);
-    $('wCardImg').setAttribute('src', 'places/' + d.id + '.jpg');
+    $('wCardImg').hidden = di === -2;
+    if (di !== -2) $('wCardImg').setAttribute('src', 'places/' + d.id + '.jpg');
     $('wCardImg').setAttribute('alt', d.name);
     $('wCardName').textContent = d.name; $('wCardSub').textContent = d.sub;
     c.hidden = false; c.classList.remove('out'); void c.offsetWidth; c.classList.add('in');
@@ -835,7 +938,7 @@
     if (L) { L.step(dt, SPEED); online(now); }
     if (talkBox) return;
     if (me.moving) {
-      me.t += dt * SPEED * (held.b ? 2 : 1);
+      me.t += dt * SPEED * (me.sail ? 1.4 : held.b ? 2 : 1);
       if (me.t >= 1) {
         me.moving = false; me.t = 0;
         if (inside) {
@@ -844,7 +947,7 @@
         } else {
           enterDistrict(world.dist[me.y * world.W + me.x]);
           s.world = here();
-          pickUp();
+          if (!me.sail) pickUp();
         }
       }
     }
@@ -907,19 +1010,21 @@
       px(ctx, OUT, sx + 2, sy + 2, 12, 8); px(ctx, '#c8a878', sx + 3, sy + 3, 10, 6);
       px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1); px(ctx, '#8a6a48', sx + 4, sy + 7, 6, 1);
     });
-    if (!inside) drawLoose(cx, cy, now);
+    if (!inside) { drawLoose(cx, cy, now); drawPiles(cx, cy, now); }
     /* people, back to front */
     var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
-    who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1 });
+    who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.sail ? 0 : me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1, boat: me.sail });
     if (L && (!inside || inside.place)) L.list().forEach(function (o) {
       var ox = (o.t < 1 ? o.fx + (o.x - o.fx) * o.t : o.x) * TS, oy = (o.t < 1 ? o.fy + (o.y - o.fy) * o.t : o.y) * TS;
       if (ox - cx < -TS || oy - cy < -TS || ox - cx > VW * TS || oy - cy > VH * TS) return;
-      who.push({ x: ox, y: oy, img: sprite(lookOf(o.look), o.dir, o.t > 0.25 && o.t < 0.75 ? 1 : 0), them: 1 });
+      who.push({ x: ox, y: oy, img: sprite(lookOf(o.look), o.dir, o.boat ? 0 : o.t > 0.25 && o.t < 0.75 ? 1 : 0), them: 1, boat: o.boat });
     });
     who.sort(function (a, b) { return a.y - b.y; });
     who.forEach(function (p) {
-      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(Math.round(p.x - cx) + 4, Math.round(p.y - cy) + 14, 8, 2);
-      ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2);
+      var bob = p.boat ? Math.floor(now / 450) % 2 : 0;
+      if (!p.boat) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(Math.round(p.x - cx) + 4, Math.round(p.y - cy) + 14, 8, 2); }
+      ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2 - (p.boat ? 3 : 0) + bob);
+      if (p.boat) ctx.drawImage(hull(), Math.round(p.x - cx), Math.round(p.y - cy) + bob);
       /* a real person: a little violet pip over their head */
       if (p.them) { px(ctx, OUT, Math.round(p.x - cx) + 6, Math.round(p.y - cy) - 7, 4, 4); px(ctx, '#b9a8ff', Math.round(p.x - cx) + 7, Math.round(p.y - cy) - 6, 2, 2); }
     });
@@ -1009,17 +1114,19 @@
     if (gift) { s.homes.redrum = 1; s.flags['hex-key'] = 1; }
     if (inside) { world = city; deco = cityDeco; npcs = cityNpcs; inside = null; }
     var wake = s.wake && s.homes[s.wake] ? doorOf(s.wake) : null;
+    me.sail = false;
     /* back where they stood, unless something is standing there now; else
        outside the apartment they last slept in; else the spawn */
     if (at && at.x >= 0 && at.v === M.V && at.in && canBeIn(at.in)) { var dd = doorOf(at.in); me.x = dd.x; me.y = dd.y; me.dir = 'down'; }
     else if (at && at.x >= 0 && at.v === M.V && !at.in && !M.solid(world, at.x, at.y) && !npcs.some(function (n) { return n.x === at.x && n.y === at.y; })) { me.x = at.x; me.y = at.y; me.dir = at.d || 'down'; }
+    else if (at && at.v === M.V && at.sail && s.boat && M.water(world, at.x, at.y)) { me.x = at.x; me.y = at.y; me.dir = at.d || 'down'; me.sail = true; }
     else if (wake) { me.x = wake.x; me.y = wake.y; me.dir = 'down'; }
     else { me.x = world.spawn.x; me.y = world.spawn.y; me.dir = world.spawn.dir; }
     me.moving = false; held = {}; talkBox = null; $('wTalk').hidden = true;
     s.world = here();
     $('world').hidden = false;
     fit();
-    district = -2; enterDistrict(world.dist[me.y * world.W + me.x]);
+    district = -3; enterDistrict(world.dist[me.y * world.W + me.x]);
     wallet();
     goOnline();
     /* they saved indoors: back inside, where they stood if it still makes sense */

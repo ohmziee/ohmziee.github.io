@@ -12,10 +12,10 @@
            6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall
            indoors: 12 floor  13 wall  14 door mat  15 tiled floor */
 (function (root) {
-  var W = 260, H = 200;
+  var W = 380, H = 300;
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
-  var VERSION = 2;
+  var VERSION = 3;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
             GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14, CHECK: 15 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
@@ -31,7 +31,7 @@
     { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, at: [-1, 1], style: 'grid', block: 4, seed: 53, wobble: 0.12 },
     { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 22 }
   ];
-  var CENTRE = [125, 115], GAP = 4, SCALE = 2.45;
+  var CENTRE = [190, 150], GAP = 4, SCALE = 2.45;
   /* hand-placed offsets (landmarks, shops, people) were laid out at the
      first draft's scale; F spreads them out to match */
   var F = SCALE / 1.55;
@@ -61,10 +61,30 @@
       d.cy = Math.round(CENTRE[1] + d.at[1] / len * far);
     });
 
-    /* the mainland: Vistadelsol's south shore, across the strait */
-    for (var x = 0; x < W; x++) {
-      var shore = 9 + Math.round(2 * Math.sin(x / 9) + 1.5 * Math.sin(x / 4 + 1));
-      for (var y = 0; y <= shore; y++) set(x, y, y >= shore - 1 ? T.SAND : T.MAINLAND, -1);
+    /* vistadelsol: the coast round the nova sea, as the terranova map has
+       it (azgaar, Terranova_2036 in the vault). nova city sits in a bay:
+       land to the north-west, a peninsula to the south-west, the coast down
+       the east and along the south. the bay opens north, and a strait opens
+       west onto the jörmun ocean. dist -2 is vistadelsol: not a district */
+    function coast(x, y) {
+      var n = 4 * Math.sin(y / 7) + 3 * Math.sin(x / 5 + y / 11);
+      if (x + n < 72 && y + n < 112) return true;                /* the north-west land */
+      if (y + n < 20 && x < 175) return true;                    /* its north shore */
+      if (x + n < 70 && y - n > 162) return true;                /* the south-west peninsula */
+      if (y - n > 264) return true;                              /* the south coast */
+      if (x - n > 320) return true;                              /* the east coast */
+      if (y + n < 22 && x > 255) return true;                    /* the north-east */
+      return false;
+    }
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) if (coast(x, y)) set(x, y, T.MAINLAND, -2);
+    /* beaches where it meets the water, shallows off them */
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      if (get(x, y) !== T.MAINLAND) continue;
+      for (var oy = -1; oy <= 1; oy++) for (var ox = -1; ox <= 1; ox++) if (inside(x + ox, y + oy) && get(x + ox, y + oy) === T.DEEP) { set(x, y, T.SAND, -2); oy = ox = 2; }
+    }
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      if (get(x, y) !== T.DEEP) continue;
+      for (var oy = -2; oy <= 2; oy++) for (var ox = -2; ox <= 2; ox++) { var c = get(x + ox, y + oy); if (inside(x + ox, y + oy) && (c === T.SAND || c === T.MAINLAND)) { set(x, y, T.SHALLOW); oy = ox = 3; } }
     }
 
     /* land: a wobbly disc per island, sand where it meets the water */
@@ -80,8 +100,17 @@
         else if (dd <= r + 2.2 && get(x, y) === T.DEEP) set(x, y, T.SHALLOW);
       }
     });
+    /* vistadelsol's little islands in the bay: palms, fruit, nobody */
+    ISLETS.forEach(function (o) {
+      var R = o.r + 3;
+      for (var y = o.y - R; y <= o.y + R; y++) for (var x = o.x - R; x <= o.x + R; x++) {
+        var dd = Math.sqrt((x - o.x) * (x - o.x) + (y - o.y) * (y - o.y)), r = o.r * (1 + 0.18 * Math.sin(Math.atan2(y - o.y, x - o.x) * 3 + o.x));
+        if (dd <= r) set(x, y, hash(x, y + 7) < 0.16 ? T.TREE : T.GRASS, -2);
+        else if (dd <= r + 2.2 && get(x, y) === T.DEEP) set(x, y, T.SHALLOW);
+      }
+    });
     for (var i = 0; i < W * H; i++) {
-      if (tile[i] !== T.GROUND) continue;
+      if (tile[i] !== T.GROUND && !(tile[i] === T.GRASS && dist[i] === -2)) continue;
       var xx = i % W, yy = (i / W) | 0;
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(function (o) { var t = get(xx + o[0], yy + o[1]); return t === T.DEEP || t === T.SHALLOW; })) tile[i] = T.SAND;
     }
@@ -234,6 +263,43 @@
       marks[marks.length - 1].home = h.d.id;
     });
 
+    /* the boatyard: yucayeque's east shore, a pier out into the bay, the
+       shipwright at the door (shops.js BOAT) */
+    var by = Y0.cy, bx = Y0.cx;
+    while (bx < W - 1 && !(dist[at(bx, by)] === Y0.index && (get(bx + 1, by) === T.SHALLOW || get(bx + 1, by) === T.DEEP))) bx++;
+    var yardDoor = landmark(Y0, 'boatyard', 'the boatyard', bx - 8 - Y0.cx, by - 3 - Y0.cy, 4, 2,
+      'THE BOATYARD\nboats built to order. bring the wood.', true);
+    carve(yardDoor.x, yardDoor.y, bx, yardDoor.y, T.ROAD, { 9: 1 });
+    for (var px = bx + 1; px <= bx + 6; px++) set(px, yardDoor.y, T.BRIDGE);
+    npcs.push({ id: 'shipwright', x: yardDoor.x + 1, y: yardDoor.y, dir: 'down', look: 'shipwright', wright: true, still: true });
+    var pierEnd = { x: bx + 6, y: yardDoor.y };
+
+    /* the landings round the coast, named for vistadelsol's towns on the
+       terranova map. a pier, a beach, a grove, someone who lives there. the
+       towns themselves aren't open yet. PLACEHOLDER lines */
+    var landings2 = [];
+    LANDINGS.forEach(function (l) {
+      /* from out in the water, head for land until there is some */
+      var x = l.from[0], y = l.from[1], guard = 0;
+      while (inside(x, y) && (get(x, y) === T.DEEP || get(x, y) === T.SHALLOW) && guard++ < 200) { x += l.dir[0]; y += l.dir[1]; }
+      var sx = x, sy = y;
+      /* the pier, back out over the water */
+      for (var k = 1; k <= 4; k++) set(sx - l.dir[0] * k, sy - l.dir[1] * k, T.BRIDGE);
+      /* the cove: cleared ground behind the beach, palms round it */
+      var cx = sx + l.dir[0] * 8, cy = sy + l.dir[1] * 8;
+      for (var yy = cy - 6; yy <= cy + 6; yy++) for (var xx = cx - 9; xx <= cx + 9; xx++) {
+        if (!inside(xx, yy) || (dist[at(xx, yy)] !== -2 && dist[at(xx, yy)] !== -1) || get(xx, yy) === T.DEEP || get(xx, yy) === T.SHALLOW || get(xx, yy) === T.BRIDGE) continue;
+        var edge = Math.abs(yy - cy) === 6 || Math.abs(xx - cx) === 9;
+        set(xx, yy, edge ? (hash(xx, yy) < 0.7 ? T.TREE : T.MAINLAND) : hash(xx * 3, yy) < 0.06 ? T.TREE : T.GRASS, -2);
+      }
+      carve(sx, sy, cx, cy, T.GRASS);
+      for (var k = 0; k <= 8; k++) dist[at(sx + l.dir[0] * k, sy + l.dir[1] * k)] = -2;
+      set(sx, sy, T.SAND, -2);
+      signs.push({ x: sx + l.dir[0] * 2 + (l.dir[1] ? 1 : 0), y: sy + l.dir[1] * 2 + (l.dir[0] ? 1 : 0), text: l.name.toUpperCase() + '\n' + l.sign });
+      npcs.push({ id: 'landing-' + l.id, x: cx + 2, y: cy, dir: 'down', look: l.look, lines: l.lines, roam: 3 });
+      landings2.push({ id: l.id, name: l.name, x: sx, y: sy, cx: cx, cy: cy });
+    });
+
     /* yucayeque's market: stalls round the hall */
     for (var s = 0; s < 8; s++) {
       var sx = Y0.cx + Math.round((-6 + (s % 4) * 4) * F), sy = Y0.cy + Math.round((2 + Math.floor(s / 4) * 3) * F);
@@ -308,8 +374,21 @@
       }
     });
 
-    return { W: W, H: H, tile: tile, dist: dist, marks: marks, signs: signs, npcs: npcs, spawn: spawn };
+    return { W: W, H: H, tile: tile, dist: dist, marks: marks, signs: signs, npcs: npcs, spawn: spawn, landings: landings2, pier: pierEnd };
   }
+
+  /* vistadelsol, past the shore (placed in map tiles, not by district) */
+  var ISLETS = [{ x: 212, y: 44, r: 7 }, { x: 46, y: 138, r: 5 }, { x: 300, y: 250, r: 7 }, { x: 140, y: 246, r: 6 }];
+  var LANDINGS = [
+    { id: 'fort-freyja', name: 'Fort Freyja', from: [90, 112], dir: [-1, 0], look: 'local',
+      sign: 'vistadelsol. the fort is up the hill.\nthe gate is shut tonight.', lines: ['the fort? old. older than the city.\nnobody goes up there after dark.', 'mangoes fall on your head here.\nit counts as lunch.'] },
+    { id: 'port-tropics', name: 'Port Tropics', from: [86, 168], dir: [-1, 0], look: 'reveler',
+      sign: 'vistadelsol. the fair comes through in summer.\nthe town is up the beach. not open yet.', lines: ['the fair\'s gone till summer.\nthe carousel\'s still out there, under a sheet.', 'you sailed here? from the city?\nbrave. or bored.'] },
+    { id: 'folkvangr', name: 'Fólkvangr', from: [130, 40], dir: [0, -1], look: 'local',
+      sign: 'vistadelsol. fields, then more fields.\nthe road inland isn\'t open yet.', lines: ['the fields go on further than you\'d think.\nso does the quiet.', 'north of here it all turns to ash, they say.\nashenreach. i\'ve never been.'] },
+    { id: 'persepolis', name: 'Persepolis', from: [300, 150], dir: [1, 0], look: 'clerk',
+      sign: 'vistadelsol. the old road to persepolis.\nclosed for repairs. since forever.', lines: ['the city\'s up the road. was. is.\ndepends who you ask.', 'the crabs here are friendly.\ndon\'t test that.'] }
+  ];
 
   var CROWD = {
     worldwood: ['the billboards change ads when you look at them.\ni stopped looking.', 'rent here is a crime. the neon is free though.',
@@ -554,6 +633,56 @@
     return seen;
   }
 
+  /* what a boat floats on */
+  function water(world, x, y) {
+    if (x < 0 || y < 0 || x >= world.W || y >= world.H) return false;
+    var t = world.tile[y * world.W + x];
+    return t === T.DEEP || t === T.SHALLOW;
+  }
+
+  /* materials: a few piles a day, like the loose joules. timber where
+     naturia's trees are, palm fibre in yucayeque's yards, scrap in redrum
+     and round majinryū's labs, fruit out in vistadelsol. shops.js RES
+     names them; item 2 turns picking them up into minigames */
+  var NODE_KINDS = [
+    { kind: 'timber', where: ['naturia'], per: 5, near: T.TREE },
+    { kind: 'fibre', where: ['yucayeque'], per: 5 },
+    { kind: 'scrap', where: ['redrum', 'majinryu'], per: 3 },
+    { kind: 'fruit', where: ['vistadelsol'], per: 8 }
+  ];
+  function nodes(world, day) {
+    if (!world.nodeOpen) {
+      var r = reach(world, world.spawn.x, world.spawn.y), busy = {};
+      world.signs.concat(world.npcs).forEach(function (o) { busy[o.y * world.W + o.x] = 1; });
+      world.nodeOpen = {};
+      NODE_KINDS.forEach(function (nk) {
+        var cells = [];
+        for (var k = 0; k < world.W * world.H; k++) {
+          var t = world.tile[k], d = world.dist[k], x = k % world.W, y = (k / world.W) | 0;
+          var where = d === -2 ? 'vistadelsol' : d >= 0 ? DISTRICTS[d].id : '';
+          if (busy[k] || nk.where.indexOf(where) < 0) continue;
+          if (where !== 'vistadelsol' && !r[k]) continue;
+          if (t !== T.GROUND && t !== T.GRASS && t !== T.ROAD) continue;
+          if (nk.near !== undefined && ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(function (o) { var nx = x + o[0], ny = y + o[1]; return nx >= 0 && ny >= 0 && nx < world.W && ny < world.H && world.tile[ny * world.W + nx] === nk.near; })) continue;
+          cells.push(k);
+        }
+        world.nodeOpen[nk.kind] = cells;
+      });
+    }
+    var seed = 0, i, out = [];
+    for (i = 0; i < day.length; i++) seed = (seed * 31 + day.charCodeAt(i)) | 0;
+    NODE_KINDS.forEach(function (nk, j) {
+      var cells = world.nodeOpen[nk.kind];
+      for (var n = 0; n < nk.per && cells.length; n++) {
+        var k = cells[Math.floor(hash(seed + j * 977, n * 6151 + 11) * cells.length)];
+        var x = k % world.W, y = (k / world.W) | 0, id = nk.kind + '@' + x + ',' + y;
+        if (out.some(function (o) { return o.x === x && o.y === y; })) continue;
+        out.push({ id: id, kind: nk.kind, x: x, y: y, n: 1 + Math.floor(hash(seed + n, j * 31 + 7) * 3) });
+      }
+    });
+    return out;
+  }
+
   /* loose joules: a few dropped ⚡ per district, somewhere new every day.
      Picked from open ground the player can actually reach, never on a
      sign or where someone stands, so they survive the map changing. The
@@ -582,5 +711,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, build: build, room: room, ROOMS: ROOMS, solid: solid, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);

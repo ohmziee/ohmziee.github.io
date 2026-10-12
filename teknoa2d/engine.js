@@ -24,6 +24,7 @@
              flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {},
              world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
+             res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -163,6 +164,9 @@
     /* a run from before money existed gets the purse a new arrival gets */
     if (o.joules === undefined && o.player && o.player.handle && o.player.origin) s.joules = START_JOULES;
     if (!s.found || typeof s.found.day !== 'string' || !s.found.got || typeof s.found.got !== 'object') s.found = { day: '', got: {} };
+    if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
+    Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
+    s.boat = s.boat ? 1 : 0;
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
                  look: p.look && typeof p.look === 'object' ? p.look : {} };
