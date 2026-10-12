@@ -44,78 +44,161 @@
   }
   function px(g, col, x, y, w, h) { g.fillStyle = col; g.fillRect(x, y, w || 1, h || 1); }
 
-  function drawTile(g, t, di, v, edge, wave) {
+  /* the game boy rules: flat colours, a dark outline where things meet,
+     patterns that repeat on a grid instead of noise, and every block drawn
+     as one building. m says which sides matter for this tile (1 north,
+     2 east, 4 south, 8 west): for roads and buildings, the sides that are
+     more of the same; for water and bridges, the sides that are land or
+     water. */
+  var OUT = '#0b0d1a';
+  function drawTile(g, t, di, v, m, wave, rv, door) {
     var p = pal(di), i;
+    var N = m & 1, E = m & 2, S = m & 4, Wd = m & 8;
     if (t === T.DEEP || t === T.SHALLOW) {
-      px(g, t === T.DEEP ? '#08142a' : '#0e2546', 0, 0, TS, TS);
-      for (i = 0; i < 3; i++) px(g, t === T.DEEP ? '#12305a' : '#1d4a7a', (v * 5 + i * 6 + wave * 3) % 14, (i * 5 + v) % 15, 3, 1);
+      var deep = t === T.DEEP, crest = deep ? '#1d4378' : '#2f69a0';
+      px(g, deep ? '#0a1834' : '#123563', 0, 0, TS, TS);
+      /* two crests in a fixed pattern, rocking a pixel with the tide */
+      var o = wave ? 1 : 0;
+      px(g, crest, 2 + o, 4, 3, 1); px(g, crest, 5 + o, 3, 2, 1);
+      if (v & 1) { px(g, crest, 9 - o, 11, 3, 1); px(g, crest, 12 - o, 10, 2, 1); }
+      /* foam where it meets land */
+      var foam = '#6fb4e0';
+      if (N) px(g, foam, 0, 0, TS, 1); if (S) px(g, foam, 0, 15, TS, 1);
+      if (E) px(g, foam, 15, 0, 1, TS); if (Wd) px(g, foam, 0, 0, 1, TS);
       return;
     }
     if (t === T.MAINLAND) {
-      px(g, '#1a2a22', 0, 0, TS, TS);
-      for (i = 0; i < 4; i++) px(g, '#244034', (v * 7 + i * 4) % 15, (i * 4 + v * 3) % 15, 2, 2);
+      /* distant cliffs: rows of rock, staggered like brick */
+      px(g, '#18261f', 0, 0, TS, TS);
+      px(g, '#22362c', 0, 7, TS, 1); px(g, '#22362c', 0, 15, TS, 1);
+      px(g, '#22362c', 4, 0, 1, 7); px(g, '#22362c', 12, 8, 1, 7);
       return;
     }
     if (t === T.SAND) {
-      px(g, '#6e5f48', 0, 0, TS, TS);
-      for (i = 0; i < 5; i++) px(g, '#857256', (v * 3 + i * 7) % 16, (i * 3 + v) % 16);
+      px(g, '#76664a', 0, 0, TS, TS);
+      var dots = v & 1 ? [[3, 3], [11, 6], [6, 12]] : [[12, 2], [4, 9], [10, 13]];
+      dots.forEach(function (d) { px(g, '#8f7c5a', d[0], d[1], 2, 1); });
       return;
     }
     if (t === T.GROUND || t === T.STALL) {
       px(g, p.ground, 0, 0, TS, TS);
-      for (i = 0; i < 3; i++) px(g, p.line, (v * 5 + i * 5) % 15, (v * 3 + i * 6) % 15);
+      if ((v & 7) === 0) { px(g, p.line, 5, 6, 2, 1); px(g, p.line, 11, 11, 1, 1); }
       if (t === T.STALL) {
-        px(g, p.glow[v % p.glow.length], 1, 2, 14, 5); px(g, '#f4f6ff', 1, 4, 14, 1);
-        px(g, '#4a3424', 2, 7, 12, 7); px(g, p.glow[(v + 1) % p.glow.length], 4, 8, 3, 2); px(g, p.glow[(v + 2) % p.glow.length], 9, 9, 3, 2);
+        /* a market stall: striped awning, counter, a few things for sale */
+        px(g, OUT, 0, 1, TS, 7);
+        for (i = 0; i < 7; i++) px(g, i % 2 ? '#f4f6ff' : p.glow[v % p.glow.length], 1 + i * 2, 2, 2, 5);
+        px(g, OUT, 1, 8, 14, 7); px(g, '#5a3c26', 2, 9, 12, 5); px(g, '#7a5638', 2, 9, 12, 1);
+        px(g, p.glow[(v + 1) % p.glow.length], 3, 10, 2, 2); px(g, p.glow[(v + 2) % p.glow.length], 7, 10, 2, 2); px(g, '#ffe97c', 11, 10, 2, 2);
       }
       return;
     }
     if (t === T.ROAD) {
       px(g, p.road, 0, 0, TS, TS);
-      if (v % 5 === 0) { px(g, p.line, 7, 6, 2, 4); }
-      if (v % 11 === 3) { px(g, '#0b0d1a', 12, 2, 2, 2); px(g, p.glow[v % p.glow.length], 12, 1, 2, 1); }
+      /* a kerb wherever the road stops */
+      if (!N) px(g, p.line, 0, 0, TS, 1); if (!S) px(g, p.line, 0, 15, TS, 1);
+      if (!E) px(g, p.line, 15, 0, 1, TS); if (!Wd) px(g, p.line, 0, 0, 1, TS);
       return;
     }
     if (t === T.GRASS) {
       px(g, p.grass, 0, 0, TS, TS);
-      for (i = 0; i < 6; i++) px(g, p.leaf, (v * 3 + i * 5) % 15, (i * 5 + v * 2) % 15, 1, 2);
+      /* tufts: little ^^ pairs on a grid, the way the old games did it */
+      (v & 1 ? [[2, 3], [10, 10]] : [[10, 2], [3, 10]]).forEach(function (c) {
+        px(g, p.leaf, c[0], c[1] + 1); px(g, p.leaf, c[0] + 1, c[1]); px(g, p.leaf, c[0] + 2, c[1] + 1);
+        px(g, p.leaf, c[0] + 3, c[1] + 1); px(g, p.leaf, c[0] + 4, c[1]); px(g, p.leaf, c[0] + 5, c[1] + 1);
+      });
       return;
     }
     if (t === T.TREE) {
       px(g, p.grass, 0, 0, TS, TS);
-      px(g, '#0b0d1a', 3, 12, 10, 3);
-      px(g, p.tree, 2, 2, 12, 11); px(g, p.tree, 4, 1, 8, 1); px(g, p.tree, 1, 4, 14, 7);
-      for (i = 0; i < 4; i++) px(g, p.leaf, 3 + (v * 3 + i * 4) % 9, 3 + (i * 3 + v) % 8, 2, 2);
+      /* a round canopy: outline, lit from the top left, a trunk under it */
+      var lit = shade(p.tree, 1.45), dark = shade(p.tree, 0.7);
+      px(g, OUT, 6, 11, 4, 5); px(g, '#5a3a22', 7, 11, 2, 4);
+      for (var yy = 0; yy < 13; yy++) for (var xx = 0; xx < TS; xx++) {
+        var dx = xx - 7.5, dy = yy - 6.2, d = Math.sqrt(dx * dx + dy * dy);
+        if (d > 7.2) continue;
+        px(g, d > 6.2 ? OUT : dx + dy < -4 ? lit : dx + dy > 3 ? dark : p.tree, xx, yy);
+      }
+      px(g, p.leaf, 4, 3, 2, 1); px(g, p.leaf, 3, 4, 1, 1); px(g, p.leaf, 9, 7, 1, 1);
       return;
     }
     if (t === T.BRIDGE) {
-      px(g, '#2a2f44', 0, 0, TS, TS);
-      for (i = 0; i < TS; i += 4) px(g, '#3a4058', 0, i, TS, 1);
-      px(g, '#9f8cff', 0, 0, TS, 1); px(g, '#9f8cff', 0, 15, TS, 1);
-      if (v % 4 === 0) px(g, '#7cf5ff', 7, 0, 2, 1);
+      px(g, '#3a3150', 0, 0, TS, TS);
+      for (i = 3; i < TS; i += 4) px(g, '#2a2340', 0, i, TS, 1);
+      /* a rail on any side with water under it */
+      var rail = '#9f8cff';
+      if (N) { px(g, OUT, 0, 0, TS, 2); px(g, rail, 0, 1, TS, 1); }
+      if (S) { px(g, OUT, 0, 14, TS, 2); px(g, rail, 0, 14, TS, 1); }
+      if (E) { px(g, OUT, 14, 0, 2, TS); px(g, rail, 14, 0, 1, TS); }
+      if (Wd) { px(g, OUT, 0, 0, 2, TS); px(g, rail, 1, 0, 1, TS); }
+      if ((v & 3) === 0 && (N || S || E || Wd)) px(g, '#7cf5ff', N || S ? 7 : 1, N ? 1 : S ? 14 : 7, 1, 1);
       return;
     }
     if (t === T.BUILDING) {
-      /* a facade where the street can see it, a roof everywhere else */
-      if (edge.face) {
-        px(g, p.wall, 0, 0, TS, TS);
-        px(g, '#0b0d1a', 0, 15, TS, 1);
-        for (i = 0; i < 2; i++) {
-          var lit = hash(v, i) < 0.7;
-          px(g, lit ? p.glow[(v + i) % p.glow.length] : '#0b0d1a', 2 + i * 7, 3, 5, 4);
-          px(g, '#0b0d1a', 4 + i * 7, 3, 1, 4);
+      var roof = [p.roof, p.roof2, shade(p.roof, 1.2)][rv || 0], rDark = shade(roof, 0.7), rLit = shade(roof, 1.3);
+      if (S) {
+        /* the roof: shingle rows, an outline where the building ends */
+        px(g, roof, 0, 0, TS, TS);
+        for (i = 3; i < TS; i += 4) {
+          px(g, rDark, 0, i, TS, 1);
+          for (var tx = (i >> 2) % 2 ? 2 : 6; tx < TS; tx += 8) px(g, rDark, tx, i - 2, 1, 2);
         }
-        if (v % 3 === 0) { px(g, '#0b0d1a', 6, 9, 4, 6); px(g, p.glow[v % p.glow.length], 6, 9, 4, 1); }
-      } else {
-        px(g, v % 2 ? p.roof : p.roof2, 0, 0, TS, TS);
-        px(g, 'rgba(0,0,0,.25)', 0, 0, TS, 1);
-        if (edge.top) px(g, p.glow[v % p.glow.length], 0, 0, TS, 1);
-        if (v % 7 === 0) { px(g, '#0b0d1a', 5, 5, 6, 5); px(g, '#3a4058', 6, 6, 4, 3); }
-        if (v % 9 === 4) px(g, p.glow[(v + 1) % p.glow.length], 12, 3, 2, 2);
+        if (!N) { px(g, OUT, 0, 0, TS, 1); px(g, rLit, 0, 1, TS, 1); }
+        if (!E) px(g, OUT, 15, 0, 1, TS);
+        if (!Wd) px(g, OUT, 0, 0, 1, TS);
+        return;
+      }
+      /* the front: eave shadow, windows in frames, maybe the door */
+      px(g, p.wall, 0, 0, TS, TS);
+      if (!N) { px(g, OUT, 0, 0, TS, 1); px(g, roof, 0, 1, TS, 2); }
+      px(g, rDark, 0, N ? 0 : 3, TS, 2);
+      px(g, shade(p.wall, 0.75), 0, 14, TS, 1); px(g, OUT, 0, 15, TS, 1);
+      if (!E) px(g, OUT, 15, 0, 1, TS);
+      if (!Wd) px(g, OUT, 0, 0, 1, TS);
+      if (door) {
+        px(g, OUT, 5, 6, 6, 9); px(g, '#1a1426', 6, 7, 4, 8); px(g, p.glow[v % p.glow.length], 6, 7, 4, 1); px(g, '#ffe97c', 9, 11, 1, 1);
+        return;
+      }
+      for (i = 0; i < 2; i++) {
+        var wx = i ? 9 : 2, on = (v >> (i + 2)) & 1 || (v & 3) === 1;
+        px(g, OUT, wx, 5, 5, 6);
+        var glass = on ? p.glow[(v + i) % p.glow.length] : '#141a2e';
+        px(g, glass, wx + 1, 6, 3, 4);
+        px(g, on ? shade(glass, 1.35) : '#232b48', wx + 1, 6, 1, 1);
+        px(g, OUT, wx + 2, 6, 1, 4);
       }
       return;
     }
     px(g, p.ground, 0, 0, TS, TS);
+  }
+
+  /* once per map: every block of buildings gets one roof colour and one
+     door, so a block reads as a building, not a quilt of tiles */
+  var deco = null;
+  function decorate(w) {
+    var n = w.W * w.H, comp = new Int32Array(n).fill(-1), roof = new Uint8Array(n), door = new Uint8Array(n), id = 0;
+    for (var k = 0; k < n; k++) {
+      if (w.tile[k] !== T.BUILDING || comp[k] >= 0) continue;
+      var q = [k], cells = [], fronts = [];
+      comp[k] = id;
+      while (q.length) {
+        var c = q.pop(); cells.push(c);
+        var cx = c % w.W, cy = (c / w.W) | 0;
+        if (cy + 1 >= w.H || w.tile[c + w.W] !== T.BUILDING) fronts.push(c);
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (o) {
+          var nx = cx + o[0], ny = cy + o[1], nk = ny * w.W + nx;
+          if (nx < 0 || ny < 0 || nx >= w.W || ny >= w.H || comp[nk] >= 0 || w.tile[nk] !== T.BUILDING) return;
+          comp[nk] = id; q.push(nk);
+        });
+      }
+      var rv = Math.floor(hash(id, 77) * 3);
+      cells.forEach(function (c) { roof[c] = rv; });
+      /* the door: the middle of the lowest front, if the front is wide enough */
+      var low = fronts.filter(function (c) { return ((c / w.W) | 0) === Math.max.apply(null, fronts.map(function (f) { return (f / w.W) | 0; })); });
+      low.sort(function (a, b) { return a - b; });
+      if (low.length >= 2 || cells.length === 1) door[low[low.length >> 1]] = 1;
+      id++;
+    }
+    return { roof: roof, door: door };
   }
 
   /* landmarks: one picture across their whole footprint */
@@ -199,7 +282,9 @@
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
     var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
-    (MARK_ART[m.id] || MARK_ART.market)(c.getContext('2d'), c.width, c.height);
+    var g = c.getContext('2d');
+    (MARK_ART[m.id] || MARK_ART.market)(g, c.width, c.height);
+    px(g, OUT, 0, 0, c.width, 1); px(g, OUT, 0, c.height - 1, c.width, 1); px(g, OUT, 0, 0, 1, c.height); px(g, OUT, c.width - 1, 0, 1, c.height);
     return (markArt[m.id] = c);
   }
 
@@ -297,6 +382,16 @@
     } else if (side && look.acc === 'glasses') { put(5, 4, 'A'); put(5, 6, 'A'); }
     return g.map(function (r) { return r.join(''); });
   }
+  /* the game boy outline: every empty pixel touching the figure goes dark */
+  function outline(g) {
+    var id = g.getImageData(0, 0, TS, TS), d = id.data, solidAt = function (x, y) { return x >= 0 && y >= 0 && x < TS && y < TS && d[(y * TS + x) * 4 + 3] > 0; };
+    var edge = [];
+    for (var y = 0; y < TS; y++) for (var x = 0; x < TS; x++) {
+      if (solidAt(x, y)) continue;
+      if (solidAt(x + 1, y) || solidAt(x - 1, y) || solidAt(x, y + 1) || solidAt(x, y - 1)) edge.push([x, y]);
+    }
+    edge.forEach(function (e) { px(g, OUT, e[0], e[1]); });
+  }
   var spriteCache = {};
   function sprite(look, dir, step) {
     var key = JSON.stringify(look) + dir + step;
@@ -315,6 +410,7 @@
         px(g, col, flip ? TS - 1 - x : x, y);
       }
     });
+    outline(g);
     return (spriteCache[key] = c);
   }
   /* the crowd: a look of their own from their seed, the same every visit */
@@ -328,7 +424,7 @@
   /* the player looks like their Chippin' In face */
   function shade(hex, f) {
     var n = parseInt(String(hex).slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
-    function c(v) { return ('0' + Math.round(v * f).toString(16)).slice(-2); }
+    function c(v) { return ('0' + Math.min(255, Math.round(v * f)).toString(16)).slice(-2); }
     return '#' + c(r) + c(g) + c(b);
   }
   function lookOf(raw) {
@@ -436,6 +532,9 @@
       var bob = Math.floor(now / 300 + j.x) % 2, lit = Math.floor(now / 150 + j.y) % 8 === 0;
       px(ctx, 'rgba(0,0,0,.35)', sx + 5, sy + 12, 6, 1);
       BOLT.forEach(function (r, y) {
+        for (var x = 0; x < 4; x++) if (r.charAt(x) === 'Y') px(ctx, OUT, sx + 5 + x, sy + 4 + y - bob, 3, 3);
+      });
+      BOLT.forEach(function (r, y) {
         for (var x = 0; x < 4; x++) if (r.charAt(x) === 'Y') px(ctx, lit ? '#ffffff' : '#ffe97c', sx + 6 + x, sy + 5 + y - bob);
       });
     });
@@ -494,16 +593,27 @@
     var cx = Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, ppx - (VW * TS) / 2 + TS / 2)));
     var cy = Math.round(Math.max(0, Math.min(world.H * TS - VH * TS, ppy - (VH * TS) / 2 + TS / 2)));
     var x0 = Math.floor(cx / TS), y0 = Math.floor(cy / TS), x, y;
+    function at(xx, yy) { return xx < 0 || yy < 0 || xx >= world.W || yy >= world.H ? T.DEEP : world.tile[yy * world.W + xx]; }
+    function wet(tt) { return tt === T.DEEP || tt === T.SHALLOW; }
     for (y = y0; y <= y0 + VH; y++) for (x = x0; x <= x0 + VW; x++) {
       if (x >= world.W || y >= world.H) continue;
       var k = y * world.W + x, t = world.tile[k], di = world.dist[k];
       if (t === T.LANDMARK) continue;
-      var v = Math.floor(hash(x, y) * 32);
-      var below = y + 1 < world.H ? world.tile[k + world.W] : -1, above = y > 0 ? world.tile[k - world.W] : -1;
-      var edge = { face: t === T.BUILDING && below !== T.BUILDING, top: t === T.BUILDING && above !== T.BUILDING };
-      var w = (t === T.DEEP || t === T.SHALLOW) ? wave : 0;
-      var key = t + '.' + di + '.' + v + '.' + (edge.face ? 1 : 0) + (edge.top ? 1 : 0) + '.' + w;
-      ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, edge, w); }), x * TS - cx, y * TS - cy);
+      var v = Math.floor(hash(x, y) * 32), m = 0, rv = 0, dr = 0;
+      var nb = [at(x, y - 1), at(x + 1, y), at(x, y + 1), at(x - 1, y)];
+      for (var b = 0; b < 4; b++) {
+        var o = nb[b], hit;
+        if (t === T.BUILDING) hit = o === T.BUILDING;
+        else if (t === T.ROAD) hit = o === T.ROAD || o === T.BRIDGE;
+        else if (wet(t)) hit = !wet(o) && o !== T.BRIDGE;
+        else if (t === T.BRIDGE) hit = wet(o);
+        if (hit) m |= 1 << b;
+      }
+      if (t === T.BUILDING) { rv = deco.roof[k]; dr = deco.door[k]; }
+      else if (t !== T.STALL) v &= 7;
+      var w = wet(t) ? wave : 0;
+      var key = t + '.' + di + '.' + v + '.' + m + '.' + w + '.' + rv + dr;
+      ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
     }
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy < 0) return;
@@ -512,7 +622,9 @@
     world.signs.forEach(function (sg) {
       var sx = sg.x * TS - cx, sy = sg.y * TS - cy;
       if (sx < -TS || sy < -TS || sx > VW * TS || sy > VH * TS) return;
-      px(ctx, '#3a2a20', sx + 7, sy + 8, 2, 7); px(ctx, '#c8a878', sx + 3, sy + 3, 10, 6); px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1);
+      px(ctx, OUT, sx + 6, sy + 8, 4, 8); px(ctx, '#5a3a22', sx + 7, sy + 9, 2, 6);
+      px(ctx, OUT, sx + 2, sy + 2, 12, 8); px(ctx, '#c8a878', sx + 3, sy + 3, 10, 6);
+      px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1); px(ctx, '#8a6a48', sx + 4, sy + 7, 6, 1);
     });
     drawLoose(cx, cy, now);
     /* people, back to front */
@@ -524,11 +636,12 @@
       ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2);
     });
     /* a little night over everything, and the rain the main page has */
-    ctx.fillStyle = 'rgba(5,6,11,.18)'; ctx.fillRect(0, 0, VW * TS, VH * TS);
-    ctx.fillStyle = 'rgba(159,140,255,.25)';
-    for (var r = 0; r < 26; r++) {
+    ctx.fillStyle = 'rgba(5,6,11,.14)'; ctx.fillRect(0, 0, VW * TS, VH * TS);
+    ctx.fillStyle = 'rgba(159,140,255,.3)';
+    var drops = Math.round(VW * VH / 10);
+    for (var r = 0; r < drops; r++) {
       var rx = (r * 53 + now * 0.12) % (VW * TS), ry = (r * 37 + now * 0.35) % (VH * TS);
-      ctx.fillRect(Math.round(rx), Math.round(ry), 1, 4);
+      ctx.fillRect(Math.floor(rx), Math.floor(ry), 1, 3);
     }
   }
 
@@ -568,13 +681,35 @@
     });
   }
 
+  /* every game pixel is a whole number of screen pixels, or the art goes
+     uneven. so the scale is picked first (about twelve tiles across, like
+     the old handhelds' ten), then as many tiles as fit at that scale */
+  function fit() {
+    var scr = canvas.parentNode, main = $('world'), dpr = window.devicePixelRatio || 1;
+    var availW = Math.min(main.clientWidth - 16, 1100);
+    var top = scr.getBoundingClientRect().top, padH = $('wPad').offsetHeight;
+    var availH = Math.max(160, window.innerHeight - Math.max(0, top) - (padH ? padH + 40 : 40));
+    var dw = availW * dpr, dh = availH * dpr;
+    var sc = Math.max(1, Math.floor(dw / (TS * 12)));
+    while (sc > 1 && Math.floor(dh / (TS * sc)) < 8) sc--;
+    VW = Math.max(10, Math.min(24, Math.floor(dw / (TS * sc))));
+    VH = Math.max(7, Math.min(Math.floor(dh / (TS * sc)), Math.round(VW * 0.75)));
+    if (canvas.width !== VW * TS || canvas.height !== VH * TS) { canvas.width = VW * TS; canvas.height = VH * TS; }
+    ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    var cw = VW * TS * sc / dpr, ch = VH * TS * sc / dpr;
+    scr.style.width = cw + 'px'; scr.style.height = ch + 'px';
+    scr.setAttribute('data-scale', sc);
+  }
+
   /* ── what ui.js calls ────────────────────────────────────── */
   function show(state, hooks) {
     s = state; api = hooks || {};
     if (!world) {
       world = M.build();
-      canvas = $('wCanvas'); canvas.width = VW * TS; canvas.height = VH * TS;
-      ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      deco = decorate(world);
+      canvas = $('wCanvas');
+      fit();
+      window.addEventListener('resize', function () { if (active) fit(); });
       npcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
       pad();
     }
@@ -585,6 +720,7 @@
     me.moving = false; held = {}; talkBox = null; $('wTalk').hidden = true;
     s.world = { x: me.x, y: me.y, d: me.dir, v: M.V };
     $('world').hidden = false;
+    fit();
     district = -2; enterDistrict(world.dist[me.y * world.W + me.x]);
     wallet();
     nudge();
