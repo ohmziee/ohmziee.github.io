@@ -196,7 +196,7 @@
   function setWho(who, mood) {
     /* narration: whoever spoke last stays on screen, dimmed, so a scene
        doesn't blink them out and glitch them back in between every line */
-    card.classList.toggle('quiet', !who);
+    card.classList.toggle('quiet', !who); hushed = !who;
     if (!who) { $('whoMood').textContent = ''; card.setAttribute('data-mood', ''); return; }
     var src = D.faces && D.faces[who];
     $('whoBig').textContent = who ? name(who) : '';
@@ -205,10 +205,46 @@
     card.classList.toggle('faced', !!src);
     card.setAttribute('data-mood', mood || '');
     if (src && $('whoImg').getAttribute('src') !== src) { $('whoImg').setAttribute('src', src); $('whoImg').setAttribute('alt', name(who)); }
+    if (who !== lastWho) framesFor(who);
     if (who && who !== lastWho && !reduce) { card.classList.remove('arrive'); void card.offsetWidth; card.classList.add('arrive'); }
     lastWho = who || null;
   }
-  function talking(on) { card.classList.toggle('talk', on); }
+  /* a face with -blink / -talk frames blinks now and then, and moves its
+     mouth while a line types out */
+  var frames = null, blinkT = 0, mouthT = 0, hushed = false;
+  function framesFor(who) {
+    var fr = D.frames && D.frames[who];
+    frames = fr && !reduce ? fr : null;
+    [['whoBlink', 'blink'], ['whoTalk', 'talk']].forEach(function (k) {
+      var img = $(k[0]), src = frames && frames[k[1]];
+      img.hidden = !src;
+      if (src && img.getAttribute('src') !== src) img.setAttribute('src', src);
+    });
+    clearTimeout(blinkT);
+    if (frames && frames.blink) blinkLater();
+  }
+  function blinkLater() {
+    blinkT = setTimeout(function () {
+      if (!frames || !frames.blink) return;
+      card.classList.add('blink');
+      /* now and then a double blink */
+      var twice = Math.random() < 0.18;
+      setTimeout(function () {
+        card.classList.remove('blink');
+        if (twice) setTimeout(function () { card.classList.add('blink'); setTimeout(function () { card.classList.remove('blink'); }, 110); }, 140);
+      }, 120);
+      blinkLater();
+    }, 2200 + Math.random() * 4200);
+  }
+  function mouth(on) {
+    clearTimeout(mouthT);
+    if (!on || !frames || !frames.talk) { card.classList.remove('mouth'); return; }
+    (function flap() {
+      card.classList.toggle('mouth');
+      mouthT = setTimeout(flap, 90 + Math.random() * 110);
+    })();
+  }
+  function talking(on) { card.classList.toggle('talk', on); mouth(on && !hushed); }
   function type(text) {
     clearInterval(typing); typing = null; full = text;
     if (reduce) { line.textContent = text; more.hidden = false; return; }

@@ -72,6 +72,14 @@ a{color:var(--lavender)}
 .who-face::after{content:'';position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px),
     linear-gradient(180deg,transparent 55%,color-mix(in srgb,var(--mood) 28%,transparent))}
+/* blinking and talking: the -blink and -talk frames sit over the face,
+   cut down to the eyes and the mouth, and only show for a moment. The
+   ellipses are where her eyes and mouth land once the picture is cropped
+   to 4:5 at 50% 22% (image y% * 1.433 - 9.5%) */
+.who-face .f-blink,.who-face .f-talk{position:absolute;inset:0;opacity:0}
+.who-face .f-blink{-webkit-mask-image:radial-gradient(19% 5.6% at 49% 54.8%,#000 70%,transparent 100%);mask-image:radial-gradient(19% 5.6% at 49% 54.8%,#000 70%,transparent 100%)}
+.who-face .f-talk{-webkit-mask-image:radial-gradient(13.5% 6.2% at 50.5% 70.7%,#000 72%,transparent 100%);mask-image:radial-gradient(13.5% 6.2% at 50.5% 70.7%,#000 72%,transparent 100%)}
+.who-card.blink .f-blink,.who-card.mouth .f-talk{opacity:1}
 .who-card.talk .who-face img{animation:breathe 4.6s ease-in-out infinite,flick 7.3s steps(1) infinite,talk .34s ease-in-out infinite alternate}
 .who-card[data-mood="anxiety"] .who-face img{animation-duration:2.2s,3.1s}
 .who-card.talk[data-mood="frustration"] .who-face img{animation:breathe 4.6s ease-in-out infinite,flick 7.3s steps(1) infinite,shake .12s linear infinite}
