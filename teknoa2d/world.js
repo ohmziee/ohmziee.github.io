@@ -303,6 +303,31 @@
       npcs.push({ id: 'store-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art === 'pawn' ? 'merc' : 'local', store: sp.id, still: true });
     });
 
+    /* redrum's small-stakes gambling (casino.js HOUSES dive / street / arcade):
+       a back room behind an unmarked door, a dice hustler and a numbers runner
+       working the street. PLACEHOLDER lines */
+    var backAt = clearSpot(R0, 3, 2, -3, 2);
+    if (backAt) {
+      landmark(R0, 'backroom', 'the back room', backAt[0], backAt[1], 3, 2,
+        'NO SIGN\njust a door, and a light under it.\nsomebody inside is laughing at somebody else\'s luck.', true);
+      walkIn('backroom');
+    }
+    /* someone on the street, on the nearest free tile to a spot in the district */
+    function standIn(d, dx, dy) {
+      for (var rr = 0; rr < 10; rr++) for (var oy = -rr; oy <= rr; oy++) for (var ox = -rr; ox <= rr; ox++) {
+        if (Math.max(Math.abs(ox), Math.abs(oy)) !== rr) continue;
+        var x = d.cx + Math.round(dx * F) + ox, y = d.cy + Math.round(dy * F) + oy, t = get(x, y);
+        if (dist[at(x, y)] !== d.index || (t !== T.ROAD && t !== T.GROUND)) continue;
+        if (npcs.some(function (n) { return Math.abs(n.x - x) + Math.abs(n.y - y) < 2; })) continue;
+        if (marks.some(function (m) { return x >= m.x && x < m.x + m.w && y === m.y + m.h; })) continue;
+        return [x, y];
+      }
+      return null;
+    }
+    var hustle = standIn(R0, 2, 4), runner = standIn(R0, -3, -2);
+    if (hustle) npcs.push({ id: 'hustler', x: hustle[0], y: hustle[1], dir: 'down', look: 'merc', name: 'DICE', game: 'dice', house: 'street', still: true });
+    if (runner) npcs.push({ id: 'numbers', x: runner[0], y: runner[1], dir: 'down', look: 'gen', seed: 8801, name: 'NUMBERS', game: 'lotto', house: 'street', still: true });
+
     /* the boatyard: yucayeque's east shore, a pier out into the bay, the
        shipwright at the door (shops.js BOAT) */
     var by = Y0.cy, bx = Y0.cx;
@@ -613,7 +638,8 @@
         { id: 'claw', x: 9, y: 1, w: 2, h: 1, text: 'a claw machine full of plush ghosts.\nnobody has ever won one. nobody.' },
         { id: 'cabinet', x: 2, y: 5, w: 1, h: 1, text: 'a dance machine.\nthe arrows are worn white.' },
         { id: 'cabinet', x: 4, y: 5, w: 1, h: 1, text: 'a shooting game.\nthe guns are chained down. good.' },
-        { id: 'prize', x: 9, y: 5, w: 3, h: 1, text: 'the prize counter. tokens for a keychain,\nor ten thousand for the big plush.\nnobody has ten thousand.' }],
+        { id: 'prize', x: 9, y: 5, w: 3, h: 1, text: 'the prize counter. tokens for a keychain,\nor ten thousand for the big plush.\nnobody has ten thousand.' },
+        { id: 'slot', x: 12, y: 1, w: 1, h: 1, game: 'slots', house: 'arcade', text: 'a slot machine wedged between the cabinets.\nnobody remembers it arriving.' }],
       people: [
         { x: 7, y: 3, look: 'gen', seed: 6601, lines: ['the arcade is neutral ground. mostly.', 'a year i\'ve been trying for that high score.\nit\'s not happening.'] },
         { x: 11, y: 7, look: 'merc', lines: ['no fighting in here.\noutside is different.'] }] },
@@ -714,6 +740,25 @@
         { id: 'shrooms', x: 2, y: 7, w: 1, h: 1, text: 'don\'t pick the blue ones.\nthey don\'t like it.' }],
       people: [
         { x: 9, y: 6, look: 'ape', lines: ['...', 'the tree likes quiet.\nso do i.'] }] },
+    /* the back room: redrum's own casino. no door, no dress code, small change */
+    backroom: { d: 'redrum', house: 'dive', map: [
+      '############',
+      '#..........#',
+      '#..........#',
+      '#..........#',
+      '#..........#',
+      '#..........#',
+      '#..........#',
+      '#####==#####'],
+      things: [
+        { id: 'dicetable', x: 2, y: 2, w: 3, h: 2, game: 'dice', text: 'high-low dice' },
+        { id: 'slot', x: 8, y: 1, w: 1, h: 1, game: 'slots', text: 'a slot machine' },
+        { id: 'slot', x: 10, y: 1, w: 1, h: 1, game: 'slots', text: 'a slot machine' },
+        { id: 'lottobooth', x: 7, y: 4, w: 3, h: 1, game: 'lotto', text: 'the numbers' }],
+      people: [
+        { x: 2, y: 5, look: 'merc', lines: ['ten joules says you lose.\ntwenty says you lose faster.', 'house rule: no crying at the table.\ncry outside like a professional.'] },
+        { x: 9, y: 6, look: 'gen', seed: 8802, lines: ['i\'m on a streak. a losing one.\nstill counts.', 'the hunter used to sit right there.\nnever played. just watched.'] },
+        { x: 5, y: 1, look: 'gen', seed: 8803, lines: ['the lottery here pays in cash and regret.\nmostly regret.'] }] },
     /* casino settebello: enzo's floor (vault: Enzo, Council, a gambler who
        talks in odds). door: what you need in your pocket to get in */
     casino: { d: 'worldwood', floor: T.CHECK, house: 'grand', door: 1000, map: [
@@ -792,7 +837,7 @@
     def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
       marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
-                   game: f.game, house: f.game ? def.house : undefined });
+                   game: f.game, house: f.game ? f.house || def.house : undefined });
     });
     (def.people || []).forEach(function (p, i) {
       npcs.push({ id: id + '-' + i, x: p.x, y: p.y, dir: p.dir || 'down', look: p.look, seed: p.seed, lines: p.lines, shop: p.shop, name: p.name, still: !!p.still, roam: 2 });

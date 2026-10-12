@@ -333,6 +333,13 @@
     px(g, OUT, 2, 0, 12, 16); px(g, '#8a1a2a', 3, 1, 10, 14); px(g, '#f2c94c', 3, 1, 10, 2);
     px(g, '#f4f6ff', 4, 5, 8, 4); px(g, '#c4473a', 5, 6, 2, 2); px(g, '#f2c94c', 9, 6, 2, 2); px(g, '#9aa0b8', 13, 4, 2, 6);
   };
+  /* the back room's door: no sign, a light under it */
+  MARK_ART.backroom = function (g, w, h) {
+    px(g, '#1a080c', 0, 0, w, h); px(g, '#2a1014', 0, 0, w, 3);
+    for (var y = 5; y < h; y += 4) for (var x = (y >> 2) % 2 ? 0 : 3; x < w; x += 6) px(g, '#2a1218', x, y, 4, 1);
+    px(g, OUT, (w >> 1) - 6, h - 16, 12, 16); px(g, '#3a2a20', (w >> 1) - 5, h - 15, 10, 15); px(g, '#ffd36a', (w >> 1) - 5, h - 1, 10, 1);
+    px(g, '#8a92a6', (w >> 1) + 2, h - 8, 2, 2);
+  };
   MARK_ART.lottobooth = function (g, w, h) {
     px(g, '#3a1218', 0, 2, w, h - 2); px(g, '#f2c94c', 0, 2, w, 3);
     for (var i = 0; i < 3; i++) { px(g, OUT, 8 + i * 12, 7, 8, 8); px(g, '#f4f6ff', 9 + i * 12, 8, 6, 6); px(g, '#c4473a', 11 + i * 12, 10, 2, 2); }
@@ -786,6 +793,8 @@
         var after = s.flags['hex-closed'] ? HEX_COLD : HEX_AFTER;
         return say([after[Math.floor(Math.random() * after.length)]], 'Hex');
       }
+      /* someone running a game on the street */
+      if (n.game) return openTable(n.game, n.house || 'street');
       if (n.name && n.lines) { n.said = ((n.said || 0) + 1) % n.lines.length; return say([n.lines[n.said]], n.name); }
       if (n.koga) { n.said = ((n.said || 0) + 1) % M.KOGA.length; return say([M.KOGA[n.said]], 'Koga'); }
       if (n.pool !== undefined && n.kind) return say([chatter(n)]);

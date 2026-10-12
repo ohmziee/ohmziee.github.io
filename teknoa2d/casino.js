@@ -17,7 +17,10 @@
 
   var HOUSES = {
     grand: { name: 'CASINO SETTEBELLO', min: 100, max: 5000, door: 1000, games: ['slots', 'blackjack', 'roulette', 'dice', 'lotto'], ticket: 200 },
-    dive:  { name: 'the back room', min: 5, max: 100, door: 0, games: ['slots', 'dice', 'lotto'], ticket: 10 }
+    /* redrum's small change: the back room, the corner, a slot in the arcade */
+    dive:   { name: 'THE BACK ROOM', min: 5, max: 100, door: 0, games: ['slots', 'dice', 'lotto'], ticket: 10 },
+    street: { name: 'REDRUM CORNER', min: 5, max: 50, door: 0, games: ['dice', 'lotto'], ticket: 10 },
+    arcade: { name: 'ARCADE', min: 5, max: 50, door: 0, games: ['slots'], ticket: 10 }
   };
   /* the stake leaves your pocket before the game is played */
   function play(MF, s, house, bet) {
