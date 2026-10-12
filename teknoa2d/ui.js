@@ -400,8 +400,9 @@
       $('opOrigin').textContent = o ? o.title : '';
       $('opJ').textContent = MF.fmtJ(MF.joules(s));
       inv.innerHTML = ''; met.innerHTML = '';
-      var CU = (window.MFShops && window.MFShops.CURIOS) || {};
-      Object.keys(s.items).forEach(function (k) { inv.appendChild(li((CU[k] ? CU[k].name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : ''), CU[k] ? CU[k].what : D.items[k])); });
+      var SH = window.MFShops, gd = function (k) { return SH && SH.goods ? SH.goods(k) : null; };
+      Object.keys(s.items).forEach(function (k) { var g = gd(k); inv.appendChild(li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : ''), g ? g.what : D.items[k])); });
+      if (SH && SH.FISH && Object.keys(s.fishlog || {}).length) inv.appendChild(li('fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds', Object.keys(s.fishlog).map(function (k) { return SH.FISH[k] ? SH.FISH[k].name.replace(/^(a|an) /, '') : k; }).join(', ') + '.'));
       var RS = (window.MFShops && window.MFShops.RES) || {};
       Object.keys(s.res || {}).forEach(function (k) { if (RS[k]) inv.appendChild(li(RS[k].name + ' x' + s.res[k], RS[k].what)); });
       if (s.boat) inv.appendChild(li('a boat', 'moored wherever you left the water. face the sea and press A to sail.'));

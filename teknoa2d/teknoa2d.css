@@ -253,7 +253,9 @@ a{color:var(--lavender)}
 /* the gathering games: a box over the bottom of the screen */
 .wmini{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;padding:.6rem .8rem .5rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;color:#f4f6ff;font:clamp(.5rem,1.5vw,.66rem)/1.5 var(--font-pixel)}
 .wmini b{display:block;margin-bottom:.45rem;color:#7CFFB2;letter-spacing:.2em}
-.wmini.k-fibre b{color:#e8d898}.wmini.k-scrap b{color:#c8ccd8}.wmini.k-fruit b{color:#ff8a3a}
+.wmini.k-fibre b{color:#e8d898}.wmini.k-fish b{color:#7cf5ff}
+.wmini.k-fish .mzone{background:#2f69a0}
+.mtrack.taut{border-color:#ff4f5e}.mtrack.taut .mmark{background:#ff4f5e;box-shadow:0 0 8px #ff4f5e}.wmini.k-scrap b{color:#c8ccd8}.wmini.k-fruit b{color:#ff8a3a}
 .wmini p{margin:.45rem 0 0;color:#b9a8ff}
 .mtrack{position:relative;height:14px;border:2px solid #dce3ff;background:#141a2e}
 .mzone{position:absolute;top:0;bottom:0;background:#3a9a5a}

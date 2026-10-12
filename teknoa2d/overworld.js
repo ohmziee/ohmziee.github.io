@@ -719,14 +719,15 @@
   function showLine() {
     $('wWho').textContent = talkBox.who;
     var last = talkBox.yes && talkBox.lines.length === 1;
-    $('wLine').textContent = talkBox.lines[0].replace(/\$handle\b/g, s.player.handle || 'stranger') + (last ? '\n\nA: yes    B: no' : '');
+    $('wLine').textContent = talkBox.lines[0].replace(/\$handle\b/g, s.player.handle || 'stranger') + (last ? '\n\n' + (talkBox.label || 'A: yes    B: no') : '');
   }
   /* a yes/no question: A on the last line says yes, B says no */
-  function ask(lines, yes) { say(lines); talkBox.yes = yes; showLine(); }
+  /* no: what B does instead of just closing; label: the line under the question */
+  function ask(lines, yes, no, label) { say(lines); talkBox.yes = yes; talkBox.no = no; talkBox.label = label; showLine(); }
   function answer(ok) {
-    var yes = talkBox.yes;
+    var yes = talkBox.yes, no = talkBox.no;
     talkBox = null; $('wTalk').hidden = true;
-    if (ok) yes();
+    if (ok) yes(); else if (no) no();
   }
   function nextLine() {
     talkBox.lines.shift();
@@ -765,7 +766,13 @@
         return say([(walkers[i].name || 'a stranger') + ' is walking the city too.'], walkers[i].name || '');
       }
     }
-    if (!inside && !me.sail && s.boat && M.water(world, tx, ty) && !npcs.some(function (n) { return n.x === tx && n.y === ty; })) return setSail(tx, ty);
+    if (!inside && M.water(world, tx, ty) && !npcs.some(function (n) { return n.x === tx && n.y === ty; })) {
+      var rod = window.MFShops.bestRod(s);
+      if (me.sail && rod) return cast(tx, ty, rod);
+      if (!me.sail && rod && s.boat) return ask(['the water\'s right there.'], function () { cast(tx, ty, rod); }, function () { me.sail = true; step(tx, ty, me.dir); }, 'A: cast a line    B: set sail');
+      if (!me.sail && rod) return cast(tx, ty, rod);
+      if (!me.sail && s.boat) return setSail(tx, ty);
+    }
     /* walking into a shop's front opens it too; an apartment's door sells
        itself or lets you in; furniture has something to say */
     var m = markAt(tx, ty);
@@ -998,6 +1005,29 @@
     drawMini();
   }
   function closeMini() { mini = null; $('wMini').hidden = true; }
+  function cast(tx, ty, rod) {
+    var SH = window.MFShops, zone = M.fishZone(world, tx, ty), lvl = SH.TOOLS[rod].level;
+    var id = SH.pickFish(zone, Math.random, lvl, new Date().getHours()), f = SH.FISH[id];
+    mini = { fish: id, zone: zone, g: window.MFMini.create('fish', null, { hard: SH.TIER_HARD[f.tier], ease: lvl ? 0.85 : 1 }), end: 0 };
+    prevL = !!held.left; prevR = !!held.right; prevB = !!held.b; pressedA = false;
+    $('wMini').hidden = false; $('wMini').className = 'wmini k-fish';
+    $('wMiniT').textContent = 'FISH · ' + SH.ZONES[zone].name;
+    drawMini();
+  }
+  function landFish(now) {
+    var SH = window.MFShops, f = SH.FISH[mini.fish], g = mini.g, msg;
+    if (g.score >= 1) {
+      var first = !(s.fishlog || {})[mini.fish];
+      s.items[mini.fish] = (s.items[mini.fish] || 0) + 1;
+      if (!s.fishlog) s.fishlog = {};
+      s.fishlog[mini.fish] = (s.fishlog[mini.fish] || 0) + 1;
+      wallet('+1 ' + f.name.replace(/^(a|an) /, ''));
+      msg = (g.perfect ? 'clean catch! ' : 'caught ') + f.name + (f.tier === 'rare' || f.tier === 'legendary' ? ' (' + f.tier + '!)' : '') + (first ? ' · new' : '');
+      if (api && api.save) api.save();
+    } else msg = { spooked: 'too soon. it swam off.', missed: 'missed the bite.', snapped: 'the line snapped.' }[g.why] || 'it got away.';
+    $('wMiniH').textContent = msg;
+    mini.end = now + 1600;
+  }
   function tickMini(dt, now) {
     var inp = { a: pressedA, hold: !!held.a, left: !!held.left && !prevL, right: !!held.right && !prevR }, b = !!held.b && !prevB;
     pressedA = false; prevL = !!held.left; prevR = !!held.right; prevB = !!held.b;
@@ -1006,6 +1036,7 @@
     window.MFMini.step(mini.g, dt, inp);
     drawMini();
     if (!mini.g.done) return;
+    if (mini.fish) return landFish(now);
     var n = window.MFMini.amount(mini.pile.n, mini.g);
     collect(mini.pile, n, mini.g.perfect ? 'PERFECT' : mini.g.score >= 1 ? 'NICE' : mini.g.score > 0.4 ? 'OK' : '');
     $('wMiniH').textContent = (mini.g.perfect ? 'perfect! ' : mini.g.score >= 1 ? 'nice. ' : mini.g.score > 0.4 ? 'not bad. ' : 'rough. ') + '+' + n;
@@ -1015,6 +1046,14 @@
     var g = mini.g, zone = $('wMiniZone'), mark = $('wMiniMark'), track = $('wMiniTrack'), lanes = $('wMiniLanes');
     track.hidden = g.kind === 'fruit'; lanes.hidden = g.kind !== 'fruit';
     var hint = g.hint + '  ·  B: leave it';
+    if (g.kind === 'fish') {
+      /* the bar fills as you reel it in; the marker is the line's tension */
+      zone.style.left = '0%'; zone.style.width = g.progress + '%';
+      mark.hidden = g.phase !== 'reel'; mark.style.left = Math.min(100, g.tension) + '%';
+      track.className = 'mtrack' + (g.tension > 70 ? ' taut' : '');
+      if (!mini.end) $('wMiniH').textContent = (g.phase === 'reel' ? 'tension ' + Math.round(g.tension) + '  ·  ' : '') + g.hint + '  ·  B: walk away';
+      return;
+    }
     if (g.kind === 'timber') {
       zone.style.left = g.zone[0] + '%'; zone.style.width = (g.zone[1] - g.zone[0]) + '%';
       mark.hidden = false; mark.style.left = g.pos + '%';
@@ -1208,6 +1247,15 @@
       /* a real person: a little violet pip over their head */
       if (p.them) { px(ctx, OUT, Math.round(p.x - cx) + 6, Math.round(p.y - cy) - 7, 4, 4); px(ctx, '#b9a8ff', Math.round(p.x - cx) + 7, Math.round(p.y - cy) - 6, 2, 2); }
     });
+    /* fishing: a line out to a bobber on the water in front, a '!' on a bite */
+    if (mini && mini.fish && !mini.end) {
+      var fd = DIRS[me.dir], bx = (me.x + fd[0]) * TS - cx + 7, by = (me.y + fd[1]) * TS - cy + 8, g = mini.g;
+      var dip = g.phase === 'bite' ? 2 : g.phase === 'reel' ? Math.floor(now / 120) % 2 : Math.floor(now / 700) % 2 ? 1 : 0;
+      ctx.strokeStyle = 'rgba(220,227,255,.7)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(ppx - cx) + 8.5, Math.round(ppy - cy) + 6.5); ctx.lineTo(bx + 1.5, by + dip + 0.5); ctx.stroke();
+      px(ctx, OUT, bx - 1, by - 1 + dip, 5, 5); px(ctx, '#ff4f5e', bx, by + dip, 3, 2); px(ctx, '#f4f6ff', bx, by + 2 + dip, 3, 1);
+      if (g.phase === 'bite') { var hx = Math.round(ppx - cx) + 6, hy = Math.round(ppy - cy) - 12; px(ctx, OUT, hx - 1, hy - 1, 5, 10); px(ctx, '#ffe97c', hx, hy, 3, 5); px(ctx, '#ffe97c', hx, hy + 6, 3, 2); }
+    }
     /* a little night over everything, and the rain the main page has */
     ctx.fillStyle = 'rgba(5,6,11,.14)'; ctx.fillRect(0, 0, VW * TS, VH * TS);
     if (inside) return;

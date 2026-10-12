@@ -132,13 +132,74 @@
     lighter:   { name: 'a scratched zippo', what: 'the lid has a knife engraved on it. the hinge squeaks.', price: 80 }
   };
   var STORES = {
-    'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 } },
-    'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 } },
-    'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 } },
+    'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 }, tools: ['rod', 'tuned'] },
+    'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 }, tools: ['rod'] },
+    'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 }, tools: ['rod'] },
     'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'] },
     'lantern-loans':    { kind: 'pawn', name: 'LANTERN LOANS', district: 'majinryu', line: 'everything here was somebody\'s once. now it\'s nobody\'s. could be yours.', buys: { timber: 9, fibre: 7, scrap: 12, fruit: 6 }, curios: ['compass', 'cassette', 'shell'] }
   };
-  function nameOf(key) { return RES[key] ? RES[key].name : CURIOS[key] ? CURIOS[key].name : key; }
+  /* fishing (overworld.js casts, minigames.js reels): rods are tools sold at
+     general stores; fish live in spots (world.js fishZone), each with its own
+     table. PLACEHOLDER names, lines and prices */
+  var TOOLS = {
+    rod:   { name: 'a fishing rod', what: 'cheap, bendy, works. face any water and press A.', price: 150, level: 0 },
+    tuned: { name: 'a tuned rod', what: 'the line hums when something big is near. rarer bites, fewer snaps.', price: 650, level: 1 }
+  };
+  /* tier: junk, common, uncommon, rare, legendary. price: what a pawn shop pays */
+  var FISH = {
+    boot:      { name: 'a lost boot', what: 'somebody walked home with one foot wet.', tier: 'junk', price: 1 },
+    can:       { name: 'a soda can', what: 'a brand that went under before the crossing.', tier: 'junk', price: 1 },
+    sardine:   { name: 'a neon sardine', what: 'it glows a little. so does everything in the harbour.', tier: 'common', price: 6 },
+    dockeel:   { name: 'a dock eel', what: 'lives under the piers. knows things.', tier: 'common', price: 8 },
+    slickcarp: { name: 'an oil-slick carp', what: 'rainbow scales. not in a good way.', tier: 'uncommon', price: 18 },
+    minnow:    { name: 'a chrome minnow', what: 'half fish, half something the labs dropped in the water.', tier: 'rare', price: 60 },
+    glowfin:   { name: 'a glowfin', what: 'naturia\'s glow, swimming.', tier: 'common', price: 10 },
+    mosstrout: { name: 'a moss trout', what: 'grows a little moss on its back. the apes say that\'s lucky.', tier: 'uncommon', price: 22 },
+    lanternray:{ name: 'a lantern ray', what: 'lights up the water around it like a lantern underwater.', tier: 'rare', price: 80 },
+    starkoi:   { name: 'a starspawn koi', what: 'its scales hold a whole night sky. nobody\'s sure where it comes from.', tier: 'legendary', price: 300 },
+    rustgill:  { name: 'a rustgill', what: 'tastes like a coin. smells like redrum.', tier: 'common', price: 7 },
+    knifepike: { name: 'a knife-tooth pike', what: 'all teeth. all attitude.', tier: 'uncommon', price: 26 },
+    redsnapper:{ name: 'a blood-red snapper', what: 'red as the neon over the arcade.', tier: 'rare', price: 90 },
+    mackerel:  { name: 'a nova mackerel', what: 'the bay\'s everyday fish. good grilled.', tier: 'common', price: 12 },
+    squid:     { name: 'a shimmer squid', what: 'changes colour every time you blink.', tier: 'uncommon', price: 30 },
+    bass:      { name: 'a council bass', what: 'it looks like it\'s judging you. in triplicate.', tier: 'uncommon', price: 28 },
+    tuna:      { name: 'an aurora tuna', what: 'streaks of green and violet down its side.', tier: 'rare', price: 120 },
+    parrot:    { name: 'a reef parrotfish', what: 'crunches coral. loudly.', tier: 'common', price: 12 },
+    mangocrab: { name: 'a mango crab', what: 'orange, sweet-smelling, very friendly. vistadelsol, basically.', tier: 'uncommon', price: 25 },
+    sunray:    { name: 'a sun ray', what: 'warm to the touch, even at night.', tier: 'rare', price: 100 },
+    grouper:   { name: 'a vistadelsol gold grouper', what: 'big, slow, golden. the locals say it\'s older than nova city.', tier: 'legendary', price: 350 },
+    herring:   { name: 'a jörmun herring', what: 'cold water fish. tastes like far away.', tier: 'common', price: 15 },
+    lanterneye:{ name: 'a deepwater lantern-eye', what: 'eyes like headlights. it\'s seen deeper than you ever will.', tier: 'uncommon', price: 45 },
+    loopeel:   { name: 'an ouroboros eel', what: 'caught it biting its own tail. it did not let go.', tier: 'rare', price: 200 },
+    glassfish: { name: 'an abyssal glassfish', what: 'you can see straight through it. it can see straight through you.', tier: 'legendary', price: 400 }
+  };
+  /* the spots, and who bites there (weights) */
+  var ZONES = {
+    harbour: { name: 'the harbour', what: 'the shallows off the districts', table: [['boot', 6], ['can', 6], ['sardine', 40], ['dockeel', 30], ['slickcarp', 14], ['minnow', 4]] },
+    glow:    { name: 'naturia\'s glow-waters', what: 'off naturia', table: [['glowfin', 50], ['mosstrout', 30], ['lanternray', 8], ['starkoi', 1.5], ['boot', 3]] },
+    redrum:  { name: 'the redrum shallows', what: 'off redrum', table: [['rustgill', 45], ['knifepike', 25], ['redsnapper', 6], ['can', 10], ['boot', 8]] },
+    bay:     { name: 'the nova bay', what: 'deep water inside the bay', table: [['mackerel', 50], ['squid', 22], ['bass', 18], ['tuna', 6]] },
+    reef:    { name: 'the vistadelsol reef', what: 'off vistadelsol\'s coast and islets', table: [['parrot', 45], ['mangocrab', 30], ['sunray', 8], ['grouper', 1.5]] },
+    jormun:  { name: 'the jörmun ocean', what: 'the open sea, past the bay', table: [['herring', 45], ['lanterneye', 28], ['loopeel', 10], ['glassfish', 2.5]] }
+  };
+  var TIER_HARD = { junk: 0.6, common: 0.8, uncommon: 1.0, rare: 1.3, legendary: 1.6 };
+  /* what bites: the spot's table, rare and legendary helped by the rod, legendary by the small hours */
+  function pickFish(zone, rng, rodLevel, hour) {
+    var z = ZONES[zone] || ZONES.harbour, total = 0;
+    var rows = z.table.map(function (r) {
+      var t = FISH[r[0]].tier, w = r[1];
+      if (t === 'rare') w *= 1 + 0.6 * (rodLevel || 0);
+      if (t === 'legendary') w *= (1 + (rodLevel || 0)) * (hour !== undefined && hour < 5 ? 2 : 1);
+      if (t === 'junk') w *= rodLevel ? 0.5 : 1;
+      total += w; return [r[0], w];
+    });
+    var roll = (rng ? rng() : Math.random()) * total;
+    for (var i = 0; i < rows.length; i++) { roll -= rows[i][1]; if (roll < 0) return rows[i][0]; }
+    return rows[rows.length - 1][0];
+  }
+  function bestRod(s) { var it = s.items || {}; return it.tuned ? 'tuned' : it.rod ? 'rod' : ''; }
+  function goods(key) { return RES[key] || CURIOS[key] || TOOLS[key] || FISH[key] || null; }
+  function nameOf(key) { var g = goods(key); return g ? g.name : key; }
   /* the counter's rows for a tab: what you can buy here, or what they'll buy off you */
   function storeRows(MF, s, id, tab) {
     var st = STORES[id], rows = [], res = s.res || {}, items = s.items || {};
@@ -146,10 +207,12 @@
     if (tab === 'buy') {
       if (st.sells) Object.keys(st.sells).forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: st.sells[k], have: res[k] || 0 }); });
       if (st.curios) st.curios.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: CURIOS[k].price, have: items[k] || 0 }); });
+      if (st.tools) st.tools.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: TOOLS[k].price, have: items[k] || 0 }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
     } else if (st.kind === 'pawn') {
       Object.keys(st.buys).forEach(function (k) { if (res[k]) rows.push({ key: k, label: nameOf(k), price: st.buys[k], have: res[k], ok: true }); });
       Object.keys(CURIOS).forEach(function (k) { if (items[k]) rows.push({ key: k, label: nameOf(k), price: Math.floor(CURIOS[k].price / 2), have: items[k], ok: true }); });
+      Object.keys(FISH).forEach(function (k) { if (items[k]) rows.push({ key: k, label: nameOf(k), price: FISH[k].price, have: items[k], ok: true }); });
     }
     return rows;
   }
@@ -160,6 +223,8 @@
     if (!s.res) s.res = {};
     if (!s.items) s.items = {};
     var into = RES[key] ? s.res : s.items;
+    /* one rod of each kind is plenty */
+    if (tab === 'buy' && TOOLS[key] && s.items[key]) return { ok: false, why: 'you already have one' };
     if (tab === 'buy') {
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
       into[key] = (into[key] || 0) + 1;
@@ -172,5 +237,6 @@
 
   root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, boatShort: boatShort, buildBoat: buildBoat,
                    CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade,
+                   TOOLS: TOOLS, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
                    price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

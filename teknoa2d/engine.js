@@ -25,6 +25,7 @@
              world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
+             fishlog: {},                                    /* every kind of fish ever caught, and how many */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 

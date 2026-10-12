@@ -13,11 +13,19 @@
    TWIST (fibre)  left, right, left, right. same side twice slips. fill it
                   before the time runs out
    PRY (scrap)    hold A, let go in the green. past the top it snaps. two tries
-   CATCH (fruit)  fruit drops down three lanes. move the basket under it */
+   CATCH (fruit)  fruit drops down three lanes. move the basket under it
+   FISH           wait (A too soon spooks it), strike on the '!', then hold A
+                  to reel: the catch comes in but the tension climbs. ease
+                  off before it snaps. opts.hard: how much fight it has */
 (function (root) {
   function rand(rng) { return rng ? rng() : Math.random(); }
 
   var MAKE = {
+    fish: function (rng, opts) {
+      var hard = (opts && opts.hard) || 1, ease = (opts && opts.ease) || 1;
+      return { kind: 'fish', title: 'FISH', hint: 'wait for the bite', phase: 'wait', bite: 1.5 + rand(rng) * 3, window: 0.75,
+               progress: 0, tension: 0, peak: 0, hard: hard, ease: ease, surge: 0, rng: rng };
+    },
     timber: function () {
       return { kind: 'timber', title: 'CHOP', hint: 'A when the blade is in the notch', pos: 0, dir: 1, speed: 85,
                zone: [38, 62], swings: 0, hits: 0, clean: 0, of: 3 };
@@ -34,8 +42,8 @@
       return { kind: 'fruit', title: 'CATCH', hint: 'left and right to move the basket', basket: 1, drops: drops, caught: 0, speed: 60 };
     }
   };
-  function create(kind, rng) {
-    var g = (MAKE[kind] || MAKE.timber)(rng);
+  function create(kind, rng, opts) {
+    var g = (MAKE[kind] || MAKE.timber)(rng, opts);
     g.done = false; g.score = 0; g.perfect = false; g.t = 0;
     return g;
   }
@@ -44,6 +52,28 @@
     if (g.done) return g;
     input = input || {};
     g.t += dt;
+    if (g.kind === 'fish') {
+      if (g.phase === 'wait') {
+        if (input.a) { g.done = true; g.why = 'spooked'; return g; }
+        g.bite -= dt;
+        if (g.bite <= 0) { g.phase = 'bite'; g.hint = '! strike! press A'; }
+      } else if (g.phase === 'bite') {
+        g.window -= dt;
+        if (input.a) { g.phase = 'reel'; g.hint = 'hold A to reel. ease off before it snaps'; }
+        else if (g.window <= 0) { g.done = true; g.why = 'missed'; }
+      } else {
+        /* it fights back in surges */
+        g.surge -= dt;
+        if (g.surge <= 0) { g.surge = 0.8 + rand(g.rng) * 1.4; g.tension += 12 * g.hard; }
+        if (input.hold) { g.progress += 26 * dt / g.hard; g.tension += 34 * dt * g.hard * g.ease; }
+        else { g.progress = Math.max(0, g.progress - 4 * dt); g.tension -= 45 * dt; }
+        g.tension = Math.max(0, g.tension);
+        g.peak = Math.max(g.peak, g.tension);
+        if (g.tension >= 100) { g.done = true; g.why = 'snapped'; }
+        else if (g.progress >= 100) { g.done = true; g.score = 1; g.perfect = g.peak < 70; }
+      }
+      return g;
+    }
     if (g.kind === 'timber') {
       g.pos += g.dir * g.speed * dt;
       if (g.pos >= 100) { g.pos = 100; g.dir = -1; }
@@ -91,5 +121,5 @@
     return Math.max(1, Math.round(n * (0.5 + g.score))) + (g.perfect ? 1 : 0);
   }
 
-  root.MFMini = { create: create, step: step, amount: amount, KINDS: Object.keys(MAKE) };
+  root.MFMini = { create: create, step: step, amount: amount, KINDS: Object.keys(MAKE).filter(function (k) { return k !== 'fish'; }), GAMES: Object.keys(MAKE) };
 })(typeof window !== 'undefined' ? window : globalThis);

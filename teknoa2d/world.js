@@ -779,6 +779,27 @@
     return seen;
   }
 
+  /* fishing: which spot this water is. the open sea at the map's edge, the
+     reef off vistadelsol, naturia's glow-waters, the redrum shallows, the
+     harbour off any other district, the bay in the middle of it all */
+  function fishZone(world, x, y) {
+    if (x < 22 || y < 22 || x > world.W - 23 || y > world.H - 23) return 'jormun';
+    var near = {}, d;
+    for (var oy = -6; oy <= 6; oy++) for (var ox = -6; ox <= 6; ox++) {
+      var nx = x + ox, ny = y + oy;
+      if (nx < 0 || ny < 0 || nx >= world.W || ny >= world.H) continue;
+      var t = world.tile[ny * world.W + nx];
+      if (t === T.DEEP || t === T.SHALLOW || t === T.BRIDGE) continue;
+      d = world.dist[ny * world.W + nx];
+      near[d === -2 ? 'vistadelsol' : d >= 0 ? DISTRICTS[d].id : 'none'] = 1;
+    }
+    if (near.vistadelsol) return 'reef';
+    if (near.naturia) return 'glow';
+    if (near.redrum) return 'redrum';
+    if (Object.keys(near).some(function (k) { return k !== 'none'; })) return 'harbour';
+    return 'bay';
+  }
+
   /* what a boat floats on */
   function water(world, x, y) {
     if (x < 0 || y < 0 || x >= world.W || y >= world.H) return false;
@@ -857,5 +878,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);
