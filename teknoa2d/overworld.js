@@ -951,6 +951,7 @@
       var r = SH.buildBoat(MF, s);
       if (!r.ok) return say(['short of something. check your pockets.'], 'SHIPWRIGHT');
       wallet('-' + MF.fmtJ(SH.BOAT.joules));
+      exp('craft', { xp: 60 });
       if (api.save) api.save();
       say(['sawing. hammering. a lot of swearing.', 'done. she\'s moored at the end of the pier.\nface the water anywhere and press A to set sail.'], 'SHIPWRIGHT');
     });
@@ -964,13 +965,14 @@
     var terms = 'i\'ll knock you a skiff together: ' + B.need.scrap + ' scrap and ' + MF.fmtJ(B.joules) + ' for the labour.\nor ' + MF.fmtJ(B.buy) + ' and you take the one tied up out back.';
     var mine = 'you\'ve got ' + have + '/' + B.need.scrap + ' scrap, ' + MF.fmtJ(MF.joules(s)) + '.';
     var build = !SH.boatShort(MF, s, 'slip').length, buy = MF.joules(s) >= B.buy;
-    function done(paid) {
+    function done(paid, built) {
       wallet('-' + MF.fmtJ(paid));
+      if (built) exp('craft', { xp: 30 });
       if (api.save) api.save();
       say(['banging. welding. one swear word, very long.', 'there. she floats. mostly.\nface the water anywhere and press A to set sail.'], 'SCRAPPER');
     }
     if (!build && !buy) return say([pitch, terms, mine, 'scrap\'s lying about all over redrum.\nthe pawn shop pays for it too, if you need joules more.'], 'SCRAPPER');
-    if (build) return ask([pitch, terms, mine + '\nbuild it?'], function () { if (SH.buildBoat(MF, s, 'slip').ok) done(B.joules); }, buy ? function () { if (SH.buyBoat(MF, s, 'slip').ok) done(B.buy); } : null, buy ? 'A: build it    B: just buy one' : null);
+    if (build) return ask([pitch, terms, mine + '\nbuild it?'], function () { if (SH.buildBoat(MF, s, 'slip').ok) done(B.joules, true); }, buy ? function () { if (SH.buyBoat(MF, s, 'slip').ok) done(B.buy); } : null, buy ? 'A: build it    B: just buy one' : null);
     ask([pitch, terms, mine + '\nbuy one?'], function () { if (SH.buyBoat(MF, s, 'slip').ok) done(B.buy); });
   }
   /* the crowd: their district's pool, in their own order, and now and then
@@ -1097,6 +1099,7 @@
     if (!s.res) s.res = {};
     s.res[p.kind] = (s.res[p.kind] || 0) + n;
     wallet((how ? how + ' ' : '') + '+' + n + ' ' + (RS[p.kind] ? RS[p.kind].name : p.kind));
+    exp('gather', { perfect: how === 'PERFECT' });
     if (api && api.save) api.save();
   }
 
@@ -1135,10 +1138,12 @@
       if (api.save) api.save();
     } else if (t.ok && t.cooked) {
       counter.msg = 'it sizzles. you have ' + t.name + '. (eat it from INV)';
+      exp('cook', { kitchen: window.MFShops.place(counter.id).where === 'kitchen' });
       if (api.save) api.save();
     } else if (t.ok) {
       counter.msg = (counter.tab === 'buy' ? 'bought ' : 'sold ') + t.name + ' for ' + window.MF.fmtJ(t.price) + '.';
       wallet((counter.tab === 'buy' ? '-' : '+') + window.MF.fmtJ(t.price));
+      if (counter.tab === 'sell') exp('sell', { price: t.price });
       if (api.save) api.save();
     } else counter.msg = t.why === 'not enough joules' ? 'not enough joules for that.' : t.why + '.';
     var left = counterRows().length;
@@ -1267,7 +1272,7 @@
     if (!bTap.busy && !bTap.moved && Date.now() - bTap.at < 260 && active) phoneTap();
   }
   var phone = null, pPrev = {}, pDrawn = 0;
-  var APPS = [['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
+  var APPS = [['id', 'ID', '#ff9de2', '◉'], ['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
   var MAP_LAYERS = ['terranova', 'nova sea', 'nova city'], ZOOM_MAX = [6, 6, 16];
   var MAPIMG = {
     biomes: { src: 'maps/biomes.png', here: [0.629, 0.797] }, states: { src: 'maps/states.png', here: [0.629, 0.797] },
@@ -1341,6 +1346,9 @@
       });
       scr.appendChild(grid);
       hint.textContent = '◀ ▶ pick · A open · tap B: put it away';
+    } else if (phone.app === 'id') {
+      drawId(scr);
+      hint.textContent = 'tap B: back';
     } else if (phone.app === 'clock') {
       var c = novaNow(), box = document.createElement('div'); box.className = 'pclock';
       var fc = '';
@@ -1369,6 +1377,27 @@
       }
       scr.appendChild(list);
     } else if (phone.app === 'map') drawMap();
+  }
+  /* the ID app: who you are, your level, and where your exp came from */
+  function drawId(scr) {
+    var L = window.MFLevel, box = document.createElement('div'); box.className = 'pid';
+    function line(cls, text) { var d = document.createElement('div'); if (cls) d.className = cls; d.textContent = text; box.appendChild(d); return d; }
+    line('who', (s.player.handle || 'stranger') + (s.player.origin ? ' · ' + s.player.origin : ''));
+    if (!L) { scr.appendChild(box); return; }
+    var i = L.info(s);
+    line('lv', 'LVL ' + i.level);
+    var bar = document.createElement('span'); bar.className = 'xbar'; var fill = document.createElement('i');
+    fill.style.width = (i.need ? Math.floor(100 * i.into / i.need) : 100) + '%'; bar.appendChild(fill); box.appendChild(bar);
+    line('', i.need ? i.into + ' / ' + i.need + ' EXP to LVL ' + (i.level + 1) : 'max level');
+    line('', 'total ' + i.total + ' EXP');
+    var src = document.createElement('div'), by = (s.xp && s.xp.by) || {}; src.className = 'src';
+    Object.keys(L.SOURCES).forEach(function (k) {
+      var n = document.createElement('span'); n.textContent = L.SOURCES[k].name;
+      var v = document.createElement('b'); v.textContent = by[k] || 0;
+      src.appendChild(n); src.appendChild(v);
+    });
+    box.appendChild(src);
+    scr.appendChild(box);
   }
   /* ── the map app: three layers, each one draggable and zoomable ──
      drag / hold the arrows to pan, wheel / pinch / A / + to zoom in, - out,
@@ -1674,6 +1703,7 @@
       if (!s.fishlog) s.fishlog = {};
       s.fishlog[mini.fish] = (s.fishlog[mini.fish] || 0) + 1;
       wallet('+1 ' + f.name.replace(/^(a|an) /, ''));
+      exp('fish', { tier: f.tier });
       msg = (g.perfect ? 'clean catch! ' : 'caught ') + f.name + (f.tier === 'rare' || f.tier === 'legendary' ? ' (' + f.tier + '!)' : '') + (first ? ' · new' : '');
       if (api && api.save) api.save();
     } else msg = { spooked: 'too soon. it swam off.', missed: 'missed the bite.', snapped: 'the line snapped.' }[g.why] || 'it got away.';
@@ -1763,6 +1793,16 @@
     if (!gain) return;
     var t = $('wJGain'); t.textContent = gain;
     t.classList.remove('on'); void t.offsetWidth; t.classList.add('on');
+  }
+  /* exp for one go at something (level.js SOURCES), shown under the purse */
+  function exp(source, d) {
+    if (!window.MFLevel) return null;
+    var r = window.MFLevel.award(s, source, d), t = $('wXPGain');
+    if (!r.xp) return r;
+    t.textContent = r.up ? 'LEVEL ' + r.level + '!' : '+' + r.xp + ' EXP';
+    t.classList.toggle('up', r.up > 0);
+    t.classList.remove('on'); void t.offsetWidth; t.classList.add('on');
+    return r;
   }
   /* a dropped joule: a little bolt that winks */
   var BOLT = ['..YY', '.YY.', 'YYYY', '.YY.', 'YY..'];

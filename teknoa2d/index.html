@@ -16,6 +16,7 @@
      rain, chat and ghostie come along; inside it, << EXiLED closes the frame -->
 <script src="../wiki/shell.js"></script>
 <script src="engine.js" defer></script>
+<script src="level.js" defer></script>
 <script src="avatar.js" defer></script>
 <script src="shops.js" defer></script>
 <script src="world.js" defer></script>
@@ -87,7 +88,7 @@
   <main id="world" class="world" hidden tabindex="-1" aria-label="nova city">
     <div class="wscreen">
       <canvas id="wCanvas" aria-label="nova city, seen from above"></canvas>
-      <div class="wj" aria-label="teknoan joules"><span id="wJ">⚡0</span><span class="gain" id="wJGain" aria-live="polite"></span></div>
+      <div class="wj" aria-label="teknoan joules"><span id="wJ">⚡0</span><span class="gain" id="wJGain" aria-live="polite"></span><span class="gain xp" id="wXPGain" aria-live="polite"></span></div>
       <div class="won" id="wOn" hidden aria-live="polite"></div>
       <div class="wbody" id="wBody" aria-label="health, hunger and thirst"><span class="bl">HEALTH</span><span class="bar"><i class="hp" id="wHealth"></i></span><span class="bl">FOOD</span><span class="bar"><i id="wFood"></i></span><span class="bl">DRINK</span><span class="bar"><i class="dr" id="wDrink"></i></span><span class="bl">LOAD</span><span class="ld" id="wLoad"></span><span class="tm" id="wTime"></span><span class="bf" id="wBuff"></span></div>
       <div class="wcard" id="wCard" hidden><img id="wCardImg" alt="" decoding="async"><div class="wcard-t"><b id="wCardName"></b><span id="wCardSub"></span></div></div>

@@ -33,6 +33,7 @@
              inbox: [],                                      /* letters on the phone: { id, from, day, title, body, read } */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
              body: { food: 100, drink: 100, health: 100, buff: '', buffT: 0, rested: -1 },  /* hunger, thirst, health (100 = full), a dish's perk and its seconds left, the nova day you last slept */
+             xp: { total: 0, by: {} },                       /* experience, and how much came from each source (level.js) */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -187,6 +188,9 @@
     Object.keys(s.wear).forEach(function (k) { var n = Math.floor(+s.wear[k] || 0); if (n > 0) s.wear[k] = n; else delete s.wear[k]; });
     var b = s.body, num = function (v, d) { v = +v; return isFinite(v) ? Math.max(0, Math.min(100, v)) : d; };
     s.body = { food: num(b.food, 100), drink: num(b.drink, 100), health: num(b.health, 100), buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0), rested: isFinite(+b.rested) ? Math.floor(+b.rested) : -1 };
+    /* sources this build doesn't know are kept: a newer build may */
+    var xb = s.xp.by && typeof s.xp.by === 'object' ? s.xp.by : {};
+    s.xp = { total: Math.max(0, Math.floor(+s.xp.total || 0)), by: counts(xb) };
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
