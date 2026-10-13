@@ -611,18 +611,16 @@
       case 'spiky': [5, 7, 9, 11].forEach(function (sx) { put(0, side ? sx - 1 : sx, 'H'); }); break;
       case 'undercut': if (dir === 'down') { put(4, 4, 'S'); put(4, 11, 'S'); } break;
       /* hex's: two high bunches, and the tails fall past her shoulders to her waist */
+      /* hex's: two high bunches, the tails down to her chest (like her portrait) */
       case 'hex':
         if (side) {
-          for (y = 0; y <= 2; y++) { put(y, 11, 'H'); put(y, 12, 'H'); }
-          for (y = 3; y <= 12; y++) { put(y, 11, 'H'); put(y, 12, 'H'); }
-          put(13, 12, 'H');
+          for (y = 0; y <= 9; y++) { put(y, 11, 'H'); put(y, 12, 'H'); }
         } else {
           for (y = 0; y <= 2; y++) { put(y, 2, 'H'); put(y, 3, 'H'); put(y, 12, 'H'); put(y, 13, 'H'); }
-          for (y = 3; y <= 12; y++) { put(y, 2, 'H'); put(y, 13, 'H'); }
-          for (y = 3; y <= 9; y++) { put(y, 3, 'H'); put(y, 12, 'H'); }
-          put(13, 2, 'H'); put(13, 13, 'H');
-          /* from behind, it hangs down her back too */
-          if (dir === 'up') for (y = 8; y <= 11; y++) for (x = 5; x <= 10; x++) put(y, x, 'H');
+          for (y = 3; y <= 9; y++) { put(y, 2, 'H'); put(y, 13, 'H'); }
+          for (y = 3; y <= 7; y++) { put(y, 3, 'H'); put(y, 12, 'H'); }
+          /* from behind, a little hangs down her back */
+          if (dir === 'up') for (y = 8; y <= 9; y++) for (x = 5; x <= 10; x++) put(y, x, 'H');
         }
         break;
     }
