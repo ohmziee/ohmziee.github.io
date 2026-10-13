@@ -101,21 +101,38 @@
     scrap:  { name: 'scrap metal', what: 'nails, brackets, a hinge. redrum and majinryū throw away good stuff.' },
     fruit:  { name: 'fruit', what: 'vistadelsol grows most things you can eat.' }
   };
-  var BOAT = { joules: 1500, need: { timber: 12, fibre: 8, scrap: 6 } };
+  /* two places to get a boat: the boatyard in yucayeque builds a proper one,
+     the slip on redrum knocks a skiff together out of scrap, or sells one
+     outright to anyone who'd rather not wait. either one floats */
+  var BOATS = {
+    yard: { joules: 1500, need: { timber: 12, fibre: 8, scrap: 6 } },
+    slip: { joules: 400, need: { scrap: 20 }, buy: 2500 }
+  };
+  var BOAT = BOATS.yard;
   /* what's still missing for the boat: [] when it can be built */
-  function boatShort(MF, s) {
-    var out = [], res = s.res || {};
+  function boatShort(MF, s, yard) {
+    var BOAT = BOATS[yard] || BOATS.yard, out = [], res = s.res || {};
     Object.keys(BOAT.need).forEach(function (k) { if ((res[k] || 0) < BOAT.need[k]) out.push({ kind: k, have: res[k] || 0, need: BOAT.need[k] }); });
     if (MF.joules(s) < BOAT.joules) out.push({ kind: 'joules', have: MF.joules(s), need: BOAT.joules });
     return out;
   }
   /* all or nothing, like a shop */
-  function buildBoat(MF, s) {
+  function buildBoat(MF, s, yard) {
+    var BOAT = BOATS[yard] || BOATS.yard;
     if (s.boat) return { ok: false, why: 'already have one' };
-    var short = boatShort(MF, s);
+    var short = boatShort(MF, s, yard);
     if (short.length) return { ok: false, why: 'short', short: short };
     if (!MF.spend(s, BOAT.joules)) return { ok: false, why: 'short' };
     Object.keys(BOAT.need).forEach(function (k) { s.res[k] -= BOAT.need[k]; if (!s.res[k]) delete s.res[k]; });
+    s.boat = 1;
+    return { ok: true };
+  }
+  /* or just pay for one, where they sell them */
+  function buyBoat(MF, s, yard) {
+    var b = BOATS[yard];
+    if (s.boat) return { ok: false, why: 'already have one' };
+    if (!b || !b.buy) return { ok: false, why: 'not for sale here' };
+    if (!MF.spend(s, b.buy)) return { ok: false, why: 'short' };
     s.boat = 1;
     return { ok: true };
   }
@@ -135,7 +152,7 @@
     'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 }, tools: ['rod', 'tuned', 'jormun'], foods: ['water', 'bar', 'electro'] },
     'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 }, tools: ['rod'], foods: ['water', 'bar'] },
     'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 }, tools: ['rod'], foods: ['water', 'bar', 'electro'] },
-    'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'] },
+    'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'], tools: ['rod'] },
     'lantern-loans':    { kind: 'pawn', name: 'LANTERN LOANS', district: 'majinryu', line: 'everything here was somebody\'s once. now it\'s nobody\'s. could be yours.', buys: { timber: 9, fibre: 7, scrap: 12, fruit: 6 }, curios: ['compass', 'cassette', 'shell'] }
   };
   /* fishing (overworld.js casts, minigames.js reels): rods are tools sold at
@@ -535,7 +552,7 @@
     return { ok: true, price: row.price, name: row.label };
   }
 
-  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, boatShort: boatShort, buildBoat: buildBoat,
+  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, BOATS: BOATS, boatShort: boatShort, buildBoat: buildBoat, buyBoat: buyBoat,
                    CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade,
                    FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, MEDS: MEDS, TREAT: TREAT, useMed: useMed, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,

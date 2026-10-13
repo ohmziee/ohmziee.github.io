@@ -866,6 +866,7 @@
       if (n.x !== tx || n.y !== ty) continue;
       n.dir = { up: 'down', down: 'up', left: 'right', right: 'left' }[me.dir];
       if (n.shop && api.shop) { api.shop(n.shop); return; }
+      if (n.wright === 'slip') return scrapper();
       if (n.wright) return shipwright();
       if (n.store) return openCounter(n.store);
       if (n.scene === 'hex') {
@@ -945,7 +946,7 @@
     var short = SH.boatShort(MF, s), need = SH.BOAT.need, res = s.res || {};
     var list = Object.keys(need).map(function (k) { return SH.RES[k].name + ' ' + (res[k] || 0) + '/' + need[k]; }).join('\n') + '\n' + MF.fmtJ(MF.joules(s)) + ' of ' + MF.fmtJ(SH.BOAT.joules);
     var pitch = 'a boat? i can build you one. it gets you past the shore:\nvistadelsol, the islands, the whole nova sea.';
-    if (short.length) return say([pitch, 'bring me ' + need.timber + ' timber, ' + need.fibre + ' palm fibre,\n' + need.scrap + ' scrap metal, and ' + MF.fmtJ(SH.BOAT.joules) + ' for my time.', 'what you\'ve got:\n' + list, 'timber\'s in naturia, by the trees. fibre in yucayeque.\nscrap in redrum and round the labs.'], 'SHIPWRIGHT');
+    if (short.length) return say([pitch, 'bring me ' + need.timber + ' timber, ' + need.fibre + ' palm fibre,\n' + need.scrap + ' scrap metal, and ' + MF.fmtJ(SH.BOAT.joules) + ' for my time.', 'what you\'ve got:\n' + list, 'timber\'s in naturia, by the trees. fibre in yucayeque.\nscrap round the labs, or over in redrum.'], 'SHIPWRIGHT');
     ask([pitch, 'that\'s everything. ' + need.timber + ' timber, ' + need.fibre + ' fibre, ' + need.scrap + ' scrap and ' + MF.fmtJ(SH.BOAT.joules) + '.\nbuild it?'], function () {
       var r = SH.buildBoat(MF, s);
       if (!r.ok) return say(['short of something. check your pockets.'], 'SHIPWRIGHT');
@@ -953,6 +954,24 @@
       if (api.save) api.save();
       say(['sawing. hammering. a lot of swearing.', 'done. she\'s moored at the end of the pier.\nface the water anywhere and press A to set sail.'], 'SHIPWRIGHT');
     });
+  }
+  /* the scrapper on redrum's slip: a skiff out of scrap, or one for cash.
+     the only way off the island. PLACEHOLDER lines */
+  function scrapper() {
+    var SH = window.MFShops, MF = window.MF, B = SH.BOATS.slip, have = (s.res || {}).scrap || 0;
+    if (s.boat) return say(['you\'ve got a boat. go on, the city\'s right there.\nface the water and press A.'], 'SCRAPPER');
+    var pitch = 'the city? no bridge. never was.\nyou want across, you want a boat.';
+    var terms = 'i\'ll knock you a skiff together: ' + B.need.scrap + ' scrap and ' + MF.fmtJ(B.joules) + ' for the labour.\nor ' + MF.fmtJ(B.buy) + ' and you take the one tied up out back.';
+    var mine = 'you\'ve got ' + have + '/' + B.need.scrap + ' scrap, ' + MF.fmtJ(MF.joules(s)) + '.';
+    var build = !SH.boatShort(MF, s, 'slip').length, buy = MF.joules(s) >= B.buy;
+    function done(paid) {
+      wallet('-' + MF.fmtJ(paid));
+      if (api.save) api.save();
+      say(['banging. welding. one swear word, very long.', 'there. she floats. mostly.\nface the water anywhere and press A to set sail.'], 'SCRAPPER');
+    }
+    if (!build && !buy) return say([pitch, terms, mine, 'scrap\'s lying about all over redrum.\nthe pawn shop pays for it too, if you need joules more.'], 'SCRAPPER');
+    if (build) return ask([pitch, terms, mine + '\nbuild it?'], function () { if (SH.buildBoat(MF, s, 'slip').ok) done(B.joules); }, buy ? function () { if (SH.buyBoat(MF, s, 'slip').ok) done(B.buy); } : null, buy ? 'A: build it    B: just buy one' : null);
+    ask([pitch, terms, mine + '\nbuy one?'], function () { if (SH.buyBoat(MF, s, 'slip').ok) done(B.buy); });
   }
   /* the crowd: their district's pool, in their own order, and now and then
      something about you, if there's something to say (world.js TALK) */

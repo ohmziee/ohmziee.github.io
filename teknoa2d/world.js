@@ -15,21 +15,22 @@
   var W = 460, H = 370;
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
-  var VERSION = 4;
+  var VERSION = 5;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
             GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14, CHECK: 15 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
 
   /* r is in tiles: sqrt(area) scaled, so the islands keep their real
-     proportions. style picks how the streets are laid. Redrum sits out on
-     its own causeway so Noorborj is the city's northernmost point. */
+     proportions. style picks how the streets are laid. Redrum sits well out
+     in the bay, no bridge to it: you start there, and the only way across to
+     the rest of the city is a boat. Noorborj is the city's northernmost point. */
   var DISTRICTS = [
     { id: 'worldwood', name: 'WORLDWOOD', sub: 'district 1 // the neon heart', km: 132, at: [0, 0], style: 'grid', block: 5, seed: 11, wobble: 0.10 },
     { id: 'yucayeque', name: 'YUCAYEQUE', sub: 'district 2 // markets and old songs', km: 222, at: [1, -0.3], style: 'village', block: 4, seed: 23, wobble: 0.16 },
     { id: 'naturia', name: 'NATURIA', sub: 'district 3 // the glowing wild', km: 139, at: [-1, -0.3], style: 'wild', block: 6, seed: 37, wobble: 0.18 },
     { id: 'haven', name: 'HAVEN', sub: 'district 4 // where the council sits', km: 88, at: [1, 1], style: 'civic', block: 7, seed: 41, wobble: 0.04 },
     { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, at: [-1, 1], style: 'grid', block: 4, seed: 53, wobble: 0.12 },
-    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 22 }
+    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 46 }
   ];
   var CENTRE = [232, 185], GAP = 4, SCALE = 3.0;
   /* the bay round the city was laid out at SCALE 2.45; K grows it with the city.
@@ -173,7 +174,7 @@
     /* bridges: from one island's shore to the next, along the line between
        their centres, as a staircase two tiles wide */
     var LINKS = [['worldwood', 'yucayeque'], ['worldwood', 'naturia'], ['worldwood', 'haven'], ['worldwood', 'majinryu'],
-                 ['worldwood', 'redrum'], ['redrum', 'naturia'], ['redrum', 'yucayeque'], ['haven', 'yucayeque'], ['majinryu', 'naturia']];
+                 ['haven', 'yucayeque'], ['majinryu', 'naturia']];
     var byId = {}; DISTRICTS.forEach(function (d) { byId[d.id] = d; });
     var landings = [];
     LINKS.forEach(function (l) {
@@ -349,8 +350,19 @@
       'THE BOATYARD\nboats built to order. bring the wood.', true);
     carve(yardDoor.x, yardDoor.y, bx, yardDoor.y, T.ROAD, { 9: 1 });
     for (var px = bx + 1; px <= bx + 6; px++) set(px, yardDoor.y, T.BRIDGE);
-    npcs.push({ id: 'shipwright', x: yardDoor.x + 1, y: yardDoor.y, dir: 'down', look: 'shipwright', wright: true, still: true });
+    npcs.push({ id: 'shipwright', x: yardDoor.x + 1, y: yardDoor.y, dir: 'down', look: 'shipwright', wright: 'yard', still: true });
     var pierEnd = { x: bx + 6, y: yardDoor.y };
+
+    /* the slip: redrum's south shore, facing the city across the water. a
+       scrapper there knocks skiffs together out of scrap (shops.js BOATS.slip),
+       or sells you one outright. PLACEHOLDER lines */
+    var sx0 = R0.cx, sy0 = R0.cy;
+    while (dist[at(sx0, sy0 + 1)] === R0.index) sy0++;
+    carve(sx0, sy0, R0.cx, R0.cy, T.ROAD, { 9: 1 });
+    for (var py = sy0 + 1; py <= sy0 + 4; py++) { set(sx0, py, T.BRIDGE); set(sx0 + 1, py, T.BRIDGE); }
+    npcs.push({ id: 'scrapper', x: sx0 + 1, y: sy0 + 1, dir: 'left', look: 'merc', name: 'SCRAPPER', wright: 'slip', still: true });
+    if (get(sx0 - 1, sy0) !== T.LANDMARK) { set(sx0 - 1, sy0, T.ROAD); signs.push({ x: sx0 - 1, y: sy0, text: 'THE SLIP\nskiffs out of scrap. no refunds.\nthe city is that way. you\'ll need a boat.' }); }
+    var slipEnd = { x: sx0, y: sy0 + 4 };
 
     /* the landings round the coast, named for vistadelsol's towns on the
        terranova map. a pier, a beach, a grove, someone who lives there. the
@@ -449,7 +461,7 @@
       carve(p % W, (p / W) | 0, d0.cx, d0.cy, T.ROAD, { 9: 1 });
       seen = reachFrom(spawn.x, spawn.y);
     }
-    function reachFrom(x, y) { return reach({ W: W, H: H, tile: tile }, x, y); }
+    function reachFrom(x, y) { return reachAll({ W: W, H: H, tile: tile, spawn: { x: x, y: y }, hub: { x: W0.cx, y: W0.cy } }); }
     function flood(start) {
       var out = [], q = [start], mark = {}; mark[start] = 1;
       while (q.length) {
@@ -501,7 +513,7 @@
       }
     });
 
-    return { W: W, H: H, tile: tile, dist: dist, marks: marks, signs: signs, npcs: npcs, spawn: spawn, landings: landings2, pier: pierEnd };
+    return { W: W, H: H, tile: tile, dist: dist, marks: marks, signs: signs, npcs: npcs, spawn: spawn, hub: { x: W0.cx, y: W0.cy }, landings: landings2, pier: pierEnd, slip: slipEnd };
   }
 
   /* vistadelsol, past the shore (placed in map tiles, not by district) */
@@ -942,6 +954,15 @@
     }
     return seen;
   }
+  /* on foot from redrum, or from the city once you've crossed: every tile
+     you could ever walk to without a boat out to vistadelsol */
+  function reachAll(world) {
+    var a = reach(world, world.spawn.x, world.spawn.y);
+    if (!world.hub) return a;
+    var b = reach(world, world.hub.x, world.hub.y);
+    for (var k = 0; k < a.length; k++) a[k] = a[k] | b[k];
+    return a;
+  }
 
   /* fishing: which spot this water is. the open sea at the map's edge, the
      reef off vistadelsol, naturia's glow-waters, the redrum shallows, the
@@ -978,15 +999,16 @@
   var NODE_KINDS = [
     { kind: 'timber', where: ['naturia'], per: 7, near: T.TREE },
     { kind: 'fibre', where: ['yucayeque'], per: 7 },
-    { kind: 'scrap', where: ['redrum', 'majinryu'], per: 5 },
+    { kind: 'scrap', where: ['redrum'], per: 6 },
+    { kind: 'scrap', where: ['majinryu'], per: 3 },
     { kind: 'fruit', where: ['vistadelsol'], per: 10 }
   ];
   function nodes(world, day) {
     if (!world.nodeOpen) {
-      var r = reach(world, world.spawn.x, world.spawn.y), busy = {};
+      var r = reachAll(world), busy = {};
       world.signs.concat(world.npcs).forEach(function (o) { busy[o.y * world.W + o.x] = 1; });
       world.nodeOpen = {};
-      NODE_KINDS.forEach(function (nk) {
+      NODE_KINDS.forEach(function (nk, j) {
         var cells = [];
         for (var k = 0; k < world.W * world.H; k++) {
           var t = world.tile[k], d = world.dist[k], x = k % world.W, y = (k / world.W) | 0;
@@ -997,13 +1019,13 @@
           if (nk.near !== undefined && ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(function (o) { var nx = x + o[0], ny = y + o[1]; return nx >= 0 && ny >= 0 && nx < world.W && ny < world.H && world.tile[ny * world.W + nx] === nk.near; })) continue;
           cells.push(k);
         }
-        world.nodeOpen[nk.kind] = cells;
+        world.nodeOpen[j] = cells;
       });
     }
     var seed = 0, i, out = [];
     for (i = 0; i < day.length; i++) seed = (seed * 31 + day.charCodeAt(i)) | 0;
     NODE_KINDS.forEach(function (nk, j) {
-      var cells = world.nodeOpen[nk.kind];
+      var cells = world.nodeOpen[j];
       for (var n = 0; n < nk.per && cells.length; n++) {
         var k = cells[Math.floor(hash(seed + j * 977, n * 6151 + 11) * cells.length)];
         var x = k % world.W, y = (k / world.W) | 0, id = nk.kind + '@' + x + ',' + y;
@@ -1021,7 +1043,7 @@
   var LOOSE_PER = 4;
   function loose(world, day) {
     if (!world.open) {
-      var r = reach(world, world.spawn.x, world.spawn.y), busy = {};
+      var r = reachAll(world), busy = {};
       world.signs.concat(world.npcs).forEach(function (o) { busy[o.y * world.W + o.x] = 1; });
       world.open = DISTRICTS.map(function () { return []; });
       for (var k = 0; k < world.W * world.H; k++) {
@@ -1042,5 +1064,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, reachAll: reachAll, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);
