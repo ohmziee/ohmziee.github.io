@@ -1284,10 +1284,10 @@
   function cast(tx, ty, rod) {
     var SH = window.MFShops, zone = M.fishZone(world, tx, ty), lvl = SH.TOOLS[rod].level;
     var id = SH.pickFish(zone, Math.random, lvl, new Date().getHours()), f = SH.FISH[id];
-    mini = { fish: id, zone: zone, g: window.MFMini.create('fish', null, { hard: SH.TIER_HARD[f.tier] * (tired ? 1.2 : 1), ease: (lvl ? 0.85 : 1) * (window.MF.buff(s, 'steady line') ? 0.75 : 1) }), end: 0 };
+    mini = { fish: id, zone: zone, rod: rod, g: window.MFMini.create('fish', null, { hard: SH.TIER_HARD[f.tier] * (tired ? 1.2 : 1), ease: (lvl >= 2 ? 0.75 : lvl ? 0.85 : 1) * (window.MF.buff(s, 'steady line') ? 0.75 : 1) }), end: 0 };
     prevL = !!held.left; prevR = !!held.right; prevB = !!held.b; pressedA = false;
     $('wMini').hidden = false; $('wMini').className = 'wmini k-fish';
-    $('wMiniT').textContent = 'FISH · ' + SH.ZONES[zone].name;
+    $('wMiniT').textContent = 'FISH · ' + SH.ZONES[zone].name + ' · rod ' + SH.rodLeft(s, rod) + '/' + SH.TOOLS[rod].dur;
     drawMini();
   }
   function landFish(now) {
@@ -1301,8 +1301,13 @@
       msg = (g.perfect ? 'clean catch! ' : 'caught ') + f.name + (f.tier === 'rare' || f.tier === 'legendary' ? ' (' + f.tier + '!)' : '') + (first ? ' · new' : '');
       if (api && api.save) api.save();
     } else msg = { spooked: 'too soon. it swam off.', missed: 'missed the bite.', snapped: 'the line snapped.' }[g.why] || 'it got away.';
+    /* the rod takes it either way; worse when it goes wrong */
+    var worn = SH.wearRod(s, mini.rod, g.score >= 1 ? 'caught' : g.why);
+    if (worn.broke) { msg += ' and your rod snaps in half. it\'s gone.'; mini.end = now + 2400; }
+    else if (worn.left <= 5) msg += ' (rod: ' + worn.left + (worn.left === 1 ? ' use' : ' uses') + ' left)';
+    if (api && api.save) api.save();
     $('wMiniH').textContent = msg;
-    mini.end = now + 1600;
+    mini.end = Math.max(mini.end, now + 1600);
   }
   function tickMini(dt, now) {
     var inp = { a: pressedA, hold: !!held.a, left: !!held.left && !prevL, right: !!held.right && !prevR }, b = !!held.b && !prevB;

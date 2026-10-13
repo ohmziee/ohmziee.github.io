@@ -402,7 +402,8 @@
       inv.innerHTML = ''; met.innerHTML = '';
       var SH = window.MFShops, gd = function (k) { return SH && SH.goods ? SH.goods(k) : null; };
       Object.keys(s.items).forEach(function (k) {
-        var g = gd(k), row = li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : ''), g ? g.what : D.items[k]);
+        var g = gd(k), worn = SH && SH.TOOLS && SH.TOOLS[k] ? ' (' + SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses)' : '';
+        var row = li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : '') + worn, g ? g.what : D.items[k]);
         /* take-away food: eat or drink it from here */
         if (SH && SH.FOODS && SH.FOODS[k]) {
           var b = document.createElement('button'); b.type = 'button'; b.className = 'eat';

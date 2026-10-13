@@ -26,6 +26,7 @@
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
+             wear: {},                                       /* uses left in each rod */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
              body: { food: 100, drink: 100, buff: '', buffT: 0 },  /* hunger and thirst (100 = full), a dish's perk and its seconds left */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
@@ -170,6 +171,7 @@
     if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
+    Object.keys(s.wear).forEach(function (k) { var n = Math.floor(+s.wear[k] || 0); if (n > 0) s.wear[k] = n; else delete s.wear[k]; });
     var b = s.body, num = function (v, d) { v = +v; return isFinite(v) ? Math.max(0, Math.min(100, v)) : d; };
     s.body = { food: num(b.food, 100), drink: num(b.drink, 100), buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0) };
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);

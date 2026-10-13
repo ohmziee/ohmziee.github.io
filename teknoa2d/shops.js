@@ -132,7 +132,7 @@
     lighter:   { name: 'a scratched zippo', what: 'the lid has a knife engraved on it. the hinge squeaks.', price: 80 }
   };
   var STORES = {
-    'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 }, tools: ['rod', 'tuned'], foods: ['water', 'bar', 'electro'] },
+    'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 }, tools: ['rod', 'tuned', 'jormun'], foods: ['water', 'bar', 'electro'] },
     'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 }, tools: ['rod'], foods: ['water', 'bar'] },
     'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 }, tools: ['rod'], foods: ['water', 'bar', 'electro'] },
     'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'] },
@@ -142,8 +142,10 @@
      general stores; fish live in spots (world.js fishZone), each with its own
      table. PLACEHOLDER names, lines and prices */
   var TOOLS = {
-    rod:   { name: 'a fishing rod', what: 'cheap, bendy, works. face any water and press A.', price: 150, level: 0 },
-    tuned: { name: 'a tuned rod', what: 'the line hums when something big is near. rarer bites, fewer snaps.', price: 650, level: 1 }
+    /* dur: how many uses it has in it (wearRod below) */
+    rod:   { name: 'a fishing rod', what: 'cheap, bendy, works. face any water and press A.', price: 150, level: 0, dur: 40 },
+    tuned: { name: 'a tuned rod', what: 'the line hums when something big is near. rarer bites, fewer snaps.', price: 650, level: 1, dur: 120 },
+    jormun:{ name: 'a jörmun rod', what: 'deep-sea carbon, a reel like a vault door. it outlasts most people.', price: 1800, level: 2, dur: 300 }
   };
   /* tier: junk, common, uncommon, rare, legendary. price: what a pawn shop pays */
   var FISH = {
@@ -197,7 +199,23 @@
     for (var i = 0; i < rows.length; i++) { roll -= rows[i][1]; if (roll < 0) return rows[i][0]; }
     return rows[rows.length - 1][0];
   }
-  function bestRod(s) { var it = s.items || {}; return it.tuned ? 'tuned' : it.rod ? 'rod' : ''; }
+  function bestRod(s) { var it = s.items || {}; return it.jormun ? 'jormun' : it.tuned ? 'tuned' : it.rod ? 'rod' : ''; }
+  /* every cast wears the rod: a clean catch 1, a spooked or missed bite 2, a
+     snapped line 4. at 0 it breaks and is gone */
+  var WEAR = { caught: 1, spooked: 2, missed: 2, snapped: 4 };
+  function rodLeft(s, rod) {
+    if (!s.wear) s.wear = {};
+    if (s.items && s.items[rod] && !(s.wear[rod] > 0)) s.wear[rod] = TOOLS[rod].dur;   /* a rod from before wear existed */
+    return s.wear[rod] || 0;
+  }
+  function wearRod(s, rod, outcome) {
+    if (!TOOLS[rod] || !s.items || !s.items[rod]) return { left: 0, broke: false };
+    var left = rodLeft(s, rod) - (WEAR[outcome] || 1);
+    if (left > 0) { s.wear[rod] = left; return { left: left, broke: false }; }
+    delete s.wear[rod];
+    s.items[rod]--; if (!s.items[rod]) delete s.items[rod];
+    return { left: 0, broke: true, name: TOOLS[rod].name };
+  }
   /* food and drink (engine.js consume): food/drink points; some dishes give a
      perk (buff) for secs of play. carts and restaurants serve it to eat on the
      spot; general stores sell the take-away kind (here: 0), eaten from INV.
@@ -353,6 +371,7 @@
     if (tab === 'buy') {
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
       into[key] = (into[key] || 0) + 1;
+      if (TOOLS[key]) { if (!s.wear) s.wear = {}; s.wear[key] = TOOLS[key].dur; }
       return { ok: true, price: row.price, name: row.label };
     }
     into[key]--; if (!into[key]) delete into[key];
@@ -364,5 +383,6 @@
                    CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade,
                    FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
+                   WEAR: WEAR, rodLeft: rodLeft, wearRod: wearRod,
                    price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);
