@@ -278,7 +278,13 @@
   function cookRows(s, where) {
     var it = s.items || {}, res = s.res || {}, rows = [], fruit = res.fruit || 0;
     var best = Object.keys(FISH).filter(function (k) { return it[k] && FISH[k].tier !== 'junk'; });
-    best.forEach(function (k) { rows.push({ key: 'grill:' + k, label: 'grill ' + FISH[k].name.replace(/^(a|an) /, '') + ' → ' + FOODS[GRILL[FISH[k].tier]].name.replace(/^(a|an) /, ''), price: 0, have: it[k], ok: true }); });
+    /* a public fire does the basics: plain grilled fish, and only the
+       everyday ones. the kitchen does each fish justice */
+    best.forEach(function (k) {
+      var t = FISH[k].tier, fine = t === 'rare' || t === 'legendary', out = cooked(k, where);
+      rows.push({ key: 'grill:' + k, price: 0, have: it[k], ok: !(fine && where !== 'kitchen'),
+                  label: 'grill ' + FISH[k].name.replace(/^(a|an) /, '') + (fine && where !== 'kitchen' ? ' (needs a kitchen)' : ' → ' + FOODS[out].name.replace(/^(a|an) /, '')) });
+    });
     rows.push({ key: 'char', label: 'char 2 fruit → charred fruit', price: 0, have: fruit, ok: fruit >= 2 });
     if (where === 'kitchen') {
       rows.push({ key: 'stew', label: 'fish + 2 fruit → fish stew', price: 0, have: fruit, ok: best.length > 0 && fruit >= 2 });
@@ -287,6 +293,8 @@
     if (Object.keys(FISH).some(function (k) { return it[k] && FISH[k].tier === 'junk'; })) rows.push({ key: 'junk', label: 'cook the junk you fished up', price: 0, have: 0, ok: true });
     return rows;
   }
+  /* what a fish becomes: a fire makes it plain, a kitchen makes it what it deserves */
+  function cooked(fish, where) { return where === 'kitchen' ? GRILL[FISH[fish].tier] : 'grilled1'; }
   /* the cheapest fish goes in the stew, not your legendary */
   function stewFish(s) {
     var order = ['common', 'uncommon', 'rare', 'legendary'];
@@ -301,7 +309,8 @@
     if (key.indexOf('grill:') === 0) {
       var f = key.slice(6);
       if (!FISH[f] || !it[f] || FISH[f].tier === 'junk') return { ok: false, why: 'no fish like that' };
-      take(f, 1, it); return give(GRILL[FISH[f].tier]);
+      if (where !== 'kitchen' && (FISH[f].tier === 'rare' || FISH[f].tier === 'legendary')) return { ok: false, why: 'a fish like this deserves a real kitchen' };
+      take(f, 1, it); return give(cooked(f, where));
     }
     if (key === 'char') { if ((res.fruit || 0) < 2) return { ok: false, why: 'you need 2 fruit' }; take('fruit', 2, res); return give('charred'); }
     if (where !== 'kitchen') return { ok: false, why: 'that needs a kitchen' };
