@@ -807,8 +807,9 @@
     }
     if (occupied(nx, ny)) {
       if (L) L.moved(me.x, me.y, dir);
-      /* walking up into your own front door lets you in */
+      /* walking up into your own front door lets you in: the door, not the wall beside it */
       var hm = !inside && dir === 'up' && markAt(nx, ny);
+      if (hm && (hm.home || hm.room) && !atDoor(hm, nx, ny)) hm = null;
       if (hm && hm.home && s.homes[hm.home]) goIn(hm.home);
       else if (hm && hm.room && !(M.ROOMS[hm.room] && M.ROOMS[hm.room].door > window.MF.joules(s))) goIn(hm.room);
       return;
@@ -904,6 +905,7 @@
     var m = markAt(tx, ty);
     if (m && m.shop && api.shop) { api.shop(m.shop); return; }
     if (m && m.store) return openCounter(m.store);
+    if (m && (m.home || (m.room && !inside)) && !(me.dir === 'up' && atDoor(m, tx, ty))) return notTheDoor(m, tx, ty);
     if (m && m.home) return homeDoor(m.home);
     if (m && m.room && !inside) {
       var need = M.ROOMS[m.room] && M.ROOMS[m.room].door;
@@ -1009,6 +1011,24 @@
     }
     return null;
   }
+  /* where a building's door is drawn (MARK_ART): a pixel span across its
+     front. most are centred; these few hang theirs on the right */
+  var DOOR_PX = { arcade: function (W) { return [W - 18, W - 6]; }, noodlebar: function (W) { return [W - 14, W - 4]; }, teahouse: function (W) { return [W - 14, W - 4]; } };
+  /* the front-row tiles the drawn door covers (a centred door on an even
+     front straddles two) */
+  function doorCols(m) {
+    var W = m.w * TS, sp = DOOR_PX[m.id] ? DOOR_PX[m.id](W) : [(W >> 1) - 5, (W >> 1) + 5], out = [];
+    for (var c = 0; c < m.w; c++) if (Math.min(sp[1], (c + 1) * TS) - Math.max(sp[0], c * TS) >= 4) out.push(m.x + c);
+    return out.length ? out : [m.x + (m.w >> 1)];
+  }
+  /* walking up into (x, y) is walking through m's door */
+  function atDoor(m, x, y) { return y === m.y + m.h - 1 && doorCols(m).indexOf(x) >= 0; }
+  /* bumped the wrong part of a building: point them at the door */
+  function notTheDoor(m, x, y) {
+    var cols = doorCols(m);
+    if (me.dir !== 'up' || y !== m.y + m.h - 1) return say(['no way in from here.\nthe door\'s round the front.']);
+    return say(['that\'s wall. the door\'s to your ' + (cols[0] < x ? 'left' : 'right') + '.']);
+  }
 
   /* ── apartments ──────────────────────────────────────────────
      a door you own lets you in; one you don't is for sale */
@@ -1028,8 +1048,8 @@
     for (var i = 0; i < city.marks.length; i++) {
       var m = city.marks[i];
       if (m.home !== id && m.room !== id) continue;
-      var y = m.y + m.h, mid = m.x + (m.w >> 1);
-      /* the middle of the front, unless someone's standing there (hex is, at the arcade) */
+      var y = m.y + m.h, mid = doorCols(m)[0];
+      /* out the door, unless someone's standing there; then the nearest free spot along the front */
       for (var o = 0; o < m.w * 2; o++) {
         var x = mid + (o % 2 ? -((o + 1) >> 1) : o >> 1);
         if (x < m.x || x >= m.x + m.w || M.solid(city, x, y)) continue;
