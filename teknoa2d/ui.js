@@ -377,13 +377,13 @@
 
   /* ── panels ─────────────────────────────────────────────── */
   function closePanels() {
-    ['map', 'inv', 'sys', 'dev'].forEach(function (p) { $(p).hidden = true; $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
+    ['inv', 'sys', 'dev'].forEach(function (p) { $(p).hidden = true; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
   }
   function toggle(p, fillIt) {
     var was = !$(p).hidden;
     closePanels();
     if (was) return;
-    fillIt(); $(p).hidden = false; $(p + 'Btn').setAttribute('aria-expanded', 'true');
+    fillIt(); $(p).hidden = false; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'true');
   }
   function li(title, desc) {
     var el = document.createElement('li');
@@ -441,26 +441,6 @@
     });
   });
 
-  /* the map of terranova, from the vault's azgaar map. here = where nova
-     city is on each picture, as a fraction of its width and height */
-  var MAPS = {
-    biomes: { src: 'maps/biomes.png', here: [0.629, 0.797], note: 'terranova, by the land. nova city is the dot, in the south, in vistadelsol.' },
-    states: { src: 'maps/states.png', here: [0.629, 0.797], note: 'terranova, by who holds it. vistadelsol is the teknoan council\'s.' },
-    nova:   { src: 'maps/nova.png', here: [0.5, 0.36], note: 'the nova sea. vistadelsol all round the bay. a boat gets you out there.' }
-  };
-  var mapShown = 'nova';
-  function showMap(k) {
-    mapShown = k;
-    var m = MAPS[k];
-    $('mapImg').setAttribute('src', m.src); $('mapImg').setAttribute('alt', 'map of terranova: ' + k);
-    $('mapHere').style.left = (m.here[0] * 100) + '%'; $('mapHere').style.top = (m.here[1] * 100) + '%';
-    $('mapNote').textContent = m.note;
-    [].forEach.call(document.querySelectorAll('.maptabs button'), function (b) { b.setAttribute('aria-selected', b.getAttribute('data-map') === k ? 'true' : 'false'); });
-  }
-  [].forEach.call(document.querySelectorAll('.maptabs button'), function (b) {
-    b.addEventListener('click', function () { showMap(b.getAttribute('data-map')); });
-  });
-  $('mapBtn').addEventListener('click', function () { toggle('map', function () { showMap(mapShown); }); });
 
   /* the backup: the whole site's progress (backup.js), not just this run.
      Old game-only MF1 codes still load. */
@@ -532,9 +512,11 @@
     toggle('dev', function () { devPlaces(); devMsg(''); $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON'); });
   });
 
-  $('sysBtn').addEventListener('click', function () {
+  /* SYS lives in the phone now (overworld.js calls this) */
+  function openSys() {
     toggle('sys', function () { $('code').value = code(); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; onlineLabel(); });
-  });
+  }
+  window.MFUI = { openSys: openSys };
   /* the shared streets: on unless they say otherwise */
   function onlineLabel() { $('onlineBtn').textContent = window.MFWorld && window.MFWorld.offline ? 'GO ONLINE' : 'GO OFFLINE'; }
   $('onlineBtn').addEventListener('click', function () {

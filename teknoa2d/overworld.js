@@ -784,6 +784,7 @@
     step(nx, ny, dir);
   }
   function step(nx, ny, dir) {
+    if (held.b) bTap.moved = true;
     me.fx = me.x; me.fy = me.y; me.x = nx; me.y = ny; me.moving = true; me.t = 0; me.step ^= 1;
     if (L) L.moved(nx, ny, dir, me.sail ? 1 : 0);
   }
@@ -1178,6 +1179,162 @@
     say(line, home ? '' : 'MEDIC');
   }
 
+  /* ── the phone: a quick tap of B (holding B still runs) ─────
+     home has the apps; in an app B goes back; on home B puts it away.
+     MAP lifts it to fill the screen: up/down zoom, left/right switch view */
+  var bTap = { at: 0, moved: false, busy: false };
+  function bEdge(down) {
+    if (down) { bTap = { at: Date.now(), moved: false, busy: !!(talkBox || mini || counter || table || fainting) }; return; }
+    if (!bTap.busy && !bTap.moved && Date.now() - bTap.at < 260 && active) phoneTap();
+  }
+  var phone = null, pPrev = {}, pDrawn = 0;
+  var APPS = [['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['sys', 'SYS', '#b9a8ff', '⚙']];
+  var MAP_LEVELS = ['terranova', 'nova sea', 'nova city', 'local'];
+  var MAPIMG = {
+    biomes: { src: 'maps/biomes.png', here: [0.629, 0.797] }, states: { src: 'maps/states.png', here: [0.629, 0.797] },
+    nova: { src: 'maps/nova.png', here: [0.5, 0.36] }
+  };
+  function phoneTap() {
+    if (!phone) { if (talkBox || mini || counter || table || fainting) return; openPhone(); return; }
+    if (phone.app !== 'home') { phone.app = 'home'; $('wPhone').classList.remove('lifted'); drawPhone(); return; }
+    closePhone();
+  }
+  function openPhone() {
+    phone = { app: 'home', sel: 0, level: 2, view: 'biomes' };
+    pPrev = { up: !!held.up, down: !!held.down, left: !!held.left, right: !!held.right };
+    pressedA = false; me.moving = me.moving; held.b = false;
+    $('wPhone').hidden = false; $('wPhone').classList.remove('lifted');
+    drawPhone();
+  }
+  function closePhone() { phone = null; $('wPhone').hidden = true; $('wPhone').classList.remove('lifted'); }
+  function openApp(id) {
+    if (id === 'sys') { closePhone(); if (window.MFUI) window.MFUI.openSys(); return; }
+    phone.app = id;
+    $('wPhone').classList.toggle('lifted', id === 'map');
+    drawPhone();
+  }
+  function tickPhone(now) {
+    function edge(k) { var e = !!held[k] && !pPrev[k]; pPrev[k] = !!held[k]; return e; }
+    var up = edge('up'), dn = edge('down'), lf = edge('left'), rt = edge('right'), a = pressedA;
+    pressedA = false;
+    if (phone.app === 'home') {
+      var n = APPS.length;
+      if (lf) phone.sel = (phone.sel + n - 1) % n;
+      if (rt) phone.sel = (phone.sel + 1) % n;
+      if (up || dn || lf || rt) drawPhone();
+      if (a) openApp(APPS[phone.sel][0]);
+    } else if (phone.app === 'map') {
+      if (up && phone.level < MAP_LEVELS.length - 1) { phone.level++; drawPhone(); }
+      if (dn && phone.level > 0) { phone.level--; drawPhone(); }
+      if ((lf || rt) && phone.level === 0) { phone.view = phone.view === 'biomes' ? 'states' : 'biomes'; drawPhone(); }
+      if (phone.level === 3 && now - pDrawn > 500) { pDrawn = now; drawLocal(); }
+    }
+    if (now - pDrawn > 1000 && phone.app !== 'map') { pDrawn = now; drawPhoneBar(); if (phone.app === 'clock') drawPhone(); }
+  }
+  function drawPhoneBar() {
+    var c = novaNow();
+    $('wPhoneBar').textContent = '';
+    var l = document.createElement('span'); l.textContent = c.text; var r = document.createElement('span'); r.textContent = tempNow() + '°C · ' + window.MF.fmtJ(window.MF.joules(s));
+    $('wPhoneBar').appendChild(l); $('wPhoneBar').appendChild(r);
+  }
+  function drawPhone() {
+    var scr = $('wPhoneScreen'), hint = $('wPhoneHint');
+    drawPhoneBar();
+    scr.innerHTML = '';
+    if (phone.app === 'home') {
+      var grid = document.createElement('div'); grid.className = 'papps';
+      APPS.forEach(function (ap, i) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'papp' + (i === phone.sel ? ' sel' : '');
+        var ic = document.createElement('i'); ic.style.background = ap[2]; ic.textContent = ap[3]; b.appendChild(ic);
+        var lb = document.createElement('span'); lb.textContent = ap[1]; b.appendChild(lb);
+        b.addEventListener('click', function (e) { e.preventDefault(); phone.sel = i; openApp(ap[0]); });
+        grid.appendChild(b);
+      });
+      scr.appendChild(grid);
+      hint.textContent = '◀ ▶ pick · A open · tap B: put it away';
+    } else if (phone.app === 'clock') {
+      var c = novaNow(), box = document.createElement('div'); box.className = 'pclock';
+      var fc = '';
+      for (var h = 2; h <= 12; h += 2) { var fcl = window.MF.clock(Date.now(), (s.dev && s.dev.shift || 0) + h * 60); fc += '<span>' + ('0' + fcl.hour).slice(-2) + 'h<br>' + window.MF.temperature(fcl, whereNow()) + '°</span>'; }
+      box.innerHTML = '<div class="big">' + c.text + '</div><div>nova city · day ' + c.day + ' · ' + c.phase + '</div><div>' + tempNow() + '°C ' + (inside ? 'indoors' : 'here') + '</div><div class="fc">' + fc + '</div>';
+      scr.appendChild(box);
+      hint.textContent = 'next 12 hours · tap B: back';
+    } else if (phone.app === 'map') drawMap();
+  }
+  /* ── the map app ── */
+  function drawMap() {
+    var scr = $('wPhoneScreen'), lvl = MAP_LEVELS[phone.level], wrap = document.createElement('div'); wrap.className = 'pmap';
+    var head = document.createElement('div'); head.className = 'lvl';
+    var name = document.createElement('span'); name.textContent = lvl.toUpperCase() + (phone.level === 0 ? ' · ' + phone.view : '');
+    var zoom = document.createElement('span'); zoom.className = 'zoom';
+    [['-', -1], ['+', 1]].forEach(function (z) {
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = z[0];
+      b.addEventListener('click', function (e) { e.preventDefault(); phone.level = Math.max(0, Math.min(MAP_LEVELS.length - 1, phone.level + z[1])); drawPhone(); });
+      zoom.appendChild(b);
+    });
+    head.appendChild(name); head.appendChild(zoom); wrap.appendChild(head);
+    var view = document.createElement('div'); view.className = 'view'; view.id = 'wMapView'; wrap.appendChild(view);
+    scr.appendChild(wrap);
+    if (phone.level <= 1) {
+      var m = MAPIMG[phone.level === 0 ? phone.view : 'nova'], img = document.createElement('img');
+      img.src = m.src; img.alt = 'map: ' + lvl;
+      view.appendChild(img);
+      img.onload = function () { placeDot(view, img.naturalWidth, img.naturalHeight, m.here[0] * img.naturalWidth, m.here[1] * img.naturalHeight); };
+    } else if (phone.level === 2) {
+      var cv = cityCanvas(); view.appendChild(cv);
+      var at = mapPos();
+      placeDot(view, city.W, city.H, at.x + 0.5, at.y + 0.5);
+    } else drawLocal();
+    $('wPhoneHint').textContent = '▲ ▼ zoom' + (phone.level === 0 ? ' · ◀ ▶ biomes / states' : '') + ' · tap B: back';
+  }
+  /* the dot: where you are, on an image drawn 'contain' in the view */
+  function placeDot(view, w, h, x, y) {
+    var d = document.createElement('span'); d.className = 'here';
+    view.appendChild(d);
+    /* measured once the phone has finished lifting (and again on resize) */
+    function put() {
+      var r = view.getBoundingClientRect(), k = Math.min(r.width / w, r.height / h), ox = (r.width - w * k) / 2, oy = (r.height - h * k) / 2;
+      d.style.left = (ox + x * k) + 'px'; d.style.top = (oy + y * k) + 'px';
+    }
+    put(); setTimeout(put, 300);
+  }
+  function mapPos() { return inside ? doorOf(inside.id) : { x: me.x, y: me.y }; }
+  function tileColour(w, k) {
+    var t = w.tile[k], p = pal(w.dist[k]);
+    return t === T.DEEP ? '#0a1834' : t === T.SHALLOW ? '#123563' : t === T.SAND ? '#76664a' : t === T.MAINLAND ? '#14301c' : t === T.BRIDGE ? '#5a4a70'
+      : t === T.BUILDING ? p.roof2 : t === T.ROAD ? p.road : t === T.GRASS ? p.grass : t === T.TREE ? p.tree : t === T.LANDMARK ? '#ffd36a'
+      : t === T.WALL ? p.wall : t === T.FLOOR || t === T.CHECK ? p.road : t === T.MAT ? '#7a2e54' : p.ground;
+  }
+  var cityCv = null;
+  function cityCanvas() {
+    if (!cityCv) {
+      cityCv = document.createElement('canvas'); cityCv.width = city.W; cityCv.height = city.H;
+      var g = cityCv.getContext('2d'), img = g.createImageData(city.W, city.H);
+      for (var k = 0; k < city.W * city.H; k++) {
+        var c = parseInt(tileColour(city, k).slice(1), 16);
+        img.data[k * 4] = c >> 16; img.data[k * 4 + 1] = (c >> 8) & 255; img.data[k * 4 + 2] = c & 255; img.data[k * 4 + 3] = 255;
+      }
+      g.putImageData(img, 0, 0);
+      g.font = 'bold 9px monospace'; g.textAlign = 'center';
+      D.forEach(function (d) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(d.name, d.cx + 1, d.cy + 1); g.fillStyle = '#f4f6ff'; g.fillText(d.name, d.cx, d.cy); });
+    }
+    var copy = document.createElement('canvas'); copy.width = cityCv.width; copy.height = cityCv.height; copy.getContext('2d').drawImage(cityCv, 0, 0);
+    return copy;
+  }
+  /* local: the streets round you, or the room you're in, a few px a tile */
+  function drawLocal() {
+    var view = $('wMapView');
+    if (!view) return;
+    var w = world, rw = inside ? w.W : 72, rh = inside ? w.H : 44, x0 = inside ? 0 : Math.max(0, Math.min(w.W - rw, me.x - (rw >> 1))), y0 = inside ? 0 : Math.max(0, Math.min(w.H - rh, me.y - (rh >> 1)));
+    var px2 = 4, cv = document.createElement('canvas'); cv.width = rw * px2; cv.height = rh * px2;
+    var g = cv.getContext('2d');
+    for (var y = 0; y < rh; y++) for (var x = 0; x < rw; x++) { var k = (y0 + y) * w.W + x0 + x; if (k < 0 || k >= w.W * w.H) continue; g.fillStyle = tileColour(w, k); g.fillRect(x * px2, y * px2, px2, px2); }
+    npcs.forEach(function (n) { if (n.x >= x0 && n.y >= y0 && n.x < x0 + rw && n.y < y0 + rh) { g.fillStyle = n.vend || n.store || n.shop ? '#7cffb2' : '#dce3ff'; g.fillRect((n.x - x0) * px2 + 1, (n.y - y0) * px2 + 1, 2, 2); } });
+    if (L) L.list().forEach(function (o) { if (o.x >= x0 && o.y >= y0 && o.x < x0 + rw && o.y < y0 + rh) { g.fillStyle = '#b9a8ff'; g.fillRect((o.x - x0) * px2, (o.y - y0) * px2, px2, px2); } });
+    view.innerHTML = ''; view.appendChild(cv);
+    placeDot(view, rw, rh, me.x - x0 + 0.5, me.y - y0 + 0.5);
+  }
+
   /* ── the tables: casino.js plays, this deals ──────────────
      left/right sets the stake, up/down picks a play, A plays it, B leaves
      (not in the middle of a blackjack hand). everything can be tapped */
@@ -1461,6 +1618,7 @@
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
     body(dt, now);
     if (fainting) return;
+    if (phone) { tickPhone(now); return; }
     if (mini) { tickMini(dt, now); return; }
     if (counter) { tickCounter(); return; }
     if (table) { tickTable(); return; }
@@ -1603,6 +1761,7 @@
     var k = KEYS[e.key];
     if (!k) return;
     e.preventDefault();
+    if (k === 'b' && !(down && e.repeat)) bEdge(down);
     held[k] = down;
   }
   document.addEventListener('keydown', function (e) { onKey(e, true); });
@@ -1620,8 +1779,8 @@
   function pad() {
     [].forEach.call(document.querySelectorAll('#wPad [data-k]'), function (b) {
       var k = b.getAttribute('data-k');
-      function on(e) { e.preventDefault(); if (k === 'a') pressedA = true; held[k] = true; b.classList.add('down'); }
-      function off(e) { if (e) e.preventDefault(); held[k] = false; b.classList.remove('down'); }
+      function on(e) { e.preventDefault(); if (k === 'a') pressedA = true; if (k === 'b') bEdge(true); held[k] = true; b.classList.add('down'); }
+      function off(e) { if (e) e.preventDefault(); if (k === 'b' && held.b) bEdge(false); held[k] = false; b.classList.remove('down'); }
       b.addEventListener('pointerdown', on);
       b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
       b.addEventListener('contextmenu', function (e) { e.preventDefault(); });

@@ -241,6 +241,30 @@ a{color:var(--lavender)}
 /* the wallet: top right of the street, a gain floats up out of it */
 .wj{position:absolute;top:.4rem;right:.4rem;padding:.35rem .5rem .3rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#ffe97c;font:clamp(.48rem,1.4vw,.62rem)/1.2 var(--font-pixel);pointer-events:none}
 .won{position:absolute;top:.4rem;left:.4rem;padding:.35rem .5rem .3rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#b9a8ff;font:clamp(.48rem,1.4vw,.62rem)/1.2 var(--font-pixel);pointer-events:none}
+/* the phone: tap B. a handset in the corner; MAP lifts it to fill the screen */
+.wphone{position:absolute;right:.6rem;bottom:.6rem;width:min(16rem,48%);height:min(72%,26rem);display:flex;flex-direction:column;
+  border:4px solid #3a3150;border-radius:14px;background:#05060b;box-shadow:0 0 0 2px #0b0d1a,0 10px 30px rgba(0,0,0,.6);
+  color:#dce3ff;font:clamp(.46rem,1.3vw,.6rem)/1.5 var(--font-pixel);transition:all .25s ease;overflow:hidden;z-index:3}
+.wphone.lifted{right:.3rem;bottom:.3rem;width:calc(100% - .6rem);height:calc(100% - .6rem)}
+.wphone .pbar{display:flex;justify-content:space-between;padding:.3rem .6rem;background:#141a2e;color:#ffe97c}
+.wphone .pscreen{flex:1;position:relative;overflow:hidden;padding:.5rem}
+.wphone .phint{padding:.25rem .6rem .35rem;color:#6a6a8a;font-size:.85em}
+.papps{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;padding:.3rem}
+.papp{display:flex;flex-direction:column;align-items:center;gap:.3rem;font:inherit;color:#dce3ff;background:none;border:2px solid transparent;border-radius:8px;padding:.4rem .2rem;cursor:pointer}
+.papp i{display:block;width:2.2rem;height:2.2rem;border-radius:9px;border:2px solid #0b0d1a;font-style:normal;font-size:1.1rem;line-height:2rem;text-align:center;color:#0b0d1a}
+.papp.sel{border-color:#7cffb2}
+.pclock{text-align:center;padding-top:.6rem}
+.pclock .big{font-size:2.6em;color:#ffe97c;letter-spacing:.05em}
+.pclock .fc{display:grid;grid-template-columns:repeat(6,1fr);gap:.2rem;margin-top:.8rem;color:#b9a8ff}
+.pmap{position:absolute;inset:.4rem;display:flex;flex-direction:column;gap:.3rem}
+.pmap .view{position:relative;flex:1;overflow:hidden;background:#0a1834;border:2px solid #3a3150}
+.pmap .view img,.pmap .view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.pmap .here{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#ff4fd8;box-shadow:0 0 0 2px #0b0d1a,0 0 10px 3px #ff4fd8;animation:here 1.4s ease-in-out infinite}
+.pmap .lvl{display:flex;justify-content:space-between;color:#7cffb2}
+.pmap .zoom{display:flex;gap:.3rem}
+.pmap .zoom button{font:inherit;background:#141a2e;color:#7cffb2;border:1px solid #3a3150;padding:.1rem .5rem;cursor:pointer}
+@keyframes here{50%{transform:scale(1.6);opacity:.6}}
+@media (prefers-reduced-motion:reduce){.wphone{transition:none}.pmap .here{animation:none}}
 /* a store's counter: the same box, taller, a list of things */
 .wcounter{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;max-height:calc(100% - 1.2rem);overflow:auto;padding:.6rem .8rem .5rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;color:#f4f6ff;font:clamp(.5rem,1.5vw,.66rem)/1.5 var(--font-pixel)}
 .wcounter b{display:block;margin-bottom:.45rem;color:#7CFFB2;letter-spacing:.2em}
