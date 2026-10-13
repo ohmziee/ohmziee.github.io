@@ -312,7 +312,68 @@
     if (key === 'juice') { if ((res.fruit || 0) < 3) return { ok: false, why: 'you need 3 fruit' }; take('fruit', 3, res); return give('juice'); }
     return { ok: false, why: 'no such recipe' };
   }
+  /* ── weight: kg per one of a thing. CARRY on foot; over it you crawl, over
+     CARRY * FROZEN you can't move. chests and the boat's hold take the rest ── */
+  var CARRY = 40, FROZEN = 1.5, STASH_CAP = 200, HOLD_CAP = 40;
+  var RES_KG = { timber: 2, fibre: 0.5, scrap: 1.5, fruit: 0.3 };
+  var TIER_KG = { junk: 0.6, common: 0.4, uncommon: 1, rare: 2.5, legendary: 7 };
+  var KG = { boot: 1, can: 0.1, sardine: 0.2, grouper: 9, glassfish: 4, rod: 1.5, tuned: 2, jormun: 4, snowglobe: 1, compass: 0.3, pager: 0.2, cassette: 0.1, shell: 0.5, lighter: 0.1 };
+  function weightOf(key) {
+    if (KG[key] !== undefined) return KG[key];
+    if (RES_KG[key] !== undefined) return RES_KG[key];
+    if (FISH[key]) return TIER_KG[FISH[key].tier];
+    if (FOODS[key]) return FOODS[key].drink > FOODS[key].food ? 0.5 : 0.4;
+    if (CURIOS[key] || TOOLS[key]) return 0.5;
+    return 0.2;
+  }
+  function weighs(box) {
+    var t = 0;
+    [box.res || {}, box.items || {}].forEach(function (b) { Object.keys(b).forEach(function (k) { t += weightOf(k) * (b[k] || 0); }); });
+    return Math.round(t * 10) / 10;
+  }
+  function carried(s) { return weighs({ res: s.res, items: s.items }); }
+  /* 0..1 is fine; over 1 you crawl; over FROZEN you're stuck */
+  function load(s) { return s.dev && s.dev.noweight ? 0 : carried(s) / CARRY; }
+  function stashOf(s, where) {
+    if (where === 'hold') { if (!s.hold || typeof s.hold !== 'object') s.hold = { items: {}, res: {} }; return s.hold; }
+    if (!s.stash) s.stash = {};
+    if (!s.stash[where]) s.stash[where] = { items: {}, res: {} };
+    return s.stash[where];
+  }
+  function stashRows(s, where, tab) {
+    var box = tab === 'buy' ? stashOf(s, where) : { res: s.res || {}, items: s.items || {} }, rows = [];
+    [['res', box.res || {}], ['items', box.items || {}]].forEach(function (pair) {
+      Object.keys(pair[1]).forEach(function (k) { if (pair[1][k] > 0) rows.push({ key: k, label: nameOf(k) + ' · ' + weightOf(k) + 'kg', price: 0, have: pair[1][k], ok: true }); });
+    });
+    return rows;
+  }
+  /* move one: TAKE (buy tab) chest → pockets, STORE (sell tab) pockets → chest */
+  function stashMove(s, where, tab, key) {
+    var box = stashOf(s, where), pockets = { res: s.res = s.res || {}, items: s.items = s.items || {} };
+    var from = tab === 'buy' ? box : pockets, to = tab === 'buy' ? pockets : box, kind = RES[key] ? 'res' : 'items';
+    if (!to[kind]) to[kind] = {};
+    if (!from[kind] || !from[kind][key]) return { ok: false, why: 'none left' };
+    var cap = where === 'hold' ? HOLD_CAP : STASH_CAP;
+    if (tab === 'sell' && weighs(box) + weightOf(key) > cap) return { ok: false, why: 'it\'s full (' + cap + 'kg)' };
+    from[kind][key]--; if (!from[kind][key]) delete from[kind][key];
+    to[kind][key] = (to[kind][key] || 0) + 1;
+    return { ok: true, price: 0, name: nameOf(key), moved: tab === 'buy' ? 'took' : 'stored' };
+  }
+  /* throw one away */
+  function drop(s, key) {
+    var b = RES[key] ? s.res : s.items;
+    if (!b || !b[key]) return false;
+    b[key]--; if (!b[key]) delete b[key];
+    if (TOOLS[key] && !b[key] && s.wear) delete s.wear[key];
+    return true;
+  }
+
   function place(id) {
+    if (String(id).indexOf('stash:') === 0) {
+      var where = id.slice(6);
+      return where === 'hold' ? { kind: 'stash', where: 'hold', name: 'BOAT HOLD', line: 'a dry box under the seat. ' + HOLD_CAP + 'kg if you pack it right.', cap: HOLD_CAP }
+                              : { kind: 'stash', where: where, name: 'YOUR CHEST', line: 'an old trunk. it holds ' + STASH_CAP + 'kg and everything you don\'t want to carry.', cap: STASH_CAP };
+    }
     if (String(id).indexOf('cook:') === 0) {
       var kind = id.split(':')[2] || id.split(':')[1], f = FIRES[kind] || FIRES.grill;
       return { kind: 'cook', where: kind === 'kitchen' ? 'kitchen' : 'fire', name: f.name, line: f.line };
@@ -334,6 +395,7 @@
     var st = place(id), rows = [], res = s.res || {}, items = s.items || {};
     if (!st) return rows;
     if (st.kind === 'cook') return tab === 'buy' ? cookRows(s, st.where) : rows;
+    if (st.kind === 'stash') return stashRows(s, st.where, tab);
     if (tab === 'buy' && st.menu) {
       st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : ''), price: f.price, have: 0, here: true }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
@@ -353,6 +415,7 @@
   /* one of something, either way. all or nothing */
   function trade(MF, s, id, tab, key) {
     var pl = place(id);
+    if (pl && pl.kind === 'stash') return stashMove(s, pl.where, tab, key);
     if (pl && pl.kind === 'cook') { var c = cook(s, key, pl.where); return c.ok ? { ok: true, price: 0, name: c.name, cooked: true } : c; }
     var row = storeRows(MF, s, id, tab).filter(function (r) { return r.key === key; })[0];
     if (!row) return { ok: false, why: tab === 'buy' ? 'not sold here' : 'nothing to sell' };
@@ -384,5 +447,6 @@
                    FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
                    WEAR: WEAR, rodLeft: rodLeft, wearRod: wearRod,
+                   CARRY: CARRY, FROZEN: FROZEN, STASH_CAP: STASH_CAP, HOLD_CAP: HOLD_CAP, weightOf: weightOf, weighs: weighs, carried: carried, load: load, stashOf: stashOf, drop: drop,
                    price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

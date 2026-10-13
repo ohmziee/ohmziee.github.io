@@ -405,6 +405,7 @@
         var g = gd(k), worn = SH && SH.TOOLS && SH.TOOLS[k] ? ' (' + SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses)' : '';
         var row = li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : '') + worn, g ? g.what : D.items[k]);
         /* take-away food: eat or drink it from here */
+        if (SH && SH.drop) dropBtn(row, k);
         if (SH && SH.FOODS && SH.FOODS[k]) {
           var b = document.createElement('button'); b.type = 'button'; b.className = 'eat';
           b.textContent = SH.FOODS[k].food ? 'EAT' : 'DRINK';
@@ -416,7 +417,21 @@
       if (s.body) inv.insertBefore(li('food ' + Math.round(s.body.food) + '% · drink ' + Math.round(s.body.drink) + '%', s.body.buff && s.body.buffT > 0 ? s.body.buff + ', ' + Math.ceil(s.body.buffT / 60) + ' more minutes' : ''), inv.firstChild);
       if (SH && SH.FISH && Object.keys(s.fishlog || {}).length) inv.appendChild(li('fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds', Object.keys(s.fishlog).map(function (k) { return SH.FISH[k] ? SH.FISH[k].name.replace(/^(a|an) /, '') : k; }).join(', ') + '.'));
       var RS = (window.MFShops && window.MFShops.RES) || {};
-      Object.keys(s.res || {}).forEach(function (k) { if (RS[k]) inv.appendChild(li(RS[k].name + ' x' + s.res[k], RS[k].what)); });
+      function dropBtn(row, k) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'eat drop'; b.textContent = 'DROP';
+        b.addEventListener('click', function () { if (SH.drop(s, k)) { if (store) MF.save(s, store); if (window.MFWorld) window.MFWorld.refresh(); $('invBtn').click(); $('invBtn').click(); } });
+        row.appendChild(b);
+      }
+      if (SH && SH.carried) {
+        var top = li('carrying ' + SH.carried(s) + ' / ' + SH.CARRY + 'kg', SH.load(s) > SH.FROZEN ? 'too heavy to move. drop something or stash it.' : SH.load(s) > 1 ? 'overloaded: you can barely walk.' : '');
+        if (window.MFWorld && window.MFWorld.sailing) {
+          var hb = document.createElement('button'); hb.type = 'button'; hb.className = 'eat'; hb.textContent = 'BOAT HOLD';
+          hb.addEventListener('click', function () { closePanels(); window.MFWorld.openHold(); });
+          top.appendChild(hb);
+        }
+        inv.appendChild(top);
+      }
+      Object.keys(s.res || {}).forEach(function (k) { if (RS[k]) { var r = li(RS[k].name + ' x' + s.res[k] + ' · ' + SH.weightOf(k) + 'kg each', RS[k].what); dropBtn(r, k); inv.appendChild(r); } });
       if (s.boat) inv.appendChild(li('a boat', 'moored wherever you left the water. face the sea and press A to sail.'));
       var HM = (window.MFShops && window.MFShops.HOMES) || {};
       Object.keys(s.homes || {}).forEach(function (k) { if (HM[k]) inv.appendChild(li('key: ' + HM[k].name, HM[k].where + (s.wake === k ? '. you wake up here.' : '.'))); });
@@ -490,6 +505,7 @@
     else if (act === 'weak') { s.body.food = 15; s.body.drink = 15; }
     else if (act === 'faint') { s.body.food = 0.3; s.body.drink = 50; }
     else if (act === 'nohunger') s.dev.nohunger = !s.dev.nohunger;
+    else if (act === 'noweight') s.dev.noweight = !s.dev.noweight;
     else if (act === 'piles') s.gathered = { day: '', got: {} };
     else if (act === 'lotto') (s.lotto || []).forEach(function (t) { t.day = '2000-01-01'; });
     else if (act === 'tp') {
@@ -503,6 +519,7 @@
       return;
     }
     $('devNoHunger').textContent = 'HUNGER: ' + (s.dev.nohunger ? 'OFF' : 'ON');
+    $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev.noweight ? 'OFF' : 'ON');
     if (store) MF.save(s, store);
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.refresh();
     devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString());

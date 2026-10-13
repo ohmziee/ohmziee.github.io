@@ -28,6 +28,7 @@
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
              dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
+             stash: {}, hold: { items: {}, res: {} },        /* each apartment's chest, the boat's hold */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
              body: { food: 100, drink: 100, buff: '', buffT: 0 },  /* hunger and thirst (100 = full), a dish's perk and its seconds left */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
@@ -172,6 +173,10 @@
     if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
+    function counts(o) { var out = {}; Object.keys(o && typeof o === 'object' ? o : {}).forEach(function (k) { var n = Math.floor(+o[k] || 0); if (n > 0) out[k] = n; }); return out; }
+    function box(b) { return { items: counts(b && b.items), res: counts(b && b.res) }; }
+    s.hold = box(s.hold);
+    Object.keys(s.stash).forEach(function (k) { s.stash[k] = box(s.stash[k]); });
     Object.keys(s.wear).forEach(function (k) { var n = Math.floor(+s.wear[k] || 0); if (n > 0) s.wear[k] = n; else delete s.wear[k]; });
     var b = s.body, num = function (v, d) { v = +v; return isFinite(v) ? Math.max(0, Math.min(100, v)) : d; };
     s.body = { food: num(b.food, 100), drink: num(b.drink, 100), buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0) };

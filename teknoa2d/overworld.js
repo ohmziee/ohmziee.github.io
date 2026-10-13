@@ -419,6 +419,10 @@
     for (var i = 0; i < 4; i++) px(g, '#c8a878', w - 12 + (i % 2), 3 + i * 2, 4, 1);
   };
   /* indoors */
+  MARK_ART.chest = function (g) {
+    px(g, OUT, 1, 4, 14, 11); px(g, '#7a5638', 2, 5, 12, 9); px(g, '#5a3a22', 2, 8, 12, 1); px(g, '#c8a878', 2, 5, 12, 1);
+    px(g, '#f2c94c', 7, 8, 2, 3);
+  };
   MARK_ART.window = function (g, w, h) {
     px(g, '#3a3150', 0, 0, w, h); px(g, OUT, 3, 2, w - 6, h - 5); px(g, '#141a2e', 4, 3, w - 8, h - 7);
     for (var i = 0; i < 6; i++) px(g, ['#ff4fd8', '#7cf5ff', '#ffe97c'][i % 3], 6 + (i * 5) % (w - 12), 5 + (i * 3) % (h - 10), 1, 1);
@@ -527,7 +531,7 @@
     px(g, '#5a3c26', 1, 7, w - 2, 8); px(g, '#7a5638', 1, 7, w - 2, 1);
     px(g, '#ff8a6b', 4, 9, 3, 3); px(g, '#7cffb2', 11, 9, 3, 3); px(g, '#ffd36a', 18, 9, 3, 3); px(g, '#ff8a6b', 25, 9, 3, 3);
   };
-  var markArt = {}, UNFRAMED = { drumfire: 1, campfire: 1, grill: 1, slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
+  var markArt = {}, UNFRAMED = { chest: 1, drumfire: 1, campfire: 1, grill: 1, slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
     var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
@@ -751,9 +755,15 @@
   }
   var DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
+  var stuckAt = 0;
   function tryMove(dir) {
     me.dir = dir;
     var d = DIRS[dir], nx = me.x + d[0], ny = me.y + d[1];
+    /* too much to carry: not a step until something goes */
+    if (!me.sail && window.MFShops.load(s) > window.MFShops.FROZEN) {
+      if (Date.now() - stuckAt > 8000) { stuckAt = Date.now(); say(['you can\'t move under all this.\ndrop something, or stash it. (INV)']); }
+      return;
+    }
     if (me.sail) {
       if (nx < 0 || ny < 0 || nx >= world.W || ny >= world.H) { edgeOfTheWorld(); return; }
       var crewed = npcs.some(function (n) { return n.x === nx && n.y === ny; });
@@ -870,6 +880,7 @@
     if (m && m.vend) return openCounter(m.vend);
     if (m && m.fire) return openCounter('cook:fire:' + m.fire);
     if (m && m.kitchen && inside) return openCounter('cook:kitchen');
+    if (m && m.chest && inside) return openCounter('stash:' + inside.id);
     if (m && m.fountain) {
       window.MF.consume(s, 0, 20);
       if (api.save) api.save();
@@ -1056,6 +1067,10 @@
       wallet('-' + window.MF.fmtJ(t.price));
       drawBody();
       if (api.save) api.save();
+    } else if (t.ok && t.moved) {
+      counter.msg = t.moved + ' ' + t.name + '.';
+      drawBody();
+      if (api.save) api.save();
     } else if (t.ok && t.cooked) {
       counter.msg = 'it sizzles. you have ' + t.name + '. (eat it from INV)';
       if (api.save) api.save();
@@ -1077,13 +1092,16 @@
     var n = counterRows().length;
     if (up && n) { counter.sel = (counter.sel + n - 1) % n; drawCounter(); }
     if (down && n) { counter.sel = (counter.sel + 1) % n; drawCounter(); }
-    if ((lf || rt) && st.kind === 'pawn') { counter.tab = counter.tab === 'buy' ? 'sell' : 'buy'; counter.sel = 0; drawCounter(); }
+    if ((lf || rt) && (st.kind === 'pawn' || st.kind === 'stash')) { counter.tab = counter.tab === 'buy' ? 'sell' : 'buy'; counter.sel = 0; drawCounter(); }
     if (a) counterAct(counter.sel);
   }
   function drawCounter() {
     var st = window.MFShops.place(counter.id), rows = counterRows(), list = $('wCounterList');
     $('wCounterT').textContent = st.name;
-    $('wCounterTabs').hidden = st.kind !== 'pawn';
+    $('wCounterTabs').hidden = st.kind !== 'pawn' && st.kind !== 'stash';
+    $('wCounterTabs').children[0].textContent = st.kind === 'stash' ? 'TAKE' : 'BUY';
+    $('wCounterTabs').children[1].textContent = st.kind === 'stash' ? 'STORE' : 'SELL';
+    if (st.kind === 'stash') { var bx = window.MFShops.stashOf(s, st.where); counter.msg = counter.msg || st.line; $('wCounterT').textContent = st.name + ' · ' + window.MFShops.weighs(bx) + '/' + st.cap + 'kg · you ' + window.MFShops.carried(s) + '/' + window.MFShops.CARRY + 'kg'; }
     [].forEach.call($('wCounterTabs').children, function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === counter.tab ? 'true' : 'false'); });
     list.innerHTML = '';
     rows.forEach(function (r, i) {
@@ -1091,7 +1109,7 @@
       b.type = 'button';
       b.className = 'crow' + (i === counter.sel ? ' sel' : '') + (r.ok ? '' : ' no');
       b.textContent = r.label + (r.have ? ' (' + r.have + ')' : '');
-      var pr = document.createElement('span'); pr.textContent = st.kind === 'cook' ? '' : window.MF.fmtJ(r.price); b.appendChild(pr);
+      var pr = document.createElement('span'); pr.textContent = st.kind === 'cook' || st.kind === 'stash' ? '' : window.MF.fmtJ(r.price); b.appendChild(pr);
       b.addEventListener('click', function (e) { e.preventDefault(); counterAct(i); });
       list.appendChild(b);
     });
@@ -1116,6 +1134,9 @@
     $('wFood').style.width = f + '%'; $('wDrink').style.width = d + '%';
     $('wBody').classList.toggle('low', f < window.MF.WEAK || d < window.MF.WEAK);
     $('wBuff').textContent = b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
+    var SH = window.MFShops, kg = SH.carried(s), ld = SH.load(s);
+    $('wLoad').textContent = kg + '/' + SH.CARRY + 'kg';
+    $('wLoad').className = 'ld' + (ld > SH.FROZEN ? ' stuck' : ld > 1 ? ' over' : '');
   }
   function faint(now) {
     if (mini) closeMini(); if (counter) closeCounter(); if (table && !(table.hand && !table.hand.done)) closeTable();
@@ -1441,7 +1462,8 @@
     if (L) { L.step(dt, SPEED); online(now); }
     if (talkBox) return;
     if (me.moving) {
-      me.t += dt * SPEED * (me.sail ? 1.4 : held.b && !tired ? (window.MF.buff(s, 'fast feet') ? 2.5 : 2) : 1);
+      var heavy = !me.sail && window.MFShops.load(s) > 1;
+      me.t += dt * SPEED * (me.sail ? 1.4 : heavy ? 0.25 : held.b && !tired ? (window.MF.buff(s, 'fast feet') ? 2.5 : 2) : 1);
       if (me.t >= 1) {
         me.moving = false; me.t = 0;
         if (inside) {
@@ -1713,5 +1735,7 @@
   }
   /* after the DEV drawer changes the run: redraw the money and the meters */
   function refresh() { if (!active) return; wallet(); drawBody(); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, setOffline: setOffline, refresh: refresh, get offline() { return offline(); }, get active() { return active; } };
+  /* the boat's hold, from INV, while you're out on it */
+  function openHold() { if (active && me.sail) openCounter('stash:hold'); }
+  window.MFWorld = { show: show, hide: hide, preview: preview, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
 })();

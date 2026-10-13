@@ -658,7 +658,8 @@
     { id: 'counter', x: 7, y: 1, w: 2, h: 1, kitchen: true, text: 'a kettle, two mugs.\none of them is clean.' },
     { id: 'plant', x: 8, y: 3, w: 1, h: 1, text: 'a plant. it\'s alive.\nyou\'ll try.' },
     { id: 'sofa', x: 2, y: 4, w: 3, h: 1, text: 'the sofa remembers whoever had it before.\nit\'s getting used to you.' },
-    { id: 'tv', x: 6, y: 4, w: 1, h: 1, text: 'static on every channel.\nyou leave it on anyway. it\'s company.' }
+    { id: 'tv', x: 6, y: 4, w: 1, h: 1, text: 'static on every channel.\nyou leave it on anyway. it\'s company.' },
+    { id: 'chest', x: 1, y: 6, w: 1, h: 1, chest: true, text: 'an old trunk.' }
   ];
   /* the big buildings, one room each. same map letters, plus : tiled
      floor, " moss, T tree. people: look, lines, and a shop if they keep one.
@@ -911,7 +912,7 @@
     });
     def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
-      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), kitchen: !!(f.kitchen && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
+      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), kitchen: !!(f.kitchen && !ROOMS.hasOwnProperty(id)), chest: !!(f.chest && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
                    game: f.game, house: f.game ? f.house || def.house : undefined, vend: f.vend });
     });
     (def.people || []).forEach(function (p, i) {

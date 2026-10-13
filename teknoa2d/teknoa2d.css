@@ -138,6 +138,7 @@ a{color:var(--lavender)}
 .panel ul{list-style:none;margin:0;padding:0}
 .panel li{padding:.35rem 0;border-bottom:1px dashed var(--violet)}
 .panel li .eat{float:right;margin-left:.5rem;font:inherit;font-size:.75rem;background:#141a2e;color:#7cffb2;border:1px solid #7cffb2;padding:.1rem .4rem;cursor:pointer}
+.panel li .drop{color:#ff8a6b;border-color:#ff8a6b}
 .panel li .d{display:block;color:var(--rain);font-size:.85rem}
 .panel .dim,.panel .empty{color:var(--rain);font-size:.85rem}
 .panel textarea{width:100%;background:var(--void);color:var(--ice);border:1px solid var(--violet);font:inherit;font-size:.75rem;padding:.4rem;resize:vertical;word-break:break-all}
@@ -283,6 +284,8 @@ a{color:var(--lavender)}
 .wbody.low{border-color:#ff4f5e;animation:lowpulse 1.2s ease-in-out infinite}
 @keyframes lowpulse{50%{border-color:#dce3ff}}
 .wbody .bf{grid-column:1/-1;color:#7cffb2}
+.wbody .ld{color:#dce3ff;text-align:right}
+.wbody .ld.over{color:#ffd36a}.wbody .ld.stuck{color:#ff4f5e}
 .wbody .bf:empty{display:none}
 .world.fainted .wscreen canvas{filter:brightness(0);transition:filter 1.2s}
 @media (prefers-reduced-motion:reduce){.wbody.low{animation:none}}
