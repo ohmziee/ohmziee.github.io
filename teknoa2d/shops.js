@@ -223,6 +223,14 @@
     ramen:    { name: 'the house ramen', what: 'the broth\'s been going since the crossing. or so they say.', food: 80, drink: 20, price: 30, here: 1, buff: 'fast feet', secs: 480 },
     wontons:  { name: 'spicy wontons', what: 'your eyes water. you order more.', food: 45, drink: -5, price: 18, here: 1 },
     icedbarley:{ name: 'iced barley', what: 'a whole jug.', food: 0, drink: 50, price: 6, here: 1 },
+    /* cooked at a fire or in a kitchen (COOK below), eaten from INV */
+    grilled1: { name: 'a grilled fish', what: 'charred skin, smoke, a squeeze of something.', food: 30, drink: 0, price: 0 },
+    grilled2: { name: 'a good grilled fish', what: 'thick and flaky. worth the wait.', food: 45, drink: 0, price: 0 },
+    grilled3: { name: 'a rare fish, grilled', what: 'you can feel your hands go steady just smelling it.', food: 65, drink: 5, price: 0, buff: 'steady line', secs: 480 },
+    feast:    { name: 'a legendary feast', what: 'one fish, cooked right, enough for a table. you eat it alone.', food: 90, drink: 20, price: 0, buff: 'fast feet', secs: 600 },
+    charred:  { name: 'charred fruit', what: 'sweet and smoky. sticky fingers.', food: 18, drink: 8, price: 0 },
+    stew:     { name: 'a fish stew', what: 'fish, fruit, whatever\'s in the cupboard. it works.', food: 60, drink: 30, price: 0 },
+    juice:    { name: 'fresh juice', what: 'three fruits\' worth. the pulp is the point.', food: 10, drink: 60, price: 0 },
     houseblend:{ name: 'the house blend', what: 'don\'t ask what\'s in it. your hands go very still.', food: 0, drink: 60, price: 15, here: 1, buff: 'steady line', secs: 600 },
     bao:      { name: 'a bao set', what: 'soft, steaming, three to a basket.', food: 70, drink: 0, price: 25, here: 1, buff: 'sharp eye', secs: 480 }
   };
@@ -239,7 +247,60 @@
     'noodle-bar':   { kind: 'restaurant', name: 'NO SIGN', district: 'worldwood', line: 'no sign. that\'s the sign. sit anywhere.', menu: ['ramen', 'wontons', 'icedbarley'] },
     'tea-house':    { kind: 'restaurant', name: 'THE TEA HOUSE', district: 'majinryu', line: 'two doors down. you found it. ask for the house blend.', menu: ['houseblend', 'bao', 'barley'] }
   };
-  function place(id) { return STORES[id] || VENDORS[id] || null; }
+  /* cooking: at a fire (cook:fire:<kind>) or in your kitchen (cook:kitchen).
+     raw fish grill by tier; fruit chars; the kitchen does stew and juice too */
+  var FIRES = {
+    drumfire: { name: 'DRUM FIRE', line: 'a barrel full of fire. someone keeps it fed. nobody says who.' },
+    campfire: { name: 'CAMPFIRE', line: 'a ring of stones, a good fire. the moss doesn\'t mind.' },
+    grill:    { name: 'ELECTRIC GRILL', line: 'a public heater-grill. red coils, a little hum. free to use.' },
+    kitchen:  { name: 'YOUR KITCHEN', line: 'a kettle, two mugs, a stove that works if you ask nicely.' }
+  };
+  var GRILL = { common: 'grilled1', uncommon: 'grilled2', rare: 'grilled3', legendary: 'feast' };
+  function cookRows(s, where) {
+    var it = s.items || {}, res = s.res || {}, rows = [], fruit = res.fruit || 0;
+    var best = Object.keys(FISH).filter(function (k) { return it[k] && FISH[k].tier !== 'junk'; });
+    best.forEach(function (k) { rows.push({ key: 'grill:' + k, label: 'grill ' + FISH[k].name.replace(/^(a|an) /, '') + ' → ' + FOODS[GRILL[FISH[k].tier]].name.replace(/^(a|an) /, ''), price: 0, have: it[k], ok: true }); });
+    rows.push({ key: 'char', label: 'char 2 fruit → charred fruit', price: 0, have: fruit, ok: fruit >= 2 });
+    if (where === 'kitchen') {
+      rows.push({ key: 'stew', label: 'fish + 2 fruit → fish stew', price: 0, have: fruit, ok: best.length > 0 && fruit >= 2 });
+      rows.push({ key: 'juice', label: 'press 3 fruit → fresh juice', price: 0, have: fruit, ok: fruit >= 3 });
+    }
+    if (Object.keys(FISH).some(function (k) { return it[k] && FISH[k].tier === 'junk'; })) rows.push({ key: 'junk', label: 'cook the junk you fished up', price: 0, have: 0, ok: true });
+    return rows;
+  }
+  /* the cheapest fish goes in the stew, not your legendary */
+  function stewFish(s) {
+    var order = ['common', 'uncommon', 'rare', 'legendary'];
+    return Object.keys(FISH).filter(function (k) { return s.items[k] && FISH[k].tier !== 'junk'; })
+      .sort(function (a, b) { return order.indexOf(FISH[a].tier) - order.indexOf(FISH[b].tier); })[0];
+  }
+  function cook(s, key, where) {
+    var it = s.items = s.items || {}, res = s.res = s.res || {};
+    function take(k, n, from) { from[k] -= n; if (!from[k]) delete from[k]; }
+    function give(k) { it[k] = (it[k] || 0) + 1; return { ok: true, made: k, name: FOODS[k].name }; }
+    if (key === 'junk') return { ok: false, why: 'you are not cooking a boot' };
+    if (key.indexOf('grill:') === 0) {
+      var f = key.slice(6);
+      if (!FISH[f] || !it[f] || FISH[f].tier === 'junk') return { ok: false, why: 'no fish like that' };
+      take(f, 1, it); return give(GRILL[FISH[f].tier]);
+    }
+    if (key === 'char') { if ((res.fruit || 0) < 2) return { ok: false, why: 'you need 2 fruit' }; take('fruit', 2, res); return give('charred'); }
+    if (where !== 'kitchen') return { ok: false, why: 'that needs a kitchen' };
+    if (key === 'stew') {
+      var sf = stewFish(s);
+      if (!sf || (res.fruit || 0) < 2) return { ok: false, why: 'you need a fish and 2 fruit' };
+      take(sf, 1, it); take('fruit', 2, res); return give('stew');
+    }
+    if (key === 'juice') { if ((res.fruit || 0) < 3) return { ok: false, why: 'you need 3 fruit' }; take('fruit', 3, res); return give('juice'); }
+    return { ok: false, why: 'no such recipe' };
+  }
+  function place(id) {
+    if (String(id).indexOf('cook:') === 0) {
+      var kind = id.split(':')[2] || id.split(':')[1], f = FIRES[kind] || FIRES.grill;
+      return { kind: 'cook', where: kind === 'kitchen' ? 'kitchen' : 'fire', name: f.name, line: f.line };
+    }
+    return STORES[id] || VENDORS[id] || null;
+  }
   /* take-away food from your pockets */
   function eat(MF, s, key) {
     var f = FOODS[key];
@@ -254,6 +315,7 @@
   function storeRows(MF, s, id, tab) {
     var st = place(id), rows = [], res = s.res || {}, items = s.items || {};
     if (!st) return rows;
+    if (st.kind === 'cook') return tab === 'buy' ? cookRows(s, st.where) : rows;
     if (tab === 'buy' && st.menu) {
       st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : ''), price: f.price, have: 0, here: true }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
@@ -272,6 +334,8 @@
   }
   /* one of something, either way. all or nothing */
   function trade(MF, s, id, tab, key) {
+    var pl = place(id);
+    if (pl && pl.kind === 'cook') { var c = cook(s, key, pl.where); return c.ok ? { ok: true, price: 0, name: c.name, cooked: true } : c; }
     var row = storeRows(MF, s, id, tab).filter(function (r) { return r.key === key; })[0];
     if (!row) return { ok: false, why: tab === 'buy' ? 'not sold here' : 'nothing to sell' };
     if (!s.res) s.res = {};
@@ -298,7 +362,7 @@
 
   root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, boatShort: boatShort, buildBoat: buildBoat,
                    CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade,
-                   FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat,
+                   FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
                    price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

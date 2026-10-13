@@ -229,7 +229,10 @@
       if (low.length >= 2 || cells.length === 1) door[low[low.length >> 1]] = 1;
       id++;
     }
-    return { roof: roof, door: door };
+    /* small things that sit on the ground (fires) get ground drawn under them */
+    var under = new Uint8Array(n);
+    (w.marks || []).forEach(function (m) { if (m.fire) under[m.y * w.W + m.x] = 1; });
+    return { roof: roof, door: door, under: under };
   }
 
   /* landmarks: one picture across their whole footprint */
@@ -332,6 +335,21 @@
   MARK_ART.slot = function (g, w, h) {
     px(g, OUT, 2, 0, 12, 16); px(g, '#8a1a2a', 3, 1, 10, 14); px(g, '#f2c94c', 3, 1, 10, 2);
     px(g, '#f4f6ff', 4, 5, 8, 4); px(g, '#c4473a', 5, 6, 2, 2); px(g, '#f2c94c', 9, 6, 2, 2); px(g, '#9aa0b8', 13, 4, 2, 6);
+  };
+  /* fires to cook on */
+  MARK_ART.drumfire = function (g) {
+    px(g, OUT, 3, 6, 10, 10); px(g, '#5a5a62', 4, 7, 8, 8); px(g, '#3a3a42', 4, 10, 8, 1); px(g, '#8a2a1a', 5, 13, 2, 2);
+    px(g, '#ff6a3a', 5, 3, 6, 4); px(g, '#ffd36a', 6, 1, 4, 4); px(g, '#fff3b0', 7, 3, 2, 2);
+  };
+  MARK_ART.campfire = function (g) {
+    px(g, '#8a8a92', 2, 12, 3, 2); px(g, '#8a8a92', 11, 12, 3, 2); px(g, '#8a8a92', 6, 14, 4, 2);
+    px(g, '#5a3a22', 3, 10, 10, 2); px(g, '#6a4422', 5, 11, 6, 2);
+    px(g, '#ff6a3a', 5, 6, 6, 5); px(g, '#ffd36a', 6, 4, 4, 5); px(g, '#fff3b0', 7, 7, 2, 2);
+  };
+  MARK_ART.grill = function (g) {
+    px(g, OUT, 2, 4, 12, 10); px(g, '#8a92a6', 3, 5, 10, 8); px(g, '#2a2f4a', 4, 6, 8, 5);
+    for (var x = 5; x < 12; x += 2) px(g, '#ff4f5e', x, 7, 1, 3);
+    px(g, '#5a6070', 4, 14, 2, 2); px(g, '#5a6070', 10, 14, 2, 2); px(g, '#7cf5ff', 11, 5, 1, 1);
   };
   /* no sign: a steamy window, a red lantern, nothing else */
   MARK_ART.noodlebar = function (g, w, h) {
@@ -509,7 +527,7 @@
     px(g, '#5a3c26', 1, 7, w - 2, 8); px(g, '#7a5638', 1, 7, w - 2, 1);
     px(g, '#ff8a6b', 4, 9, 3, 3); px(g, '#7cffb2', 11, 9, 3, 3); px(g, '#ffd36a', 18, 9, 3, 3); px(g, '#ff8a6b', 25, 9, 3, 3);
   };
-  var markArt = {}, UNFRAMED = { slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
+  var markArt = {}, UNFRAMED = { drumfire: 1, campfire: 1, grill: 1, slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
     var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
@@ -850,6 +868,8 @@
     }
     if (m && m.game) return openTable(m.game, m.house || 'grand');
     if (m && m.vend) return openCounter(m.vend);
+    if (m && m.fire) return openCounter('cook:fire:' + m.fire);
+    if (m && m.kitchen && inside) return openCounter('cook:kitchen');
     if (m && m.fountain) {
       window.MF.consume(s, 0, 20);
       if (api.save) api.save();
@@ -1036,6 +1056,9 @@
       wallet('-' + window.MF.fmtJ(t.price));
       drawBody();
       if (api.save) api.save();
+    } else if (t.ok && t.cooked) {
+      counter.msg = 'it sizzles. you have ' + t.name + '. (eat it from INV)';
+      if (api.save) api.save();
     } else if (t.ok) {
       counter.msg = (counter.tab === 'buy' ? 'bought ' : 'sold ') + t.name + ' for ' + window.MF.fmtJ(t.price) + '.';
       wallet((counter.tab === 'buy' ? '-' : '+') + window.MF.fmtJ(t.price));
@@ -1068,7 +1091,7 @@
       b.type = 'button';
       b.className = 'crow' + (i === counter.sel ? ' sel' : '') + (r.ok ? '' : ' no');
       b.textContent = r.label + (r.have ? ' (' + r.have + ')' : '');
-      var pr = document.createElement('span'); pr.textContent = window.MF.fmtJ(r.price); b.appendChild(pr);
+      var pr = document.createElement('span'); pr.textContent = st.kind === 'cook' ? '' : window.MF.fmtJ(r.price); b.appendChild(pr);
       b.addEventListener('click', function (e) { e.preventDefault(); counterAct(i); });
       list.appendChild(b);
     });
@@ -1457,7 +1480,7 @@
     for (y = y0; y <= y0 + VH; y++) for (x = x0; x <= x0 + VW; x++) {
       if (x >= world.W || y >= world.H) continue;
       var k = y * world.W + x, t = world.tile[k], di = world.dist[k];
-      if (t === T.LANDMARK) { if (!inside) continue; t = y ? world.floor || T.FLOOR : world.edge || T.WALL; }
+      if (t === T.LANDMARK) { if (!inside && !deco.under[k]) continue; t = inside ? (y ? world.floor || T.FLOOR : world.edge || T.WALL) : T.GROUND; }
       var v = Math.floor(hash(x, y) * 32), m = 0, rv = 0, dr = 0;
       var nb = [at(x, y - 1), at(x + 1, y), at(x, y + 1), at(x - 1, y)];
       for (var b = 0; b < 4; b++) {

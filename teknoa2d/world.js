@@ -386,6 +386,37 @@
       if (dist[at(sx, sy)] === Y0.index && get(sx, sy) !== T.LANDMARK) { set(sx, sy, T.STALL); set(sx, sy + 1, T.ROAD); }
     }
 
+    /* fires to cook on, near the shore (shops.js FIRES): drum barrels in
+       redrum, campfires in naturia and at the landings, electric grills
+       everywhere else. always on open ground, never in a narrow way */
+    function fireAt(ok, kind, seed) {
+      var cands = [];
+      for (var y = 2; y < H - 2; y++) for (var x = 2; x < W - 2; x++) {
+        var t = get(x, y);
+        if (!ok(x, y) || (t !== T.GROUND && t !== T.GRASS && t !== T.SAND)) continue;
+        var open = true, wet = false;
+        for (var oy = -1; oy <= 1 && open; oy++) for (var ox = -1; ox <= 1; ox++) { var nt = get(x + ox, y + oy); if (SOLID[nt] || nt === T.BRIDGE) { open = false; break; } }
+        if (!open) continue;
+        for (var wy = -4; wy <= 4 && !wet; wy++) for (var wx = -4; wx <= 4; wx++) { var wt = get(x + wx, y + wy); if (wt === T.SHALLOW || wt === T.DEEP) { wet = true; break; } }
+        if (!wet || npcs.some(function (n) { return Math.abs(n.x - x) + Math.abs(n.y - y) < 3; }) || signs.some(function (sg) { return sg.x === x && sg.y === y; })) continue;
+        if (marks.some(function (m) { return x >= m.x - 1 && x <= m.x + m.w && y >= m.y - 1 && y <= m.y + m.h + 1; })) continue;
+        cands.push([x, y]);
+      }
+      if (!cands.length) return null;
+      var c = cands[Math.floor(hash(seed, 313) * cands.length)];
+      set(c[0], c[1], T.LANDMARK);
+      marks.push({ id: kind, name: kind, x: c[0], y: c[1], w: 1, h: 1, d: dist[at(c[0], c[1])], fire: kind });
+      return c;
+    }
+    var inD = function (d) { return function (x, y) { return dist[at(x, y)] === d.index; }; };
+    DISTRICTS.forEach(function (d) {
+      var kind = d.id === 'redrum' ? 'drumfire' : d.id === 'naturia' ? 'campfire' : 'grill';
+      for (var n = 0; n < (kind === 'grill' ? 1 : 2); n++) fireAt(inD(d), kind, d.seed * 7 + n * 101);
+    });
+    landings2.forEach(function (l, i) {
+      fireAt(function (x, y) { return dist[at(x, y)] === -2 && Math.abs(x - l.cx) + Math.abs(y - l.cy) <= 8; }, 'campfire', 900 + i);
+    });
+
     /* who is out tonight */
     var spawn = { x: arcadeDoor.x, y: arcadeDoor.y + 3, dir: 'up' };
     carve(spawn.x, spawn.y, arcadeDoor.x, arcadeDoor.y, T.ROAD);
@@ -624,7 +655,7 @@
     { id: 'window', x: 2, y: 0, w: 2, h: 1, view: true },
     { id: 'window', x: 5, y: 0, w: 2, h: 1, view: true },
     { id: 'bed', x: 1, y: 1, w: 2, h: 2, bed: true, text: 'your bed. nobody else\'s.\nyou\'ll wake up here now.' },
-    { id: 'counter', x: 7, y: 1, w: 2, h: 1, text: 'a kettle, two mugs.\none of them is clean.' },
+    { id: 'counter', x: 7, y: 1, w: 2, h: 1, kitchen: true, text: 'a kettle, two mugs.\none of them is clean.' },
     { id: 'plant', x: 8, y: 3, w: 1, h: 1, text: 'a plant. it\'s alive.\nyou\'ll try.' },
     { id: 'sofa', x: 2, y: 4, w: 3, h: 1, text: 'the sofa remembers whoever had it before.\nit\'s getting used to you.' },
     { id: 'tv', x: 6, y: 4, w: 1, h: 1, text: 'static on every channel.\nyou leave it on anyway. it\'s company.' }
@@ -880,7 +911,7 @@
     });
     def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
-      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
+      marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), kitchen: !!(f.kitchen && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
                    game: f.game, house: f.game ? f.house || def.house : undefined, vend: f.vend });
     });
     (def.people || []).forEach(function (p, i) {
