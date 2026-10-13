@@ -262,6 +262,7 @@
     'skewer-guy':   { kind: 'vendor', name: 'SKEWERS', district: 'redrum', line: 'four joules. no questions. especially about the meat.', menu: ['skewer', 'buzz'] },
     'market-patties':{ kind: 'vendor', name: 'PATTY STALL', district: 'yucayeque', line: 'the good ones. tell them who sent you.', menu: ['patty', 'cocobread', 'sorrel'] },
     'market-mangoes':{ kind: 'vendor', name: 'MANGO STALL', district: 'yucayeque', line: 'three for a joule. two if you can carry a tune.', menu: ['mango', 'smoothie'] },
+    'clinic':       { kind: 'clinic', name: 'NOVA CITY HOSPITAL', district: 'majinryu', line: 'reception. take a number. there are no numbers. you\'re next.', meds: ['medkit', 'bandage'] },
     'noodle-bar':   { kind: 'restaurant', name: 'NO SIGN', district: 'worldwood', line: 'no sign. that\'s the sign. sit anywhere.', menu: ['ramen', 'wontons', 'icedbarley'] },
     'tea-house':    { kind: 'restaurant', name: 'THE TEA HOUSE', district: 'majinryu', line: 'two doors down. you found it. ask for the house blend.', menu: ['houseblend', 'bao', 'barley'] }
   };
@@ -323,6 +324,7 @@
     if (RES_KG[key] !== undefined) return RES_KG[key];
     if (FISH[key]) return TIER_KG[FISH[key].tier];
     if (FOODS[key]) return FOODS[key].drink > FOODS[key].food ? 0.5 : 0.4;
+    if (MEDS[key]) return key === 'medkit' ? 0.6 : 0.1;
     if (CURIOS[key] || TOOLS[key]) return 0.5;
     return 0.2;
   }
@@ -434,14 +436,29 @@
     return STORES[id] || VENDORS[id] || null;
   }
   /* take-away food from your pockets */
+  /* medicine: the hospital's reception sells treatment (on the spot, priced
+     by what's missing) and these to carry. PLACEHOLDER prices */
+  var MEDS = {
+    medkit:  { name: 'a medkit', what: 'gauze, a stapler, something in a syringe. +40 health.', heal: 40, price: 60 },
+    bandage: { name: 'a bandage', what: 'it won\'t fix much. it\'ll fix a little. +15 health.', heal: 15, price: 20 }
+  };
+  var TREAT = 2;   /* ⚡ per point of health the hospital puts back */
+  function useMed(MF, s, key) {
+    var m = MEDS[key];
+    if (!m || !s.items || !s.items[key]) return { ok: false, why: 'none left' };
+    s.items[key]--; if (!s.items[key]) delete s.items[key];
+    MF.heal(s, m.heal);
+    return { ok: true, name: m.name };
+  }
   function eat(MF, s, key) {
+    if (MEDS[key]) return useMed(MF, s, key);
     var f = FOODS[key];
     if (!f || !s.items || !s.items[key]) return { ok: false, why: 'nothing to eat' };
     s.items[key]--; if (!s.items[key]) delete s.items[key];
     MF.consume(s, f.food, f.drink, f.buff, f.secs);
     return { ok: true, name: f.name };
   }
-  function goods(key) { return RES[key] || CURIOS[key] || TOOLS[key] || FISH[key] || FOODS[key] || null; }
+  function goods(key) { return RES[key] || CURIOS[key] || TOOLS[key] || FISH[key] || FOODS[key] || MEDS[key] || null; }
   function nameOf(key) { var g = goods(key); return g ? g.name : key; }
   /* the counter's rows for a tab: what you can buy here, or what they'll buy off you */
   function storeRows(MF, s, id, tab) {
@@ -449,6 +466,13 @@
     if (!st) return rows;
     if (st.kind === 'cook') return tab === 'buy' ? cookRows(s, st.where) : rows;
     if (st.kind === 'stash') return stashRows(s, st.where, tab);
+    if (tab === 'buy' && st.kind === 'clinic') {
+      var missing = Math.ceil(100 - ((s.body && s.body.health !== undefined) ? s.body.health : 100));
+      rows.push({ key: 'treat', label: missing ? 'treatment: back to full health (' + missing + ' points)' : 'treatment: you\'re fine. go home.', price: missing * TREAT, have: 0, here: true, treat: true });
+      st.meds.forEach(function (k) { rows.push({ key: k, label: MEDS[k].name, price: MEDS[k].price, have: items[k] || 0 }); });
+      rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price && (!r.treat || missing > 0); });
+      return rows;
+    }
     if (tab === 'buy' && st.menu) {
       st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : ''), price: f.price, have: 0, here: true }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
@@ -475,6 +499,13 @@
     if (!s.res) s.res = {};
     if (!s.items) s.items = {};
     var into = RES[key] ? s.res : s.items;
+    /* the hospital puts you back together, there and then */
+    if (tab === 'buy' && row.treat) {
+      if (row.price <= 0) return { ok: false, why: 'nothing to treat' };
+      if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
+      MF.heal(s, 100);
+      return { ok: true, price: row.price, name: 'treatment', ate: true, healed: true };
+    }
     /* a cart or a restaurant: you eat it there and then */
     if (tab === 'buy' && row.here) {
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
@@ -497,7 +528,7 @@
 
   root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, boatShort: boatShort, buildBoat: buildBoat,
                    CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade,
-                   FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
+                   FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, MEDS: MEDS, TREAT: TREAT, useMed: useMed, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
                    WEAR: WEAR, rodLeft: rodLeft, wearRod: wearRod,
                    UPKEEP: UPKEEP, LEVY: LEVY, levy: levy, bill: bill, treasury: treasury,

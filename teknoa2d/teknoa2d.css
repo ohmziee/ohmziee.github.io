@@ -313,6 +313,7 @@ a{color:var(--lavender)}
 .wbody .bar{display:block;height:6px;background:#141a2e;border:1px solid #3a3150}
 .wbody .bar i{display:block;height:100%;background:#ff8a3a;transition:width .4s}
 .wbody .bar i.dr{background:#7cf5ff}
+.wbody .bar i.hp{background:#ff4f5e}
 .wbody.low{border-color:#ff4f5e;animation:lowpulse 1.2s ease-in-out infinite}
 @keyframes lowpulse{50%{border-color:#dce3ff}}
 .wbody .bf{grid-column:1/-1;color:#7cffb2}

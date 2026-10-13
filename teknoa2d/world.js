@@ -740,7 +740,7 @@
       '#............#',
       '######==######'],
       things: [
-        { id: 'desk', x: 5, y: 2, w: 4, h: 1, text: 'reception. take a number.\nthe screen says NOW SERVING: 0.' },
+        { id: 'desk', x: 5, y: 2, w: 4, h: 1, vend: 'clinic', text: 'reception. take a number.\nthe screen says NOW SERVING: 0.' },
         { id: 'bed', x: 11, y: 1, w: 2, h: 2, text: 'a bed behind a curtain. someone left flowers.\nnobody\'s in it.' },
         { id: 'bench', x: 1, y: 5, w: 3, h: 1, text: 'the waiting room chairs are joined together.\nso, eventually, are you.' },
         { id: 'bench', x: 1, y: 7, w: 3, h: 1, text: 'the number hasn\'t changed\nsince you sat down.' },

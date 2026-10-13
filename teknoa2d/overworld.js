@@ -890,7 +890,13 @@
     }
     if (m && m.shut) return say([m.shut]);
     if (m && m.text) {
-      if (m.bed && inside) { s.wake = inside.id; if (api.save) api.save(); }
+      if (m.bed && inside) {
+        s.wake = inside.id;
+        /* a proper rest, once a nova city day */
+        var today2 = novaNow().day;
+        if (s.body.rested !== today2 && s.body.health < 100) { s.body.rested = today2; window.MF.heal(s, 25); drawBody(); if (api.save) api.save(); return say(['you lie down for a while. the city hums.\nyou get up feeling better. (+25 health)']); }
+        if (api.save) api.save();
+      }
       return say([m.text]);
     }
     /* a sign is read facing it, or standing on it */
@@ -1063,7 +1069,11 @@
     if (!r) return;
     counter.sel = i;
     var t = window.MFShops.trade(window.MF, s, counter.id, counter.tab, r.key);
-    if (t.ok && t.ate) {
+    if (t.ok && t.healed) {
+      counter.msg = 'patched up. full health. try not to need this again.';
+      wallet('-' + window.MF.fmtJ(t.price)); drawBody();
+      if (api.save) api.save();
+    } else if (t.ok && t.ate) {
       counter.msg = 'you have ' + t.name + '.' + (t.buff ? ' ' + t.buff + '!' : '');
       wallet('-' + window.MF.fmtJ(t.price));
       drawBody();
@@ -1127,6 +1137,7 @@
     if (!MF.drain || fainting) { if (fainting && now > fainting) wakeUp(); return; }
     var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, held.b && me.moving && !me.sail ? 1.5 : 1, tempNow());
     tired = state !== '';
+    if (state === 'collapse') return faint(now, true);
     if (state === 'faint') return faint(now);
     if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
     if (!tired) warned = false;
@@ -1142,10 +1153,11 @@
   }
   function tempNow() { return window.MF.temperature(novaNow(), whereNow()); }
   function drawBody() {
-    var b = s.body, f = Math.round(b.food), d = Math.round(b.drink), c = novaNow();
+    var b = s.body, f = Math.round(b.food), d = Math.round(b.drink), c = novaNow(), hp = Math.round(b.health === undefined ? 100 : b.health);
+    $('wHealth').style.width = hp + '%';
     $('wTime').textContent = c.text + ' · ' + tempNow() + '°C';
     $('wFood').style.width = f + '%'; $('wDrink').style.width = d + '%';
-    $('wBody').classList.toggle('low', f < window.MF.WEAK || d < window.MF.WEAK);
+    $('wBody').classList.toggle('low', f < window.MF.WEAK || d < window.MF.WEAK || hp < 25);
     $('wBuff').textContent = b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
     var SH = window.MFShops, kg = SH.carried(s), ld = SH.load(s);
     $('wLoad').textContent = kg + '/' + SH.CARRY + 'kg';
@@ -1160,7 +1172,10 @@
     $('wMail').hidden = false; $('wMail').classList.remove('on'); void $('wMail').offsetWidth; $('wMail').classList.add('on');
     setTimeout(function () { $('wMail').hidden = true; }, 5000);
   }
-  function faint(now) {
+  var collapsed = false;
+  function faint(now, hard) {
+    collapsed = !!hard;
+    if (!hard) window.MF.hurt(s, 25);
     if (mini) closeMini(); if (counter) closeCounter(); if (table && !(table.hand && !table.hand.done)) closeTable();
     talkBox = null; $('wTalk').hidden = true; me.moving = false; held = {};
     fainting = now + 1800;
@@ -1168,7 +1183,7 @@
   }
   /* you come round in your own bed, or the hospital's (and it isn't free) */
   function wakeUp() {
-    var MF = window.MF, home = s.wake && s.homes[s.wake] ? s.wake : Object.keys(s.homes || {})[0], line;
+    var MF = window.MF, home = collapsed ? '' : s.wake && s.homes[s.wake] ? s.wake : Object.keys(s.homes || {})[0], line;
     fainting = 0;
     $('world').classList.remove('fainted');
     MF.revive(s);
@@ -1176,11 +1191,15 @@
     if (inside) goOut();
     if (home) { goIn(home); line = ['you come round on your own floor.\nsomeone left a glass of water by the door. you don\'t ask who.']; }
     else {
-      var bill = Math.min(300, Math.floor(MF.joules(s) * 0.1));
+      /* a collapse (health gone) costs more than a faint, and always ends here */
+      var bill = collapsed ? Math.min(600, Math.floor(MF.joules(s) * 0.2)) : Math.min(300, Math.floor(MF.joules(s) * 0.1));
       MF.spend(s, bill);
+      if (collapsed) s.body.health = Math.max(s.body.health, 50);
       goIn('hospital');
       wallet(bill ? '-' + MF.fmtJ(bill) : '');
-      line = ['you wake up in nova city hospital.\na medic is already writing the bill.', bill ? 'treatment: ' + MF.fmtJ(bill) + '. eat something. drink something.\nwe\'d rather not see you again tonight.' : 'no charge. you didn\'t have anything.\neat something. please.'];
+      line = [collapsed ? 'you wake up in nova city hospital, wired to three machines.\nthey stopped beeping at you an hour ago.' : 'you wake up in nova city hospital.\na medic is already writing the bill.',
+              bill ? 'treatment: ' + MF.fmtJ(bill) + '. eat something. drink something.\nwe\'d rather not see you again tonight.' : 'no charge. you didn\'t have anything.\neat something. please.'];
+      collapsed = false;
     }
     warned = false;
     if (api.save) api.save();

@@ -406,6 +406,11 @@
         var row = li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : '') + worn, g ? g.what : D.items[k]);
         /* take-away food: eat or drink it from here */
         if (SH && SH.drop) dropBtn(row, k);
+        if (SH && SH.MEDS && SH.MEDS[k]) {
+          var ub = document.createElement('button'); ub.type = 'button'; ub.className = 'eat'; ub.textContent = 'USE';
+          ub.addEventListener('click', function () { if (SH.useMed(MF, s, k).ok) { if (store) MF.save(s, store); if (window.MFWorld) window.MFWorld.refresh(); $('invBtn').click(); $('invBtn').click(); } });
+          row.appendChild(ub);
+        }
         if (SH && SH.FOODS && SH.FOODS[k]) {
           var b = document.createElement('button'); b.type = 'button'; b.className = 'eat';
           b.textContent = SH.FOODS[k].food ? 'EAT' : 'DRINK';
@@ -414,7 +419,7 @@
         }
         inv.appendChild(row);
       });
-      if (s.body) inv.insertBefore(li('food ' + Math.round(s.body.food) + '% · drink ' + Math.round(s.body.drink) + '%', s.body.buff && s.body.buffT > 0 ? s.body.buff + ', ' + Math.ceil(s.body.buffT / 60) + ' more minutes' : ''), inv.firstChild);
+      if (s.body) inv.insertBefore(li('health ' + Math.round(s.body.health === undefined ? 100 : s.body.health) + '% · food ' + Math.round(s.body.food) + '% · drink ' + Math.round(s.body.drink) + '%', s.body.buff && s.body.buffT > 0 ? s.body.buff + ', ' + Math.ceil(s.body.buffT / 60) + ' more minutes' : ''), inv.firstChild);
       if (SH && SH.FISH && Object.keys(s.fishlog || {}).length) inv.appendChild(li('fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds', Object.keys(s.fishlog).map(function (k) { return SH.FISH[k] ? SH.FISH[k].name.replace(/^(a|an) /, '') : k; }).join(', ') + '.'));
       var RS = (window.MFShops && window.MFShops.RES) || {};
       function dropBtn(row, k) {
@@ -481,7 +486,8 @@
     else if (act === 'food') Object.keys(SH.FOODS).forEach(function (k) { if (!SH.FOODS[k].here) s.items[k] = (s.items[k] || 0) + 3; });
     else if (act === 'curios') Object.keys(SH.CURIOS).forEach(function (k) { s.items[k] = (s.items[k] || 0) + 1; });
     else if (act === 'clear') { s.items = {}; s.res = {}; s.wear = {}; }
-    else if (act === 'full') { s.body.food = 100; s.body.drink = 100; }
+    else if (act === 'full') { s.body.food = 100; s.body.drink = 100; s.body.health = 100; }
+    else if (act === 'hurt') s.body.health = 10;
     else if (act === 'weak') { s.body.food = 15; s.body.drink = 15; }
     else if (act === 'faint') { s.body.food = 0.3; s.body.drink = 50; }
     else if (act === 'nohunger') s.dev.nohunger = !s.dev.nohunger;

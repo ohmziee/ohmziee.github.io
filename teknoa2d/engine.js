@@ -32,7 +32,7 @@
              treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
              inbox: [],                                      /* letters on the phone: { id, from, day, title, body, read } */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
-             body: { food: 100, drink: 100, buff: '', buffT: 0 },  /* hunger and thirst (100 = full), a dish's perk and its seconds left */
+             body: { food: 100, drink: 100, health: 100, buff: '', buffT: 0, rested: -1 },  /* hunger, thirst, health (100 = full), a dish's perk and its seconds left, the nova day you last slept */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -186,7 +186,7 @@
     Object.keys(s.stash).forEach(function (k) { s.stash[k] = box(s.stash[k]); });
     Object.keys(s.wear).forEach(function (k) { var n = Math.floor(+s.wear[k] || 0); if (n > 0) s.wear[k] = n; else delete s.wear[k]; });
     var b = s.body, num = function (v, d) { v = +v; return isFinite(v) ? Math.max(0, Math.min(100, v)) : d; };
-    s.body = { food: num(b.food, 100), drink: num(b.drink, 100), buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0) };
+    s.body = { food: num(b.food, 100), drink: num(b.drink, 100), health: num(b.health, 100), buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0), rested: isFinite(+b.rested) ? Math.floor(+b.rested) : -1 };
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
@@ -219,8 +219,18 @@
     b.food = Math.max(0, b.food - 100 * f * cold / FOOD_SECS);
     b.drink = Math.max(0, b.drink - 100 * f * heat / DRINK_SECS);
     if (b.buffT > 0) { b.buffT = Math.max(0, b.buffT - (+secs || 0)); if (!b.buffT) b.buff = ''; }
-    return b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) ? 'weak' : '';
+    /* health: starving or parched wears it down, bitter cold or heat too;
+       eating well brings it back */
+    var mins = Math.max(0, +secs || 0) / 60, hp = b.health === undefined ? 100 : b.health;
+    var exposed = temp !== undefined && (temp < 14 || temp > 34);
+    if (weak(s)) hp -= 2 * mins;
+    if (exposed) hp -= mins;
+    else if (!weak(s) && b.food > 60 && b.drink > 60) hp += 3 * mins;
+    b.health = Math.max(0, Math.min(100, hp));
+    return b.health <= 0 ? 'collapse' : b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) ? 'weak' : '';
   }
+  function hurt(s, n) { s.body.health = Math.max(0, (s.body.health === undefined ? 100 : s.body.health) - n); return s.body.health; }
+  function heal(s, n) { s.body.health = Math.min(100, (s.body.health === undefined ? 100 : s.body.health) + n); return s.body.health; }
   function weak(s) { return s.body.food < WEAK || s.body.drink < WEAK; }
   /* after a faint: back on your feet, not full */
   function revive(s) { s.body.food = Math.max(s.body.food, WAKE); s.body.drink = Math.max(s.body.drink, WAKE); s.body.buff = ''; s.body.buffT = 0; }
@@ -255,7 +265,7 @@
 
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
-              FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff,
+              FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
               cleanHandle: cleanHandle, chippedIn: chippedIn, answer: answer, normalAnswer: normalAnswer,
               enter: enter, view: view, next: next, choose: choose,
