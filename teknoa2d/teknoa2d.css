@@ -258,7 +258,13 @@ a{color:var(--lavender)}
 .pclock .fc{display:grid;grid-template-columns:repeat(6,1fr);gap:.2rem;margin-top:.8rem;color:#b9a8ff}
 .pmap{position:absolute;inset:.4rem;display:flex;flex-direction:column;gap:.3rem}
 .pmap .view{position:relative;flex:1;overflow:hidden;background:#0a1834;border:2px solid #3a3150}
-.pmap .view img,.pmap .view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.pmap .view{touch-action:none;cursor:grab}
+.pmap .view:active{cursor:grabbing}
+.pmap .stage{position:absolute;left:0;top:0;transform-origin:0 0}
+.pmap .stage img,.pmap .stage canvas{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none}
+.pmap .pin{position:absolute;width:0;height:0;transform-origin:0 0}
+.pmap .pin .here{left:0;top:0}
+.pmap .zoom button.on{color:#ffe97c;border-color:#ffe97c}
 .pmap .here{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#ff4fd8;box-shadow:0 0 0 2px #0b0d1a,0 0 10px 3px #ff4fd8;animation:here 1.4s ease-in-out infinite}
 .pmap .lvl{display:flex;justify-content:space-between;color:#7cffb2}
 .pmap .zoom{display:flex;gap:.3rem}

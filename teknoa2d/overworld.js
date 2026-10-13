@@ -1249,7 +1249,7 @@
   }
   var phone = null, pPrev = {}, pDrawn = 0;
   var APPS = [['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
-  var MAP_LEVELS = ['terranova', 'nova sea', 'nova city', 'local'];
+  var MAP_LAYERS = ['terranova', 'nova sea', 'nova city'], ZOOM_MAX = [6, 6, 16];
   var MAPIMG = {
     biomes: { src: 'maps/biomes.png', here: [0.629, 0.797] }, states: { src: 'maps/states.png', here: [0.629, 0.797] },
     nova: { src: 'maps/nova.png', here: [0.5, 0.36] }
@@ -1260,7 +1260,7 @@
     closePhone();
   }
   function openPhone() {
-    phone = { app: 'home', sel: 0, level: 2, view: 'biomes' };
+    phone = { app: 'home', sel: 0, layer: 2, view: 'biomes', zoom: [1, 1, 3], c: [null, null, null] };
     pPrev = { up: !!held.up, down: !!held.down, left: !!held.left, right: !!held.right };
     pressedA = false; me.moving = me.moving; held.b = false;
     $('wPhone').hidden = false; $('wPhone').classList.remove('lifted');
@@ -1292,10 +1292,11 @@
         if (a && box[phone.msel]) { phone.open = phone.msel; box[phone.msel].read = true; if (api.save) api.save(); drawPhone(); }
       }
     } else if (phone.app === 'map') {
-      if (up && phone.level < MAP_LEVELS.length - 1) { phone.level++; drawPhone(); }
-      if (dn && phone.level > 0) { phone.level--; drawPhone(); }
-      if ((lf || rt) && phone.level === 0) { phone.view = phone.view === 'biomes' ? 'states' : 'biomes'; drawPhone(); }
-      if (phone.level === 3 && now - pDrawn > 500) { pDrawn = now; drawLocal(); }
+      /* hold the arrows to pan; A zooms in */
+      var px = (held.right ? 1 : 0) - (held.left ? 1 : 0), py = (held.down ? 1 : 0) - (held.up ? 1 : 0);
+      if (px || py) panMap(px * 9, py * 9);
+      if (a) zoomMap(1.25);
+      if (phone.layer === 2 && now - pDrawn > 500) { pDrawn = now; drawOverlay(); }
     }
     if (now - pDrawn > 1000 && phone.app !== 'map') { pDrawn = now; drawPhoneBar(); if (phone.app === 'clock') drawPhone(); }
   }
@@ -1350,42 +1351,132 @@
       scr.appendChild(list);
     } else if (phone.app === 'map') drawMap();
   }
-  /* ── the map app ── */
+  /* ── the map app: three layers, each one draggable and zoomable ──
+     drag / hold the arrows to pan, wheel / pinch / A / + to zoom in, - out,
+     ◎ ME back to you. nova city zooms all the way to the street */
+  var mapImgs = {};
+  function mapContent(layer) {
+    if (layer === 2) { var at = mapPos(); return { w: city.W, h: city.H, here: [at.x + 0.5, at.y + 0.5] }; }
+    var m = MAPIMG[layer === 0 ? phone.view : 'nova'], im = mapImgs[m.src];
+    if (!im || !im.naturalWidth) return null;
+    return { w: im.naturalWidth, h: im.naturalHeight, here: [m.here[0] * im.naturalWidth, m.here[1] * im.naturalHeight] };
+  }
   function drawMap() {
-    var scr = $('wPhoneScreen'), lvl = MAP_LEVELS[phone.level], wrap = document.createElement('div'); wrap.className = 'pmap';
+    var scr = $('wPhoneScreen'), wrap = document.createElement('div'); wrap.className = 'pmap';
     var head = document.createElement('div'); head.className = 'lvl';
-    var name = document.createElement('span'); name.textContent = lvl.toUpperCase() + (phone.level === 0 ? ' · ' + phone.view : '');
+    var tabs = document.createElement('span'); tabs.className = 'zoom';
+    MAP_LAYERS.forEach(function (name, i) {
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = name.toUpperCase();
+      if (i === phone.layer) b.className = 'on';
+      b.addEventListener('click', function (e) { e.preventDefault(); setLayer(i); });
+      tabs.appendChild(b);
+    });
+    if (phone.layer === 0) {
+      var vb = document.createElement('button'); vb.type = 'button'; vb.textContent = phone.view === 'biomes' ? 'STATES' : 'BIOMES';
+      vb.addEventListener('click', function (e) { e.preventDefault(); phone.view = phone.view === 'biomes' ? 'states' : 'biomes'; phone.c[0] = null; drawPhone(); });
+      tabs.appendChild(vb);
+    }
     var zoom = document.createElement('span'); zoom.className = 'zoom';
-    [['-', -1], ['+', 1]].forEach(function (z) {
+    [['−', function () { zoomMap(0.8); }], ['+', function () { zoomMap(1.25); }], ['◎ ME', function () { phone.c[phone.layer] = null; layoutMap(); }]].forEach(function (z) {
       var b = document.createElement('button'); b.type = 'button'; b.textContent = z[0];
-      b.addEventListener('click', function (e) { e.preventDefault(); phone.level = Math.max(0, Math.min(MAP_LEVELS.length - 1, phone.level + z[1])); drawPhone(); });
+      b.addEventListener('click', function (e) { e.preventDefault(); z[1](); });
       zoom.appendChild(b);
     });
-    head.appendChild(name); head.appendChild(zoom); wrap.appendChild(head);
-    var view = document.createElement('div'); view.className = 'view'; view.id = 'wMapView'; wrap.appendChild(view);
+    head.appendChild(tabs); head.appendChild(zoom); wrap.appendChild(head);
+    var view = document.createElement('div'); view.className = 'view'; view.id = 'wMapView';
+    var stage = document.createElement('div'); stage.className = 'stage'; stage.id = 'wMapStage'; view.appendChild(stage);
+    wrap.appendChild(view);
     scr.appendChild(wrap);
-    if (phone.level <= 1) {
-      var m = MAPIMG[phone.level === 0 ? phone.view : 'nova'], img = document.createElement('img');
-      img.src = m.src; img.alt = 'map: ' + lvl;
-      view.appendChild(img);
-      img.onload = function () { placeDot(view, img.naturalWidth, img.naturalHeight, m.here[0] * img.naturalWidth, m.here[1] * img.naturalHeight); };
-    } else if (phone.level === 2) {
-      var cv = cityCanvas(); view.appendChild(cv);
-      var at = mapPos();
-      placeDot(view, city.W, city.H, at.x + 0.5, at.y + 0.5);
-    } else drawLocal();
-    $('wPhoneHint').textContent = '▲ ▼ zoom' + (phone.level === 0 ? ' · ◀ ▶ biomes / states' : '') + ' · tap B: back';
-  }
-  /* the dot: where you are, on an image drawn 'contain' in the view */
-  function placeDot(view, w, h, x, y) {
-    var d = document.createElement('span'); d.className = 'here';
-    view.appendChild(d);
-    /* measured once the phone has finished lifting (and again on resize) */
-    function put() {
-      var r = view.getBoundingClientRect(), k = Math.min(r.width / w, r.height / h), ox = (r.width - w * k) / 2, oy = (r.height - h * k) / 2;
-      d.style.left = (ox + x * k) + 'px'; d.style.top = (oy + y * k) + 'px';
+    if (phone.layer === 2) {
+      stage.appendChild(cityCanvas());
+      var ov = document.createElement('canvas'); ov.id = 'wMapOverlay'; ov.width = city.W; ov.height = city.H; stage.appendChild(ov);
+    } else {
+      var m = MAPIMG[phone.layer === 0 ? phone.view : 'nova'], img = mapImgs[m.src] || (mapImgs[m.src] = new Image());
+      if (!img.src) img.src = m.src;
+      var shown = img.cloneNode(); shown.alt = 'map: ' + MAP_LAYERS[phone.layer]; stage.appendChild(shown);
+      if (!img.complete) img.onload = function () { if (phone && phone.app === 'map') layoutMap(); };
     }
-    put(); setTimeout(put, 300);
+    var dot = document.createElement('span'); dot.className = 'pin'; dot.id = 'wMapDot'; dot.appendChild(document.createElement('span')).className = 'here'; stage.appendChild(dot);
+    mapGestures(view);
+    layoutMap(); setTimeout(layoutMap, 300);
+    if (phone.layer === 2) drawOverlay();
+    $('wPhoneHint').textContent = 'drag or arrows: move · wheel, pinch, A or +: zoom · ◎ ME: you · tap B: back';
+  }
+  function setLayer(i) { phone.layer = i; drawPhone(); }
+  /* place the stage: the content scaled to fit, times the zoom, centred on c */
+  function layoutMap() {
+    var view = $('wMapView'), stage = $('wMapStage'), L2 = phone && phone.layer, ct = view && mapContent(L2);
+    if (!view || !stage || !ct) return;
+    var r = view.getBoundingClientRect(), fit = Math.min(r.width / ct.w, r.height / ct.h), z = phone.zoom[L2], sc = fit * z;
+    var c = phone.c[L2] || ct.here.slice();
+    var tx = r.width / 2 - c[0] * sc, ty = r.height / 2 - c[1] * sc;
+    /* keep the map on the screen */
+    tx = ct.w * sc <= r.width ? (r.width - ct.w * sc) / 2 : Math.min(0, Math.max(r.width - ct.w * sc, tx));
+    ty = ct.h * sc <= r.height ? (r.height - ct.h * sc) / 2 : Math.min(0, Math.max(r.height - ct.h * sc, ty));
+    phone.c[L2] = [(r.width / 2 - tx) / sc, (r.height / 2 - ty) / sc];
+    phone.scale = sc; phone.tx = tx; phone.ty = ty;
+    stage.style.width = ct.w + 'px'; stage.style.height = ct.h + 'px';
+    stage.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')';
+    var dot = $('wMapDot');
+    dot.style.left = ct.here[0] + 'px'; dot.style.top = ct.here[1] + 'px';
+    dot.style.transform = 'scale(' + (1 / sc) + ')';
+  }
+  function panMap(dx, dy) {
+    var c = phone.c[phone.layer];
+    if (!c || !phone.scale) return;
+    phone.c[phone.layer] = [c[0] + dx / phone.scale, c[1] + dy / phone.scale];
+    layoutMap();
+  }
+  /* zoom by f, keeping the point under (sx, sy) where it is (default: the middle) */
+  function zoomMap(f, sx, sy) {
+    var view = $('wMapView'), L2 = phone.layer;
+    if (!view || !phone.scale) return;
+    var r = view.getBoundingClientRect();
+    if (sx === undefined) { sx = r.width / 2; sy = r.height / 2; }
+    var px = (sx - phone.tx) / phone.scale, py = (sy - phone.ty) / phone.scale;
+    var z = Math.max(1, Math.min(ZOOM_MAX[L2], phone.zoom[L2] * f));
+    var s2 = phone.scale * z / phone.zoom[L2];
+    phone.zoom[L2] = z;
+    phone.c[L2] = [px + (r.width / 2 - sx) / s2, py + (r.height / 2 - sy) / s2];
+    layoutMap();
+  }
+  /* drag with a mouse or a finger, pinch with two, the wheel zooms */
+  function mapGestures(view) {
+    var pts = {}, last = null;
+    function pos(e) { var r = view.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    view.addEventListener('pointerdown', function (e) { e.preventDefault(); try { view.setPointerCapture(e.pointerId); } catch (x) {} pts[e.pointerId] = pos(e); last = null; });
+    view.addEventListener('pointermove', function (e) {
+      if (!pts[e.pointerId]) return;
+      var p0 = pts[e.pointerId], p1 = pos(e), ids = Object.keys(pts);
+      pts[e.pointerId] = p1;
+      if (ids.length === 1) panMap(p0[0] - p1[0], p0[1] - p1[1]);
+      else if (ids.length === 2) {
+        var a2 = pts[ids[0]], b2 = pts[ids[1]], d = Math.hypot(a2[0] - b2[0], a2[1] - b2[1]);
+        if (last) zoomMap(d / last, (a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2);
+        last = d;
+      }
+    });
+    function up(e) { delete pts[e.pointerId]; last = null; }
+    view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+    view.addEventListener('wheel', function (e) { e.preventDefault(); var p2 = pos(e); zoomMap(e.deltaY < 0 ? 1.15 : 1 / 1.15, p2[0], p2[1]); }, { passive: false });
+  }
+  /* + and -, 1 2 3 for the layers, while the map is open */
+  document.addEventListener('keydown', function (e) {
+    if (!phone || phone.app !== 'map') return;
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomMap(1.25); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomMap(0.8); }
+    else if (e.key === '1' || e.key === '2' || e.key === '3') { e.preventDefault(); setLayer(+e.key - 1); }
+  });
+  /* close in on the city: who's about (shopkeepers green, players violet) */
+  function drawOverlay() {
+    var ov = $('wMapOverlay');
+    if (!ov) return;
+    var g = ov.getContext('2d');
+    g.clearRect(0, 0, ov.width, ov.height);
+    if (phone.zoom[2] < 4 || inside) return;
+    cityNpcs.forEach(function (n) { g.fillStyle = n.vend || n.store || n.shop || n.game ? '#7cffb2' : '#dce3ff'; g.fillRect(n.x, n.y, 1, 1); });
+    if (L) L.list().forEach(function (o) { g.fillStyle = '#b9a8ff'; g.fillRect(o.x, o.y, 1, 1); });
+    var at = mapPos(); $('wMapDot').style.left = (at.x + 0.5) + 'px'; $('wMapDot').style.top = (at.y + 0.5) + 'px';
   }
   function mapPos() { return inside ? doorOf(inside.id) : { x: me.x, y: me.y }; }
   function tileColour(w, k) {
@@ -1409,19 +1500,6 @@
     }
     var copy = document.createElement('canvas'); copy.width = cityCv.width; copy.height = cityCv.height; copy.getContext('2d').drawImage(cityCv, 0, 0);
     return copy;
-  }
-  /* local: the streets round you, or the room you're in, a few px a tile */
-  function drawLocal() {
-    var view = $('wMapView');
-    if (!view) return;
-    var w = world, rw = inside ? w.W : 72, rh = inside ? w.H : 44, x0 = inside ? 0 : Math.max(0, Math.min(w.W - rw, me.x - (rw >> 1))), y0 = inside ? 0 : Math.max(0, Math.min(w.H - rh, me.y - (rh >> 1)));
-    var px2 = 4, cv = document.createElement('canvas'); cv.width = rw * px2; cv.height = rh * px2;
-    var g = cv.getContext('2d');
-    for (var y = 0; y < rh; y++) for (var x = 0; x < rw; x++) { var k = (y0 + y) * w.W + x0 + x; if (k < 0 || k >= w.W * w.H) continue; g.fillStyle = tileColour(w, k); g.fillRect(x * px2, y * px2, px2, px2); }
-    npcs.forEach(function (n) { if (n.x >= x0 && n.y >= y0 && n.x < x0 + rw && n.y < y0 + rh) { g.fillStyle = n.vend || n.store || n.shop ? '#7cffb2' : '#dce3ff'; g.fillRect((n.x - x0) * px2 + 1, (n.y - y0) * px2 + 1, 2, 2); } });
-    if (L) L.list().forEach(function (o) { if (o.x >= x0 && o.y >= y0 && o.x < x0 + rw && o.y < y0 + rh) { g.fillStyle = '#b9a8ff'; g.fillRect((o.x - x0) * px2, (o.y - y0) * px2, px2, px2); } });
-    view.innerHTML = ''; view.appendChild(cv);
-    placeDot(view, rw, rh, me.x - x0 + 0.5, me.y - y0 + 0.5);
   }
 
   /* ── the tables: casino.js plays, this deals ──────────────
