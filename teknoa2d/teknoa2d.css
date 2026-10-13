@@ -285,6 +285,7 @@ a{color:var(--lavender)}
 @keyframes lowpulse{50%{border-color:#dce3ff}}
 .wbody .bf{grid-column:1/-1;color:#7cffb2}
 .wbody .ld{color:#dce3ff;text-align:right}
+.wbody .tm{grid-column:1/-1;color:#ffe97c;text-align:right}
 .wbody .ld.over{color:#ffd36a}.wbody .ld.stuck{color:#ff4f5e}
 .wbody .bf:empty{display:none}
 .world.fainted .wscreen canvas{filter:brightness(0);transition:filter 1.2s}

@@ -506,6 +506,9 @@
     else if (act === 'faint') { s.body.food = 0.3; s.body.drink = 50; }
     else if (act === 'nohunger') s.dev.nohunger = !s.dev.nohunger;
     else if (act === 'noweight') s.dev.noweight = !s.dev.noweight;
+    else if (act === 'h1' || act === 'h6') s.dev.shift = (s.dev.shift || 0) + (act === 'h1' ? 60 : 360);
+    else if (act === 'noon' || act === 'midnight') { var c0 = MF.clock(Date.now(), 0); s.dev.shift = ((act === 'noon' ? 720 : 1440) - (c0.hour * 60 + c0.minute) + 1440) % 1440; }
+    else if (act === 'real') s.dev.shift = 0;
     else if (act === 'piles') s.gathered = { day: '', got: {} };
     else if (act === 'lotto') (s.lotto || []).forEach(function (t) { t.day = '2000-01-01'; });
     else if (act === 'tp') {
@@ -522,7 +525,7 @@
     $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev.noweight ? 'OFF' : 'ON');
     if (store) MF.save(s, store);
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.refresh();
-    devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString());
+    devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString() + ' · nova city ' + MF.clock(Date.now(), s.dev.shift || 0).text);
   }
   [].forEach.call(document.querySelectorAll('[data-dev]'), function (b) { b.addEventListener('click', function () { devDo(b.getAttribute('data-dev')); }); });
   $('devBtn').addEventListener('click', function () {

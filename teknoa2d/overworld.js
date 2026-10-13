@@ -1117,20 +1117,32 @@
     $('wCounterM').textContent = counter.msg;
   }
 
+  var LIGHT = { night: 'rgba(4,6,24,.42)', dawn: 'rgba(60,24,40,.18)', day: 'rgba(5,6,11,.04)', dusk: 'rgba(48,20,60,.22)' };
+
   /* ── hunger and thirst (engine.js drain): the hud, tired, fainting ── */
   var tired = false, bodyT = 0, fainting = 0, warned = false;
   function body(dt, now) {
     var MF = window.MF;
     if (!MF.drain || fainting) { if (fainting && now > fainting) wakeUp(); return; }
-    var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, held.b && me.moving && !me.sail ? 1.5 : 1);
+    var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, held.b && me.moving && !me.sail ? 1.5 : 1, tempNow());
     tired = state !== '';
     if (state === 'faint') return faint(now);
     if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
     if (!tired) warned = false;
     if (now - bodyT > 400) { bodyT = now; drawBody(); }
   }
+  /* the time and the weather where you stand */
+  function novaNow() { return window.MF.clock(Date.now(), s.dev && s.dev.shift || 0); }
+  function whereNow() {
+    if (inside) return 'indoors';
+    if (me.sail) return M.fishZone(world, me.x, me.y) === 'jormun' ? 'jormun' : 'bay';
+    var di = world.dist[me.y * world.W + me.x];
+    return di === -2 ? 'vistadelsol' : di >= 0 ? D[di].id : 'bay';
+  }
+  function tempNow() { return window.MF.temperature(novaNow(), whereNow()); }
   function drawBody() {
-    var b = s.body, f = Math.round(b.food), d = Math.round(b.drink);
+    var b = s.body, f = Math.round(b.food), d = Math.round(b.drink), c = novaNow();
+    $('wTime').textContent = c.text + ' · ' + tempNow() + '°C';
     $('wFood').style.width = f + '%'; $('wDrink').style.width = d + '%';
     $('wBody').classList.toggle('low', f < window.MF.WEAK || d < window.MF.WEAK);
     $('wBuff').textContent = b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
@@ -1563,7 +1575,7 @@
       if (g.phase === 'bite') { var hx = Math.round(ppx - cx) + 6, hy = Math.round(ppy - cy) - 12; px(ctx, OUT, hx - 1, hy - 1, 5, 10); px(ctx, '#ffe97c', hx, hy, 3, 5); px(ctx, '#ffe97c', hx, hy + 6, 3, 2); }
     }
     /* a little night over everything, and the rain the main page has */
-    ctx.fillStyle = 'rgba(5,6,11,.14)'; ctx.fillRect(0, 0, VW * TS, VH * TS);
+    ctx.fillStyle = inside ? 'rgba(5,6,11,.1)' : LIGHT[novaNow().phase]; ctx.fillRect(0, 0, VW * TS, VH * TS);
     if (inside) return;
     ctx.fillStyle = 'rgba(159,140,255,.3)';
     var drops = Math.round(VW * VH / 10);

@@ -205,10 +205,12 @@
      drain with the seconds that passed). running drains faster. under WEAK
      you can't run and the games get harder; at 0 you faint */
   var FOOD_SECS = 45 * 60, DRINK_SECS = 30 * 60, WEAK = 20, WAKE = 40;
-  function drain(s, secs, factor) {
-    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0);
-    b.food = Math.max(0, b.food - 100 * f / FOOD_SECS);
-    b.drink = Math.max(0, b.drink - 100 * f / DRINK_SECS);
+  /* temp (°C), if given: heat dries you out, cold makes you hungry */
+  function drain(s, secs, factor, temp) {
+    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0), heat = 1, cold = 1;
+    if (temp !== undefined) { heat = 1 + Math.max(0, temp - 28) * 0.08; cold = 1 + Math.max(0, 20 - temp) * 0.06; }
+    b.food = Math.max(0, b.food - 100 * f * cold / FOOD_SECS);
+    b.drink = Math.max(0, b.drink - 100 * f * heat / DRINK_SECS);
     if (b.buffT > 0) { b.buffT = Math.max(0, b.buffT - (+secs || 0)); if (!b.buffT) b.buff = ''; }
     return b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) ? 'weak' : '';
   }
@@ -224,7 +226,28 @@
   }
   function buff(s, name) { return s.body.buff === name && s.body.buffT > 0; }
 
+  /* ── nova city time: one clock for everyone, worked out from real time.
+     a day lasts SPEEDUP times less than ours: 2 real hours ───────────── */
+  var SPEEDUP = 12, EPOCH = Date.UTC(2026, 0, 1);
+  function clock(ms, shiftMins) {
+    var mins = Math.floor((ms - EPOCH) * SPEEDUP / 60000) + (shiftMins || 0);
+    var day = Math.floor(mins / 1440), m = ((mins % 1440) + 1440) % 1440, hour = Math.floor(m / 60), minute = m % 60;
+    var phase = hour >= 21 || hour < 5 ? 'night' : hour < 7 ? 'dawn' : hour < 18 ? 'day' : 'dusk';
+    return { mins: mins, day: day, hour: hour, minute: minute, phase: phase, text: ('0' + hour).slice(-2) + ':' + ('0' + minute).slice(-2) };
+  }
+  /* °C: coolest before dawn, hottest mid-afternoon, a little different each day.
+     where: a district id, 'bay', 'jormun', 'indoors' */
+  var WHERE_C = { worldwood: 2, naturia: -2, haven: -1, redrum: 1, yucayeque: 1, majinryu: 0, vistadelsol: 0, bay: -4, jormun: -6 };
+  function temperature(c, where) {
+    var t = c.hour + c.minute / 60, base = 24.5 + 6.5 * Math.sin((t - 9) / 24 * 2 * Math.PI);
+    var h = Math.imul(c.day ^ 0x9e3779b9, 2654435761) >>> 0, wobble = (h % 61) / 10 - 3;
+    var v = base + wobble + (WHERE_C[where] || 0);
+    if (where === 'indoors') v = Math.max(22, Math.min(26, base + wobble));
+    return Math.round(v);
+  }
+
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
+              SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
               cleanHandle: cleanHandle, chippedIn: chippedIn, answer: answer, normalAnswer: normalAnswer,
