@@ -314,21 +314,22 @@ a{color:var(--lavender)}
 .mlanes{position:relative;height:80px;border:2px solid #dce3ff;background:linear-gradient(90deg,#141a2e 33%,#10162a 33% 66%,#141a2e 66%)}
 .mlanes .fr{position:absolute;width:12px;height:12px;margin-left:-2px;background:#ff8a3a;border:2px solid #0b0d1a}
 .mlanes .bk{position:absolute;bottom:2px;width:25%;height:8px;background:#c8a878;border:2px solid #0b0d1a}
-/* hunger and thirst: two little bars under the joules */
-.wbody{position:absolute;top:2.6rem;right:.4rem;display:grid;grid-template-columns:auto 4.5rem;gap:.2rem .35rem;align-items:center;padding:.3rem .45rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#dce3ff;font:clamp(.42rem,1.2vw,.52rem)/1 var(--font-pixel);pointer-events:none}
-.wbody .bar{display:block;height:6px;background:#141a2e;border:1px solid #3a3150}
-.wbody .bar i{display:block;height:100%;background:#ff8a3a;transition:width .4s}
-.wbody .bar i.dr{background:#7cf5ff}
-.wbody .bar i.hp{background:#ff4f5e}
-.wbody.low{border-color:#ff4f5e;animation:lowpulse 1.2s ease-in-out infinite}
-@keyframes lowpulse{50%{border-color:#dce3ff}}
-.wbody .bf{grid-column:1/-1;color:#7cffb2}
-.wbody .ld{color:#dce3ff;text-align:right}
-.wbody .tm{grid-column:1/-1;color:#ffe97c;text-align:right}
-.wbody .ld.over{color:#ffd36a}.wbody .ld.stuck{color:#ff4f5e}
+/* the hud under the joules: the time, a perk, stamina while you run, a warning */
+.wbody{position:absolute;top:2.6rem;right:.4rem;display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;padding:.3rem .45rem;border:3px double #dce3ff;border-radius:3px;background:#0b0d1a;color:#dce3ff;font:clamp(.42rem,1.2vw,.52rem)/1 var(--font-pixel);pointer-events:none}
+.wbody .bar{display:block;width:4.5rem;height:6px;background:#141a2e;border:1px solid #3a3150}
+.wbody .bar i{display:block;height:100%;background:#ffd36a;transition:width .15s linear}
+.wbody .sta{display:flex;align-items:center;gap:.3rem}
+.wbody .sta b{font-weight:normal}
+.wbody .sta.winded .bar i{background:#ff4f5e}
+.wbody .bf{color:#7cffb2}
+.wbody .tm{color:#ffe97c;text-align:right}
 .wbody .bf:empty{display:none}
+.wbody .alert{pointer-events:auto;cursor:pointer;font:inherit;color:#0b0d1a;background:#ffd36a;border:2px solid #0b0d1a;border-radius:3px;padding:.2rem .35rem}
+.wbody .alert.crit{background:#ff4f5e;color:#fff;animation:critpulse 1s ease-in-out infinite}
+.wbody .alert[hidden]{display:none}
+@keyframes critpulse{50%{opacity:.55}}
 .world.fainted .wscreen canvas{filter:brightness(0);transition:filter 1.2s}
-@media (prefers-reduced-motion:reduce){.wbody.low{animation:none}}
+@media (prefers-reduced-motion:reduce){.wbody .alert.crit{animation:none}}
 .wj .gain{position:absolute;right:.4rem;top:100%;color:#ffe97c;opacity:0;white-space:nowrap;text-shadow:0 0 6px rgba(255,233,124,.6)}
 .wj .gain.on{animation:jgain 1.4s ease-out forwards}
 @keyframes jgain{0%{opacity:0;transform:translateY(.6rem)}15%{opacity:1}100%{opacity:0;transform:translateY(-.4rem)}}
@@ -336,13 +337,24 @@ a{color:var(--lavender)}
 .wj .gain.xp{top:calc(100% + 1.1em);color:#7cffb2;text-shadow:0 0 6px rgba(124,255,178,.6)}
 .wj .gain.xp.up{color:#fff;text-shadow:0 0 8px #7cffb2}
 .wj .gain.xp.up.on{animation-duration:3s}
-.pid{padding:.3rem .2rem;line-height:1.5}
+.pid{padding:.2rem .2rem;line-height:1.5}
+.pid .ptabs{display:flex;gap:.25rem;margin-bottom:.4rem;flex-wrap:wrap}
+.pid .ptabs button{font:inherit;font-size:.75em;color:#b9a8ff;background:#0b0d1a;border:2px solid #3a3150;border-radius:3px;padding:.15rem .3rem;cursor:pointer}
+.pid .ptabs button.on{color:#0b0d1a;background:#ff9de2;border-color:#ff9de2}
 .pid .who{color:#ffe97c}
 .pid .lv{font-size:1.8em;color:#7cffb2;margin:.3rem 0 .1rem}
-.pid .xbar{display:block;height:.55rem;border:2px solid #dce3ff;background:#0b0d1a;margin:.2rem 0 .1rem}
+.pid .up{color:#fff;margin-top:.5rem}
+.pid .pts{color:#b9a8ff;margin-top:.4rem}
+.pid .buff{color:#7cffb2}
+.pid .xbar{display:block;height:.55rem;border:2px solid #dce3ff;background:#0b0d1a;margin:.15rem 0 .25rem}
 .pid .xbar i{display:block;height:100%;background:#7cffb2}
-.pid .src{display:grid;grid-template-columns:1fr auto;gap:.05rem .6rem;margin-top:.6rem;color:#b9a8ff}
-.pid .src b{font-weight:normal;color:#dce3ff;text-align:right}
+.pid .xbar.hp i{background:#ff4f5e}.pid .xbar.sta i{background:#ffd36a}.pid .xbar.int i{background:#b9a8ff}
+.pid .xbar.food i{background:#ff8a3a}.pid .xbar.drink i{background:#7cf5ff}.pid .xbar.trait i{background:#ff9de2}
+.pid .vrow{display:flex;justify-content:space-between;gap:.5rem}
+.pid .vrow b{font-weight:normal;color:#dce3ff}
+.pid .crow{display:block;width:100%;text-align:left}
+.pid .crow small{display:block;color:#b9a8ff;font-size:.85em;margin-top:.15rem}
+.pid .crow.dim{opacity:.6}
 .purse{display:flex;justify-content:space-between;align-items:baseline;margin:.8rem 0 0;padding:.45rem .6rem;border:1px solid var(--violet);font-size:.8rem;letter-spacing:.12em;color:var(--rain)}
 .purse b{color:#ffe97c;font:600 1.05rem var(--font-mono);letter-spacing:.04em}
 

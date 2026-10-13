@@ -245,19 +245,19 @@
     cocobread:{ name: 'coco bread', what: 'soft and sweet. the patty goes inside it.', food: 15, drink: 0, price: 4, here: 1 },
     sorrel:   { name: 'a cup of sorrel', what: 'deep red, ginger in the back of your throat.', food: 0, drink: 30, price: 5, here: 1 },
     noodles:  { name: 'a noodle cup', what: 'fast, hot, a little neon.', food: 35, drink: 5, price: 10, here: 1 },
-    soda:     { name: 'a neon soda', what: 'it glows. your tongue glows. it\'s fine.', food: 0, drink: 30, price: 4, here: 1 },
+    soda:     { name: 'a neon soda', what: 'it glows. your tongue glows. it\'s fine.', food: 0, drink: 30, price: 4, here: 1, mind: 10 },
     dumplings:{ name: 'a box of dumplings', what: 'from the cart that doesn\'t move.', food: 30, drink: 0, price: 9, here: 1 },
-    barley:   { name: 'barley tea', what: 'toasty, cold, endless.', food: 0, drink: 30, price: 3, here: 1 },
+    barley:   { name: 'barley tea', what: 'toasty, cold, endless.', food: 0, drink: 30, price: 3, here: 1, mind: 15 },
     smoothie: { name: 'a mango smoothie', what: 'mostly mango. a little glow.', food: 10, drink: 35, price: 6, here: 1 },
     berries:  { name: 'a cup of glow berries', what: 'they light up when you bite them.', food: 15, drink: 10, price: 5, here: 1 },
     sandwich: { name: 'a cucumber sandwich', what: 'crusts off. inspected.', food: 25, drink: 0, price: 12, here: 1 },
     filtered: { name: 'a glass of filtered water', what: 'filtered three times. you can taste the paperwork.', food: 0, drink: 30, price: 2, here: 1 },
     skewer:   { name: 'a mystery skewer', what: 'don\'t ask. it\'s good though.', food: 25, drink: -5, price: 4, here: 1 },
-    buzz:     { name: 'a can of buzz', what: 'the label is mostly warnings.', food: 0, drink: 20, price: 3, here: 1 },
+    buzz:     { name: 'a can of buzz', what: 'the label is mostly warnings.', food: 0, drink: 20, price: 3, here: 1, mind: 35 },
     mango:    { name: 'a ripe mango', what: 'three for a joule, two if you sing.', food: 15, drink: 10, price: 2, here: 1 },
     ramen:    { name: 'the house ramen', what: 'the broth\'s been going since the crossing. or so they say.', food: 80, drink: 20, price: 30, here: 1, buff: 'fast feet', secs: 480 },
     wontons:  { name: 'spicy wontons', what: 'your eyes water. you order more.', food: 45, drink: -5, price: 18, here: 1 },
-    icedbarley:{ name: 'iced barley', what: 'a whole jug.', food: 0, drink: 50, price: 6, here: 1 },
+    icedbarley:{ name: 'iced barley', what: 'a whole jug.', food: 0, drink: 50, price: 6, here: 1, mind: 20 },
     /* cooked at a fire or in a kitchen (COOK below), eaten from INV */
     grilled1: { name: 'a grilled fish', what: 'charred skin, smoke, a squeeze of something.', food: 30, drink: 0, price: 0 },
     grilled2: { name: 'a good grilled fish', what: 'thick and flaky. worth the wait.', food: 45, drink: 0, price: 0 },
@@ -266,7 +266,7 @@
     charred:  { name: 'charred fruit', what: 'sweet and smoky. sticky fingers.', food: 18, drink: 8, price: 0 },
     stew:     { name: 'a fish stew', what: 'fish, fruit, whatever\'s in the cupboard. it works.', food: 60, drink: 30, price: 0 },
     juice:    { name: 'fresh juice', what: 'three fruits\' worth. the pulp is the point.', food: 10, drink: 60, price: 0 },
-    houseblend:{ name: 'the house blend', what: 'don\'t ask what\'s in it. your hands go very still.', food: 0, drink: 60, price: 15, here: 1, buff: 'steady line', secs: 600 },
+    houseblend:{ name: 'the house blend', what: 'don\'t ask what\'s in it. your hands go very still.', food: 0, drink: 60, price: 15, here: 1, buff: 'steady line', secs: 600, mind: 50 },
     bao:      { name: 'a bao set', what: 'soft, steaming, three to a basket.', food: 70, drink: 0, price: 25, here: 1, buff: 'sharp eye', secs: 480 }
   };
   /* the places that serve it: street carts, a market stall, restaurants */
@@ -481,7 +481,7 @@
     var f = FOODS[key];
     if (!f || !s.items || !s.items[key]) return { ok: false, why: 'nothing to eat' };
     s.items[key]--; if (!s.items[key]) delete s.items[key];
-    MF.consume(s, f.food, f.drink, f.buff, f.secs);
+    MF.consume(s, f.food, f.drink, f.buff, f.secs, f.mind);
     return { ok: true, name: f.name };
   }
   function goods(key) { return RES[key] || CURIOS[key] || TOOLS[key] || FISH[key] || FOODS[key] || MEDS[key] || null; }
@@ -493,14 +493,14 @@
     if (st.kind === 'cook') return tab === 'buy' ? cookRows(s, st.where) : rows;
     if (st.kind === 'stash') return stashRows(s, st.where, tab);
     if (tab === 'buy' && st.kind === 'clinic') {
-      var missing = Math.ceil(100 - ((s.body && s.body.health !== undefined) ? s.body.health : 100));
+      var missing = Math.ceil(MF.maxOf(s, 'hp') - MF.vital(s, 'hp'));
       rows.push({ key: 'treat', label: missing ? 'treatment: back to full health (' + missing + ' points)' : 'treatment: you\'re fine. go home.', price: missing * TREAT, have: 0, here: true, treat: true });
       st.meds.forEach(function (k) { rows.push({ key: k, label: MEDS[k].name, price: MEDS[k].price, have: items[k] || 0 }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price && (!r.treat || missing > 0); });
       return rows;
     }
     if (tab === 'buy' && st.menu) {
-      st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : ''), price: f.price, have: 0, here: true }); });
+      st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : '') + (f.mind ? ' · +' + f.mind + ' brainpower' : ''), price: f.price, have: 0, here: true }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
     } else if (tab === 'buy') {
       if (st.foods) st.foods.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: FOODS[k].price, have: items[k] || 0 }); });
@@ -529,14 +529,14 @@
     if (tab === 'buy' && row.treat) {
       if (row.price <= 0) return { ok: false, why: 'nothing to treat' };
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
-      MF.heal(s, 100);
+      MF.heal(s, MF.maxOf(s, 'hp'));
       return { ok: true, price: row.price, name: 'treatment', ate: true, healed: true };
     }
     /* a cart or a restaurant: you eat it there and then */
     if (tab === 'buy' && row.here) {
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
       var f = FOODS[key];
-      MF.consume(s, f.food, f.drink, f.buff, f.secs);
+      MF.consume(s, f.food, f.drink, f.buff, f.secs, f.mind);
       return { ok: true, price: row.price, name: f.name, ate: true, buff: f.buff };
     }
     /* one rod of each kind is plenty */

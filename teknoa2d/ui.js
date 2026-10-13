@@ -419,7 +419,7 @@
         }
         inv.appendChild(row);
       });
-      if (s.body) inv.insertBefore(li('health ' + Math.round(s.body.health === undefined ? 100 : s.body.health) + '% · food ' + Math.round(s.body.food) + '% · drink ' + Math.round(s.body.drink) + '%', s.body.buff && s.body.buffT > 0 ? s.body.buff + ', ' + Math.ceil(s.body.buffT / 60) + ' more minutes' : ''), inv.firstChild);
+      if (s.body) inv.insertBefore(li('health ' + Math.round(MF.vital(s, 'hp')) + '/' + MF.maxOf(s, 'hp') + ' · food ' + Math.round(s.body.food) + '% · drink ' + Math.round(s.body.drink) + '%', s.body.buff && s.body.buffT > 0 ? s.body.buff + ', ' + Math.ceil(s.body.buffT / 60) + ' more minutes' : ''), inv.firstChild);
       if (SH && SH.FISH && Object.keys(s.fishlog || {}).length) inv.appendChild(li('fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds', Object.keys(s.fishlog).map(function (k) { return SH.FISH[k] ? SH.FISH[k].name.replace(/^(a|an) /, '') : k; }).join(', ') + '.'));
       var RS = (window.MFShops && window.MFShops.RES) || {};
       function dropBtn(row, k) {
@@ -486,8 +486,19 @@
     else if (act === 'food') Object.keys(SH.FOODS).forEach(function (k) { if (!SH.FOODS[k].here) s.items[k] = (s.items[k] || 0) + 3; });
     else if (act === 'curios') Object.keys(SH.CURIOS).forEach(function (k) { s.items[k] = (s.items[k] || 0) + 1; });
     else if (act === 'clear') { s.items = {}; s.res = {}; s.wear = {}; }
-    else if (act === 'full') { s.body.food = 100; s.body.drink = 100; s.body.health = 100; }
+    else if (act === 'full') { s.body.food = 100; s.body.drink = 100; MF.heal(s, MF.maxOf(s, 'hp')); MF.rest(s); }
     else if (act === 'hurt') s.body.health = 10;
+    else if (act === 'drained') { s.body.sta = 5; s.body.int = 5; }
+    else if (act === 'xp500' || act === 'traits') {
+      var LV = window.MFLevel; LV.ready(s);
+      /* exp lands on the traits evenly, so the character level moves with it */
+      Object.keys(LV.TRAITS).forEach(function (t) {
+        var n = act === 'xp500' ? Math.ceil(500 / Object.keys(LV.TRAITS).length) : 0;
+        if (act === 'traits') { var lv = LV.traitLevel(s, t); for (var i = 0; i < 5; i++) n += LV.needT(lv + i); n -= LV.traitInfo(s, t).into; }
+        s.skills[t] = (s.skills[t] || 0) + n; s.xp.total += n;
+      });
+    }
+    else if (act === 'relevel') { s.xp = { total: 0, by: {} }; s.skills = {}; s.core = { hp: 0, sta: 0, int: 0 }; s.perks = {}; MF.heal(s, 0); MF.rest(s); s.body.health = Math.min(s.body.health, MF.maxOf(s, 'hp')); }
     else if (act === 'weak') { s.body.food = 15; s.body.drink = 15; }
     else if (act === 'faint') { s.body.food = 0.3; s.body.drink = 50; }
     else if (act === 'nohunger') s.dev.nohunger = !s.dev.nohunger;
@@ -512,7 +523,7 @@
     $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev.noweight ? 'OFF' : 'ON');
     if (store) MF.save(s, store);
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.refresh();
-    devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString() + ' · nova city ' + MF.clock(Date.now(), s.dev.shift || 0).text);
+    devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString() + (window.MFLevel ? ' · LVL ' + window.MFLevel.level(s) : '') + ' · nova city ' + MF.clock(Date.now(), s.dev.shift || 0).text);
   }
   [].forEach.call(document.querySelectorAll('[data-dev]'), function (b) { b.addEventListener('click', function () { devDo(b.getAttribute('data-dev')); }); });
   $('devBtn').addEventListener('click', function () {

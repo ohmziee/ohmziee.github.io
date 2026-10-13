@@ -32,8 +32,11 @@
              treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
              inbox: [],                                      /* letters on the phone: { id, from, day, title, body, read } */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
-             body: { food: 100, drink: 100, health: 100, buff: '', buffT: 0, rested: -1 },  /* hunger, thirst, health (100 = full), a dish's perk and its seconds left, the nova day you last slept */
+             body: { food: 100, drink: 100, health: 100, sta: 100, int: 100, buff: '', buffT: 0, rested: -1 },  /* hunger, thirst, health, stamina, intelligence, a dish's perk and its seconds left, the nova day you last slept */
+             core: { hp: 0, sta: 0, int: 0 },                /* level-up picks: each one raises that maximum by CORE_STEP */
              xp: { total: 0, by: {} },                       /* experience, and how much came from each source (level.js) */
+             skills: {},                                     /* exp in each trait: atk, def, stl ... (level.js TRAITS) */
+             perks: {},                                      /* perks taken from the trait trees (level.js PERKS) */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -186,8 +189,14 @@
     s.hold = box(s.hold);
     Object.keys(s.stash).forEach(function (k) { s.stash[k] = box(s.stash[k]); });
     Object.keys(s.wear).forEach(function (k) { var n = Math.floor(+s.wear[k] || 0); if (n > 0) s.wear[k] = n; else delete s.wear[k]; });
-    var b = s.body, num = function (v, d) { v = +v; return isFinite(v) ? Math.max(0, Math.min(100, v)) : d; };
-    s.body = { food: num(b.food, 100), drink: num(b.drink, 100), health: num(b.health, 100), buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0), rested: isFinite(+b.rested) ? Math.floor(+b.rested) : -1 };
+    var co = s.core;
+    s.core = {}; Object.keys(CORE).forEach(function (k) { s.core[k] = Math.max(0, Math.min(MAX_PICKS, Math.floor(+co[k] || 0))); });
+    var b = s.body, num = function (v, d, top) { v = +v; return isFinite(v) ? Math.max(0, Math.min(top || 100, v)) : d; };
+    s.body = { food: num(b.food, 100), drink: num(b.drink, 100), health: num(b.health, maxOf(s, 'hp'), maxOf(s, 'hp')),
+               sta: num(b.sta, maxOf(s, 'sta'), maxOf(s, 'sta')), int: num(b.int, maxOf(s, 'int'), maxOf(s, 'int')),
+               buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0), rested: isFinite(+b.rested) ? Math.floor(+b.rested) : -1 };
+    s.skills = counts(s.skills);
+    s.perks = {}; Object.keys(o.perks && typeof o.perks === 'object' ? o.perks : {}).forEach(function (k) { if (o.perks[k]) s.perks[k] = 1; });
     /* sources this build doesn't know are kept: a newer build may */
     var xb = s.xp.by && typeof s.xp.by === 'object' ? s.xp.by : {};
     s.xp = { total: Math.max(0, Math.floor(+s.xp.total || 0)), by: counts(xb) };
@@ -230,18 +239,54 @@
     if (weak(s)) hp -= 2 * mins;
     if (exposed) hp -= mins;
     else if (!weak(s) && b.food > 60 && b.drink > 60) hp += 3 * mins;
-    b.health = Math.max(0, Math.min(100, hp));
+    b.health = Math.max(0, Math.min(maxOf(s, 'hp'), hp));
+    /* brainpower: the mind tires slowly while you're up and about */
+    b.int = Math.max(0, num0(b.int, maxOf(s, 'int')) - 100 * (+secs || 0) / INT_SECS);
     return b.health <= 0 ? 'collapse' : b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) ? 'weak' : '';
   }
-  function hurt(s, n) { s.body.health = Math.max(0, (s.body.health === undefined ? 100 : s.body.health) - n); return s.body.health; }
-  function heal(s, n) { s.body.health = Math.min(100, (s.body.health === undefined ? 100 : s.body.health) + n); return s.body.health; }
+  function num0(v, d) { return v === undefined || !isFinite(+v) ? d : +v; }
+  function hurt(s, n) { s.body.health = Math.max(0, num0(s.body.health, maxOf(s, 'hp')) - n); return s.body.health; }
+  function heal(s, n) { s.body.health = Math.min(maxOf(s, 'hp'), num0(s.body.health, maxOf(s, 'hp')) + n); return s.body.health; }
+
+  /* ── the three core vitals. every level-up the player picks one and its
+     maximum goes up by CORE_STEP (level.js pickCore) ─────────────────── */
+  /* name: the maximum, raised at level-up. pool: what you spend and get back
+     (using your mind tires it like running tires the body) */
+  var CORE = { hp: { name: 'health', pool: 'health', icon: '♥', key: 'health' }, sta: { name: 'stamina', pool: 'stamina', icon: '💪', key: 'sta' }, int: { name: 'intelligence', pool: 'brainpower', icon: '🧠', key: 'int' } };
+  var CORE_BASE = 100, CORE_STEP = 10, MAX_PICKS = 98;
+  function maxOf(s, k) { return CORE_BASE + CORE_STEP * Math.max(0, Math.floor(+(s.core && s.core[k]) || 0)); }
+  function vital(s, k) { return num0(s.body[CORE[k].key], maxOf(s, k)); }
+  /* put some back, never past the top */
+  function restore(s, k, n) { s.body[CORE[k].key] = Math.max(0, Math.min(maxOf(s, k), vital(s, k) + (+n || 0))); return s.body[CORE[k].key]; }
+
+  /* stamina: sprinting burns it, easing off brings it back. at 0 you're
+     winded (overworld.js keeps you walking until it's back to RUN_AGAIN) */
+  var STA_RUN = 5, STA_BACK = 2.5, RUN_AGAIN = 25, INT_SECS = 90 * 60;
+  function exert(s, secs, running) {
+    var t = Math.max(0, +secs || 0), back = weak(s) ? STA_BACK / 2 : STA_BACK;
+    return restore(s, 'sta', running ? -STA_RUN * t : back * t);
+  }
+  /* a physical feat that costs stamina up front: false, and nothing spent, if they can't */
+  function strain(s, n) { if (vital(s, 'sta') < n) return false; restore(s, 'sta', -n); return true; }
+  /* an intelligence check: a sharp enough mind (intelligence of `need`, `cost`
+     brainpower left) skips the minigame and spends `cost` brainpower on it */
+  function intCheck(s, need, cost) {
+    cost = cost || 0;
+    if (maxOf(s, 'int') < need || vital(s, 'int') < cost) return false;
+    restore(s, 'int', -cost);
+    return true;
+  }
+  /* a night's sleep: stamina and the mind come back in full */
+  function rest(s) { restore(s, 'sta', maxOf(s, 'sta')); restore(s, 'int', maxOf(s, 'int')); }
   function weak(s) { return s.body.food < WEAK || s.body.drink < WEAK; }
   /* after a faint: back on your feet, not full */
   function revive(s) { s.body.food = Math.max(s.body.food, WAKE); s.body.drink = Math.max(s.body.drink, WAKE); s.body.buff = ''; s.body.buffT = 0; }
-  /* eating or drinking: food/drink points, and maybe a perk for some seconds */
-  function consume(s, food, drink, buff, secs) {
+  /* eating or drinking: food/drink points, and maybe a perk for some seconds.
+     mind: intelligence back (caffeine and the like) */
+  function consume(s, food, drink, buff, secs, mind) {
     s.body.food = Math.min(100, s.body.food + (food || 0));
     s.body.drink = Math.min(100, s.body.drink + (drink || 0));
+    if (mind) restore(s, 'int', mind);
     if (buff) { s.body.buff = buff; s.body.buffT = secs || 300; }
     return s.body;
   }
@@ -270,6 +315,8 @@
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
+              CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
+              STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
               cleanHandle: cleanHandle, chippedIn: chippedIn, answer: answer, normalAnswer: normalAnswer,
               enter: enter, view: view, next: next, choose: choose,
