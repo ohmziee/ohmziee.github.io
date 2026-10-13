@@ -1104,7 +1104,7 @@
   function body(dt, now) {
     var MF = window.MF;
     if (!MF.drain || fainting) { if (fainting && now > fainting) wakeUp(); return; }
-    var state = MF.drain(s, dt, held.b && me.moving && !me.sail ? 1.5 : 1);
+    var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, held.b && me.moving && !me.sail ? 1.5 : 1);
     tired = state !== '';
     if (state === 'faint') return faint(now);
     if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
@@ -1711,5 +1711,7 @@
     var g = big.getContext('2d'); g.drawImage(sprite(lookOf(look), dir, step), 0, 0);
     return big;
   }
-  window.MFWorld = { show: show, hide: hide, preview: preview, setOffline: setOffline, get offline() { return offline(); }, get active() { return active; } };
+  /* after the DEV drawer changes the run: redraw the money and the meters */
+  function refresh() { if (!active) return; wallet(); drawBody(); }
+  window.MFWorld = { show: show, hide: hide, preview: preview, setOffline: setOffline, refresh: refresh, get offline() { return offline(); }, get active() { return active; } };
 })();

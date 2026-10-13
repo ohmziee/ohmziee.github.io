@@ -27,6 +27,7 @@
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
+             dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
              body: { food: 100, drink: 100, buff: '', buffT: 0 },  /* hunger and thirst (100 = full), a dish's perk and its seconds left */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */

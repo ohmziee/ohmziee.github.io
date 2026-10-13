@@ -377,7 +377,7 @@
 
   /* ── panels ─────────────────────────────────────────────── */
   function closePanels() {
-    ['map', 'inv', 'sys'].forEach(function (p) { $(p).hidden = true; $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
+    ['map', 'inv', 'sys', 'dev'].forEach(function (p) { $(p).hidden = true; $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
   }
   function toggle(p, fillIt) {
     var was = !$(p).hidden;
@@ -453,6 +453,65 @@
   function msg(t, bad) { $('sysMsg').textContent = t; $('sysMsg').classList.toggle('err', !!bad); }
   function code() { if (store) MF.save(s, store); return B && store ? B.pack(store) : MF.exportCode(s); }
   function backedUp() { try { store.setItem('exiled.backupAt', String(Date.now())); } catch (e) {} }
+  /* ── DEV: the owner's test drawer ─────────────────────────────
+     shows only when this browser holds the owner key (the one the chat
+     takes as name#key). it only touches this browser's run, and it is a
+     convenience, not a lock: a run in localStorage can always be edited */
+  var owner = '';
+  try { owner = store && store.getItem('exiled.owner') || ''; } catch (e) {}
+  if (owner) $('devBtn').hidden = false;
+  function devMsg(t) { $('devMsg').textContent = t; }
+  function devPlaces() {
+    var M = window.MFWorldMap, w = M && M.build(), sel = $('devTo'), opts = [];
+    if (!w) return;
+    M.DISTRICTS.forEach(function (d) { opts.push([d.name, { x: d.cx, y: d.cy }]); });
+    (w.landings || []).forEach(function (l) { opts.push([l.name.toUpperCase() + ' (landing)', { x: l.x, y: l.y }]); });
+    Object.keys(M.ROOMS).forEach(function (r) { var rm = M.room(r); opts.push(['inside: ' + r, { x: rm.spawn.x, y: rm.spawn.y, in: r }]); });
+    opts.push(['the jörmun, by boat', { x: 6, y: Math.floor(w.H / 2), sail: 1 }]);
+    sel.innerHTML = '';
+    opts.forEach(function (o, i) { var op = document.createElement('option'); op.value = i; op.textContent = o[0]; sel.appendChild(op); });
+    sel._places = opts;
+  }
+  function devDo(act) {
+    var SH = window.MFShops, M = window.MFWorldMap;
+    if (!s.dev) s.dev = {};
+    if (!s.items) s.items = {};
+    if (!s.res) s.res = {};
+    if (act === 'j1k') MF.earn(s, 1000); else if (act === 'j10k') MF.earn(s, 10000); else if (act === 'j100k') MF.earn(s, 100000); else if (act === 'j0') s.joules = 0;
+    else if (act === 'mats') Object.keys(SH.RES).forEach(function (k) { s.res[k] = (s.res[k] || 0) + 20; });
+    else if (act === 'rods') Object.keys(SH.TOOLS).forEach(function (k) { s.items[k] = 1; if (!s.wear) s.wear = {}; s.wear[k] = SH.TOOLS[k].dur; });
+    else if (act === 'boat') s.boat = 1;
+    else if (act === 'homes') Object.keys(SH.HOMES).forEach(function (k) { s.homes[k] = 1; });
+    else if (act === 'fish') Object.keys(SH.FISH).forEach(function (k) { s.items[k] = (s.items[k] || 0) + 1; });
+    else if (act === 'food') Object.keys(SH.FOODS).forEach(function (k) { if (!SH.FOODS[k].here) s.items[k] = (s.items[k] || 0) + 3; });
+    else if (act === 'curios') Object.keys(SH.CURIOS).forEach(function (k) { s.items[k] = (s.items[k] || 0) + 1; });
+    else if (act === 'clear') { s.items = {}; s.res = {}; s.wear = {}; }
+    else if (act === 'full') { s.body.food = 100; s.body.drink = 100; }
+    else if (act === 'weak') { s.body.food = 15; s.body.drink = 15; }
+    else if (act === 'faint') { s.body.food = 0.3; s.body.drink = 50; }
+    else if (act === 'nohunger') s.dev.nohunger = !s.dev.nohunger;
+    else if (act === 'piles') s.gathered = { day: '', got: {} };
+    else if (act === 'lotto') (s.lotto || []).forEach(function (t) { t.day = '2000-01-01'; });
+    else if (act === 'tp') {
+      var p = $('devTo')._places[+$('devTo').value];
+      if (!p) return;
+      s.world = { x: p[1].x, y: p[1].y, d: 'down', v: M.V, in: p[1].in, sail: p[1].sail };
+      if (p[1].sail) s.boat = 1;
+      if (store) MF.save(s, store);
+      closePanels();
+      showWorld();
+      return;
+    }
+    $('devNoHunger').textContent = 'HUNGER: ' + (s.dev.nohunger ? 'OFF' : 'ON');
+    if (store) MF.save(s, store);
+    if (window.MFWorld && window.MFWorld.active) window.MFWorld.refresh();
+    devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString());
+  }
+  [].forEach.call(document.querySelectorAll('[data-dev]'), function (b) { b.addEventListener('click', function () { devDo(b.getAttribute('data-dev')); }); });
+  $('devBtn').addEventListener('click', function () {
+    toggle('dev', function () { devPlaces(); devMsg(''); $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON'); });
+  });
+
   $('sysBtn').addEventListener('click', function () {
     toggle('sys', function () { $('code').value = code(); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; onlineLabel(); });
   });

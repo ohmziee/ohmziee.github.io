@@ -37,6 +37,7 @@
       <button type="button" id="mapBtn" aria-controls="map" aria-expanded="false">MAP</button>
       <button type="button" id="invBtn" aria-controls="inv" aria-expanded="false">INV</button>
       <button type="button" id="sysBtn" aria-controls="sys" aria-expanded="false">SYS</button>
+      <button type="button" id="devBtn" aria-controls="dev" aria-expanded="false" hidden>DEV</button>
     </span>
   </header>
 
@@ -146,6 +147,23 @@
     </div>
     <div class="mapview" id="mapView"><img id="mapImg" alt="" decoding="async"><span class="here" id="mapHere" aria-hidden="true"></span></div>
     <p class="dim" id="mapNote"></p>
+  </aside>
+
+  <!-- the owner's test drawer: only shown when this browser holds the owner key -->
+  <aside class="panel devpanel" id="dev" hidden aria-label="test tools">
+    <h2>DEV</h2>
+    <p class="dim">owner test tools. everything here only changes this browser's run.</p>
+    <h2>JOULES</h2>
+    <div class="devrow"><button type="button" data-dev="j1k">+⚡1,000</button><button type="button" data-dev="j10k">+⚡10,000</button><button type="button" data-dev="j100k">+⚡100,000</button><button type="button" data-dev="j0">⚡0</button></div>
+    <h2>GIVE</h2>
+    <div class="devrow"><button type="button" data-dev="mats">MATERIALS x20</button><button type="button" data-dev="rods">ALL RODS</button><button type="button" data-dev="boat">BOAT</button><button type="button" data-dev="homes">ALL APARTMENTS</button></div>
+    <div class="devrow"><button type="button" data-dev="fish">ONE OF EVERY FISH</button><button type="button" data-dev="food">FOOD x3</button><button type="button" data-dev="curios">CURIOS</button><button type="button" data-dev="clear">EMPTY POCKETS</button></div>
+    <h2>BODY</h2>
+    <div class="devrow"><button type="button" data-dev="full">FULL</button><button type="button" data-dev="weak">WEAK</button><button type="button" data-dev="faint">ABOUT TO FAINT</button><button type="button" data-dev="nohunger" id="devNoHunger">HUNGER: ON</button></div>
+    <h2>WORLD</h2>
+    <div class="devrow"><button type="button" data-dev="piles">RESET TODAY'S PILES</button><button type="button" data-dev="lotto">TICKETS → YESTERDAY</button></div>
+    <div class="devrow"><select id="devTo" aria-label="teleport to"></select><button type="button" data-dev="tp">GO</button></div>
+    <p class="msg" id="devMsg" role="status"></p>
   </aside>
 
   <aside class="panel" id="sys" hidden aria-label="system">
