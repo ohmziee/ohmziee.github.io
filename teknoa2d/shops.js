@@ -368,6 +368,59 @@
     return true;
   }
 
+  /* ── the nova city treasury: one letter a nova city week (7 days). upkeep
+     on each apartment, a levy on the part of a balance over each threshold,
+     and whatever was left unpaid last time. PLACEHOLDER rates and words ── */
+  var UPKEEP = 0.03;
+  var LEVY = [[5000, 0.02], [20000, 0.05], [100000, 0.10], [500000, 0.20]];
+  function levy(balance) {
+    var owed = 0;
+    for (var i = 0; i < LEVY.length; i++) {
+      var lo = LEVY[i][0], hi = i + 1 < LEVY.length ? LEVY[i + 1][0] : Infinity;
+      if (balance > lo) owed += (Math.min(balance, hi) - lo) * LEVY[i][1];
+    }
+    return Math.floor(owed);
+  }
+  function bill(s) {
+    var homes = Object.keys(s.homes || {}).filter(function (k) { return HOMES[k]; });
+    var upkeep = homes.map(function (k) { return [HOMES[k].name, Math.round(HOMES[k].price * UPKEEP)]; });
+    var up = upkeep.reduce(function (a, b) { return a + b[1]; }, 0), bal = Math.floor(+s.joules || 0), lv = levy(bal), back = (s.treasury && s.treasury.arrears) || 0;
+    return { upkeep: upkeep, up: up, levy: lv, arrears: back, total: up + lv + back, balance: bal, spent: (s.treasury && s.treasury.spent) || 0 };
+  }
+  /* week: the nova city week now. bills at most once per turn of the week,
+     never a backlog. the first time it only says hello */
+  function treasury(MF, s, week, day) {
+    var tr = s.treasury;
+    if (tr.week === week) return null;
+    var first = tr.week < 0;
+    tr.week = week;
+    var letter = { id: 'tr' + week, from: 'NOVA CITY TREASURY', day: day, read: false };
+    if (first) {
+      tr.spent = 0;
+      letter.title = 'welcome to nova city';
+      letter.body = 'the treasury will write once a week (every seven nova city days).\n\nhomes have upkeep. very large balances pay a levy, so the city keeps moving. nothing personal. it is never personal.';
+      s.inbox.push(letter);
+      return { letter: letter, paid: 0 };
+    }
+    var b = bill(s), paid = Math.min(b.total, Math.floor(+s.joules || 0));
+    s.joules = Math.floor(+s.joules || 0) - paid;
+    tr.arrears = b.total - paid;
+    tr.spent = 0;
+    var lines = ['weekly statement, week ' + week + '.', ''];
+    lines.push('you spent ' + MF.fmtJ(b.spent) + ' this week.');
+    lines.push('balance when assessed: ' + MF.fmtJ(b.balance) + '.', '');
+    b.upkeep.forEach(function (u) { lines.push('upkeep, ' + u[0] + ': ' + MF.fmtJ(u[1])); });
+    if (b.levy) lines.push('wealth levy: ' + MF.fmtJ(b.levy));
+    if (b.arrears) lines.push('carried over from last week: ' + MF.fmtJ(b.arrears));
+    if (!b.total) lines.push('nothing owed this week. the treasury thanks you for being unremarkable.');
+    else lines.push('', 'total: ' + MF.fmtJ(b.total) + '. collected: ' + MF.fmtJ(paid) + '.');
+    if (tr.arrears) lines.push('', 'outstanding: ' + MF.fmtJ(tr.arrears) + '. it will be collected next week. the treasury is patient. the treasury is also persistent.');
+    letter.title = b.total ? 'weekly statement: ' + MF.fmtJ(paid) + ' collected' : 'weekly statement: nothing owed';
+    letter.body = lines.join('\n');
+    s.inbox.push(letter);
+    return { letter: letter, paid: paid, bill: b };
+  }
+
   function place(id) {
     if (String(id).indexOf('stash:') === 0) {
       var where = id.slice(6);
@@ -447,6 +500,7 @@
                    FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
                    WEAR: WEAR, rodLeft: rodLeft, wearRod: wearRod,
+                   UPKEEP: UPKEEP, LEVY: LEVY, levy: levy, bill: bill, treasury: treasury,
                    CARRY: CARRY, FROZEN: FROZEN, STASH_CAP: STASH_CAP, HOLD_CAP: HOLD_CAP, weightOf: weightOf, weighs: weighs, carried: carried, load: load, stashOf: stashOf, drop: drop,
                    price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

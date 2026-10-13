@@ -489,6 +489,7 @@
     else if (act === 'h1' || act === 'h6') s.dev.shift = (s.dev.shift || 0) + (act === 'h1' ? 60 : 360);
     else if (act === 'noon' || act === 'midnight') { var c0 = MF.clock(Date.now(), 0); s.dev.shift = ((act === 'noon' ? 720 : 1440) - (c0.hour * 60 + c0.minute) + 1440) % 1440; }
     else if (act === 'real') s.dev.shift = 0;
+    else if (act === 'bill') { if (!s.treasury) s.treasury = { week: -1, spent: 0, arrears: 0 }; s.treasury.week = Math.max(0, Math.floor(MF.clock(Date.now(), s.dev.shift || 0).day / 7) - 1); }
     else if (act === 'piles') s.gathered = { day: '', got: {} };
     else if (act === 'lotto') (s.lotto || []).forEach(function (t) { t.day = '2000-01-01'; });
     else if (act === 'tp') {

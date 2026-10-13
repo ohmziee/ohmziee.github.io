@@ -247,7 +247,7 @@ a{color:var(--lavender)}
   color:#dce3ff;font:clamp(.46rem,1.3vw,.6rem)/1.5 var(--font-pixel);transition:all .25s ease;overflow:hidden;z-index:3}
 .wphone.lifted{right:.3rem;bottom:.3rem;width:calc(100% - .6rem);height:calc(100% - .6rem)}
 .wphone .pbar{display:flex;justify-content:space-between;padding:.3rem .6rem;background:#141a2e;color:#ffe97c}
-.wphone .pscreen{flex:1;position:relative;overflow:hidden;padding:.5rem}
+.wphone .pscreen{flex:1;position:relative;overflow:auto;padding:.5rem}
 .wphone .phint{padding:.25rem .6rem .35rem;color:#6a6a8a;font-size:.85em}
 .papps{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;padding:.3rem}
 .papp{display:flex;flex-direction:column;align-items:center;gap:.3rem;font:inherit;color:#dce3ff;background:none;border:2px solid transparent;border-radius:8px;padding:.4rem .2rem;cursor:pointer}
@@ -265,6 +265,14 @@ a{color:var(--lavender)}
 .pmap .zoom button{font:inherit;background:#141a2e;color:#7cffb2;border:1px solid #3a3150;padding:.1rem .5rem;cursor:pointer}
 @keyframes here{50%{transform:scale(1.6);opacity:.6}}
 @media (prefers-reduced-motion:reduce){.wphone{transition:none}.pmap .here{animation:none}}
+.pmail{display:flex;flex-direction:column;gap:.25rem}
+.pmail .crow.unread{color:#ffe97c}
+.pletter b{color:#ff8a6b}
+.pletter .pt{color:#ffe97c;margin:.3rem 0}
+.pletter pre{margin:0;white-space:pre-wrap;font:inherit;color:#dce3ff}
+.wmail{position:absolute;left:50%;top:.5rem;transform:translateX(-50%);padding:.35rem .7rem;border:3px double #ff8a6b;border-radius:4px;background:#0b0d1a;color:#ff8a6b;font:clamp(.46rem,1.3vw,.6rem)/1.4 var(--font-pixel);pointer-events:none}
+.wmail.on{animation:mailin .4s ease-out}
+@keyframes mailin{from{transform:translate(-50%,-150%)}to{transform:translate(-50%,0)}}
 /* a store's counter: the same box, taller, a list of things */
 .wcounter{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;max-height:calc(100% - 1.2rem);overflow:auto;padding:.6rem .8rem .5rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;color:#f4f6ff;font:clamp(.5rem,1.5vw,.66rem)/1.5 var(--font-pixel)}
 .wcounter b{display:block;margin-bottom:.45rem;color:#7CFFB2;letter-spacing:.2em}

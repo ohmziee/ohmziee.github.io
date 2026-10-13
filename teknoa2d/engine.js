@@ -29,6 +29,8 @@
              wear: {},                                       /* uses left in each rod */
              dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
              stash: {}, hold: { items: {}, res: {} },        /* each apartment's chest, the boat's hold */
+             treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
+             inbox: [],                                      /* letters on the phone: { id, from, day, title, body, read } */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
              body: { food: 100, drink: 100, buff: '', buffT: 0 },  /* hunger and thirst (100 = full), a dish's perk and its seconds left */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
@@ -42,7 +44,9 @@
   function spend(s, n) {
     n = Math.max(0, Math.floor(+n || 0));
     if (joules(s) < n) return false;
-    s.joules = joules(s) - n; return true;
+    s.joules = joules(s) - n;
+    if (s.treasury) s.treasury.spent = (s.treasury.spent || 0) + n;   /* for the weekly letter */
+    return true;
   }
   function fmtJ(n) { return '⚡' + String(Math.floor(+n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
@@ -173,6 +177,9 @@
     if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
+    var tr = s.treasury;
+    s.treasury = { week: Math.floor(+tr.week) >= -1 ? Math.floor(+tr.week) : -1, spent: Math.max(0, Math.floor(+tr.spent || 0)), arrears: Math.max(0, Math.floor(+tr.arrears || 0)) };
+    s.inbox = (Array.isArray(s.inbox) ? s.inbox : []).filter(function (m) { return m && typeof m.title === 'string' && typeof m.body === 'string'; }).slice(-40);
     function counts(o) { var out = {}; Object.keys(o && typeof o === 'object' ? o : {}).forEach(function (k) { var n = Math.floor(+o[k] || 0); if (n > 0) out[k] = n; }); return out; }
     function box(b) { return { items: counts(b && b.items), res: counts(b && b.res) }; }
     s.hold = box(s.hold);

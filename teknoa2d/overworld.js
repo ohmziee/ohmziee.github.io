@@ -1130,7 +1130,7 @@
     if (state === 'faint') return faint(now);
     if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
     if (!tired) warned = false;
-    if (now - bodyT > 400) { bodyT = now; drawBody(); }
+    if (now - bodyT > 400) { bodyT = now; drawBody(); weekly(); }
   }
   /* the time and the weather where you stand */
   function novaNow() { return window.MF.clock(Date.now(), s.dev && s.dev.shift || 0); }
@@ -1150,6 +1150,15 @@
     var SH = window.MFShops, kg = SH.carried(s), ld = SH.load(s);
     $('wLoad').textContent = kg + '/' + SH.CARRY + 'kg';
     $('wLoad').className = 'ld' + (ld > SH.FROZEN ? ' stuck' : ld > 1 ? ' over' : '');
+  }
+  /* the treasury writes once a nova city week (shops.js treasury) */
+  function weekly() {
+    var c = novaNow(), r = window.MFShops.treasury(window.MF, s, Math.floor(c.day / 7), c.day);
+    if (!r) return;
+    if (r.paid) wallet('-' + window.MF.fmtJ(r.paid));
+    if (api.save) api.save();
+    $('wMail').hidden = false; $('wMail').classList.remove('on'); void $('wMail').offsetWidth; $('wMail').classList.add('on');
+    setTimeout(function () { $('wMail').hidden = true; }, 5000);
   }
   function faint(now) {
     if (mini) closeMini(); if (counter) closeCounter(); if (table && !(table.hand && !table.hand.done)) closeTable();
@@ -1188,7 +1197,7 @@
     if (!bTap.busy && !bTap.moved && Date.now() - bTap.at < 260 && active) phoneTap();
   }
   var phone = null, pPrev = {}, pDrawn = 0;
-  var APPS = [['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['sys', 'SYS', '#b9a8ff', '⚙']];
+  var APPS = [['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
   var MAP_LEVELS = ['terranova', 'nova sea', 'nova city', 'local'];
   var MAPIMG = {
     biomes: { src: 'maps/biomes.png', here: [0.629, 0.797] }, states: { src: 'maps/states.png', here: [0.629, 0.797] },
@@ -1209,7 +1218,7 @@
   function closePhone() { phone = null; $('wPhone').hidden = true; $('wPhone').classList.remove('lifted'); }
   function openApp(id) {
     if (id === 'sys') { closePhone(); if (window.MFUI) window.MFUI.openSys(); return; }
-    phone.app = id;
+    phone.app = id; phone.msel = 0; phone.open = -1;
     $('wPhone').classList.toggle('lifted', id === 'map');
     drawPhone();
   }
@@ -1223,6 +1232,14 @@
       if (rt) phone.sel = (phone.sel + 1) % n;
       if (up || dn || lf || rt) drawPhone();
       if (a) openApp(APPS[phone.sel][0]);
+    } else if (phone.app === 'mail') {
+      var box = (s.inbox || []).slice().reverse();
+      if (phone.open >= 0) { if (a) { phone.open = -1; drawPhone(); } }
+      else {
+        if (up && box.length) { phone.msel = (phone.msel + box.length - 1) % box.length; drawPhone(); }
+        if (dn && box.length) { phone.msel = (phone.msel + 1) % box.length; drawPhone(); }
+        if (a && box[phone.msel]) { phone.open = phone.msel; box[phone.msel].read = true; if (api.save) api.save(); drawPhone(); }
+      }
     } else if (phone.app === 'map') {
       if (up && phone.level < MAP_LEVELS.length - 1) { phone.level++; drawPhone(); }
       if (dn && phone.level > 0) { phone.level--; drawPhone(); }
@@ -1246,7 +1263,8 @@
       APPS.forEach(function (ap, i) {
         var b = document.createElement('button'); b.type = 'button'; b.className = 'papp' + (i === phone.sel ? ' sel' : '');
         var ic = document.createElement('i'); ic.style.background = ap[2]; ic.textContent = ap[3]; b.appendChild(ic);
-        var lb = document.createElement('span'); lb.textContent = ap[1]; b.appendChild(lb);
+        var unread = ap[0] === 'mail' ? (s.inbox || []).filter(function (m) { return !m.read; }).length : 0;
+        var lb = document.createElement('span'); lb.textContent = ap[1] + (unread ? ' (' + unread + ')' : ''); b.appendChild(lb);
         b.addEventListener('click', function (e) { e.preventDefault(); phone.sel = i; openApp(ap[0]); });
         grid.appendChild(b);
       });
@@ -1259,6 +1277,26 @@
       box.innerHTML = '<div class="big">' + c.text + '</div><div>nova city · day ' + c.day + ' · ' + c.phase + '</div><div>' + tempNow() + '°C ' + (inside ? 'indoors' : 'here') + '</div><div class="fc">' + fc + '</div>';
       scr.appendChild(box);
       hint.textContent = 'next 12 hours · tap B: back';
+    } else if (phone.app === 'mail') {
+      var mails = (s.inbox || []).slice().reverse(), list = document.createElement('div'); list.className = 'pmail';
+      if (phone.open >= 0 && mails[phone.open]) {
+        var m = mails[phone.open], art = document.createElement('div'); art.className = 'pletter';
+        var hd = document.createElement('b'); hd.textContent = m.from + ' · day ' + m.day; art.appendChild(hd);
+        var tt = document.createElement('div'); tt.className = 'pt'; tt.textContent = m.title; art.appendChild(tt);
+        var bd = document.createElement('pre'); bd.textContent = m.body; art.appendChild(bd);
+        list.appendChild(art);
+        hint.textContent = 'A: back to the list · tap B: home';
+      } else {
+        if (!mails.length) { var e0 = document.createElement('p'); e0.textContent = 'no mail yet.'; list.appendChild(e0); }
+        mails.forEach(function (m, i) {
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'crow' + (i === phone.msel ? ' sel' : '') + (m.read ? '' : ' unread');
+          b.textContent = (m.read ? '' : '● ') + m.title;
+          b.addEventListener('click', function (ev) { ev.preventDefault(); phone.msel = i; phone.open = i; m.read = true; if (api.save) api.save(); drawPhone(); });
+          list.appendChild(b);
+        });
+        hint.textContent = '▲ ▼ pick · A read · tap B: home';
+      }
+      scr.appendChild(list);
     } else if (phone.app === 'map') drawMap();
   }
   /* ── the map app ── */
