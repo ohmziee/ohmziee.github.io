@@ -231,20 +231,54 @@
     }
     /* small things that sit on the ground (fires) get ground drawn under them */
     var under = new Uint8Array(n);
-    (w.marks || []).forEach(function (m) { if (m.fire) under[m.y * w.W + m.x] = 1; });
+    (w.marks || []).forEach(function (m) {
+      if (m.fire) under[m.y * w.W + m.x] = 1;
+      /* the tower stands in the open: ground under its whole footprint */
+      if (m.id === 'tower') for (var yy = m.y; yy < m.y + m.h; yy++) for (var xx = m.x; xx < m.x + m.w; xx++) under[yy * w.W + xx] = 1;
+    });
     return { roof: roof, door: door, under: under };
   }
 
   /* landmarks: one picture across their whole footprint */
   var MARK_ART = {
+    /* the tuned tower: a replica of the one in paris, iron lattice, two
+       platforms, a spire, retuned so the lights hum in colours */
     tower: function (g, w, h) {
-      px(g, '#1c1736', 0, 0, w, h);
-      var c = ['#ff4fd8', '#7cf5ff', '#9f8cff', '#ffe97c'];
-      for (var y = 4; y < h; y += 2) {
-        var span = Math.round((y / h) * (w - 8)) + 4, x0 = (w - span) >> 1;
-        px(g, c[(y >> 1) % 4], x0, y, span, 1);
+      var iron = '#4a3f6e', dark = '#2a2342', lit = '#8a7ac0', cx = w / 2;
+      var y1 = Math.round(h * 0.6), y2 = Math.round(h * 0.33), y3 = Math.round(h * 0.1);
+      /* the half-width of the outside of the tower at row y */
+      function half(y) {
+        if (y >= y1) return 6 + (h - 1 - y) / (h - 1 - y1) * -0 + (y - y1) / (h - 1 - y1) * 16 + 6;
+        if (y >= y2) return 5 + (y - y2) / (y1 - y2) * 7;
+        if (y >= y3) return 1.5 + (y - y3) / (y2 - y3) * 3.5;
+        return 1;
       }
-      px(g, '#f4f6ff', (w >> 1) - 1, 0, 2, 6);
+      for (var y = 0; y < h; y++) {
+        var hw = half(y), x0 = Math.round(cx - hw), x1 = Math.round(cx + hw) - 1;
+        if (y >= y1) {
+          /* the legs, and the arch between them */
+          var leg = 4 + Math.round((y - y1) / (h - y1) * 3), archTop = y1 + (h - y1) * 0.35, ay = (y - archTop) / (h - archTop);
+          var open = y > archTop ? Math.round((hw - leg) * Math.sqrt(Math.min(1, ay * 1.4))) : 0;
+          for (var x = x0; x <= x1; x++) {
+            var d = Math.abs(x + 0.5 - cx);
+            if (d < open) continue;
+            px(g, (x + y) % 4 === 0 || (x - y) % 4 === 0 ? dark : iron, x, y);
+          }
+        } else if (y >= y3) {
+          for (var x2 = x0; x2 <= x1; x2++) px(g, y < y2 && x2 > x0 && x2 < x1 ? dark : (x2 + y) % 3 === 0 ? dark : iron, x2, y);
+        } else px(g, iron, x0, y, Math.max(1, x1 - x0 + 1), 1);
+      }
+      /* highlights down the left of each leg */
+      for (var y4 = y3; y4 < h; y4++) px(g, lit, Math.round(cx - half(y4)), y4);
+      /* the platforms, lit */
+      function deck(y, hw, col) { px(g, OUT, Math.round(cx - hw) - 1, y - 1, Math.round(hw * 2) + 2, 4); px(g, dark, Math.round(cx - hw), y, Math.round(hw * 2), 2); px(g, col, Math.round(cx - hw), y, Math.round(hw * 2), 1); }
+      deck(y1, half(y1) + 2, '#ff4fd8'); deck(y2, half(y2) + 2, '#7cf5ff'); deck(y3, half(y3) + 2, '#9f8cff');
+      /* the spire and its light */
+      px(g, '#dce3ff', Math.round(cx) - 1, 0, 1, y3); px(g, '#ffe97c', Math.round(cx) - 2, 0, 3, 2);
+      /* outline whatever is drawn */
+      var id = g.getImageData(0, 0, w, h), dd = id.data, on = function (x, y) { return x >= 0 && y >= 0 && x < w && y < h && dd[(y * w + x) * 4 + 3] > 0; }, edge = [];
+      for (var yy = 0; yy < h; yy++) for (var xx = 0; xx < w; xx++) if (!on(xx, yy) && (on(xx + 1, yy) || on(xx - 1, yy) || on(xx, yy + 1) || on(xx, yy - 1))) edge.push([xx, yy]);
+      edge.forEach(function (e) { px(g, OUT, e[0], e[1]); });
     },
     sapphire: function (g, w, h) {
       px(g, '#0e2a6a', 0, 0, w, h); px(g, '#3a7aff', 2, 2, w - 4, h - 6);
@@ -531,7 +565,7 @@
     px(g, '#5a3c26', 1, 7, w - 2, 8); px(g, '#7a5638', 1, 7, w - 2, 1);
     px(g, '#ff8a6b', 4, 9, 3, 3); px(g, '#7cffb2', 11, 9, 3, 3); px(g, '#ffd36a', 18, 9, 3, 3); px(g, '#ff8a6b', 25, 9, 3, 3);
   };
-  var markArt = {}, UNFRAMED = { chest: 1, drumfire: 1, campfire: 1, grill: 1, slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
+  var markArt = {}, UNFRAMED = { tower: 1, chest: 1, drumfire: 1, campfire: 1, grill: 1, slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
     var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
