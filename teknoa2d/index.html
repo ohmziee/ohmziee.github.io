@@ -22,6 +22,7 @@
 <script src="gangs.js" defer></script>
 <script src="foes.js" defer></script>
 <script src="combat.js" defer></script>
+<script src="streets.js" defer></script>
 <script src="shops.js" defer></script>
 <script src="world.js" defer></script>
 <script src="backup.js" defer></script>
@@ -147,6 +148,8 @@
     <h2>BODY</h2>
     <div class="devrow"><button type="button" data-dev="xp500">+500 EXP</button><button type="button" data-dev="traits">ALL TRAITS +5 LV</button><button type="button" data-dev="relevel">RESET LEVELS</button></div>
     <div class="devrow"><button type="button" data-dev="full">FULL</button><button type="button" data-dev="weak">WEAK</button><button type="button" data-dev="faint">ABOUT TO FAINT</button><button type="button" data-dev="hurt">HEALTH 10</button><button type="button" data-dev="drained">STA + BRAIN 5</button><button type="button" data-dev="nohunger" id="devNoHunger">HUNGER: ON</button><button type="button" data-dev="noweight" id="devNoWeight">CARRY LIMIT: ON</button></div>
+    <h2>FOES</h2>
+    <div class="devrow"><select id="devFoe" aria-label="which foe"><option value="">whoever fits here</option><option>bandit</option><option>zombie</option><option>skeleton</option><option>rogueai</option><option>vampire</option><option>werewolf</option><option>agent</option><option>vigilante</option><option>gang:intergang</option><option>gang:electricdead</option><option>gang:buzzeddragons</option><option>gang:foojeez</option><option>gang:revengers</option><option>gang:nullifiers</option></select><button type="button" data-dev="foe">SPAWN</button><button type="button" data-dev="peace" id="devPeace">FOES: ON</button></div>
     <h2>WORLD</h2>
     <div class="devrow"><button type="button" data-dev="piles">RESET TODAY'S PILES</button><button type="button" data-dev="lotto">TICKETS → YESTERDAY</button></div>
     <div class="devrow"><button type="button" data-dev="h1">TIME +1H</button><button type="button" data-dev="h6">TIME +6H</button><button type="button" data-dev="noon">NOON</button><button type="button" data-dev="midnight">MIDNIGHT</button><button type="button" data-dev="real">REAL TIME</button><button type="button" data-dev="bill">BILL NOW</button></div>

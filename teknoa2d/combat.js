@@ -69,15 +69,16 @@
   }
   var F = function () { return root.MFFoes; }, G = function () { return root.MFGangs || {}; };
   /* a foe, ready to fight: foe('bandit', 'bruiser', 3) or foe('gang:intergang', 'enforcer', 2).
-     rng picks the sub (when none is given) and what's in their pockets */
-  function foe(id, sub, level, rng) {
+     rng picks the sub (when none is given) and what's in their pockets.
+     exact: the level is final (a gang's threat doesn't add levels to it) */
+  function foe(id, sub, level, rng, exact) {
     rng = rng || Math.random;
     var base, name, gang = null, mult = 1, lv = Math.max(1, Math.floor(+level || 1));
     if (id.indexOf('gang:') === 0) {
       gang = G()[id.slice(5)];
       if (!gang) throw new Error('no such gang: ' + id);
       var th = F().THREAT[gang.threat] || F().THREAT.medium;
-      base = F().GANGER; mult = th.mult; lv = Math.max(1, lv + th.lv);
+      base = F().GANGER; mult = th.mult; if (!exact) lv = Math.max(1, lv + th.lv);
     } else {
       base = F().FOES[id];
       if (!base) throw new Error('no such foe: ' + id);

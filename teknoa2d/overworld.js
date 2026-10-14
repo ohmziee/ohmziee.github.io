@@ -842,6 +842,7 @@
   function occupied(x, y) {
     if (M.solid(world, x, y)) return true;
     for (var i = 0; i < npcs.length; i++) if (npcs[i].x === x && npcs[i].y === y) return true;
+    if (mobAt(x, y)) return true;
     return me.x === x && me.y === y;
   }
   var DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -1403,6 +1404,7 @@
     MF.rest(s); winded = false;
     me.sail = false;
     if (inside) goOut();
+    var beat = lostLines();
     if (home) { goIn(home); line = ['you come round on your own floor.\nsomeone left a glass of water by the door. you don\'t ask who.']; }
     else {
       /* a collapse (health gone) costs more than a faint, and always ends here */
@@ -1418,7 +1420,7 @@
     warned = false;
     if (api.save) api.save();
     drawBody();
-    say(line, home ? '' : 'MEDIC');
+    say(beat.concat(line), home ? '' : 'MEDIC');
   }
 
   /* ── the phone: a quick tap of B (holding B still runs) ─────
@@ -2226,7 +2228,7 @@
       pressedA = false;
       if (talkBox && talkBox.yes && talkBox.lines.length === 1) answer(true);
       else if (talkBox) nextLine();
-      else if (!me.moving) interact();
+      else if (!me.moving && !attackTap(now)) interact();
     }
     if (L) { L.step(dt, SPEED); online(now); }
     if (talkBox) return;
@@ -2249,6 +2251,7 @@
       var dir = held.up ? 'up' : held.down ? 'down' : held.left ? 'left' : held.right ? 'right' : '';
       if (dir) tryMove(dir);
     }
+    tickMobs(dt, now);
     /* the others wander a little, near where they stand */
     if (now - npcTick > 900) {
       npcTick = now;
@@ -2262,6 +2265,169 @@
       });
     }
   }
+
+  /* ── the street: foes that come for you (streets.js says who and when,
+     combat.js does the maths). they turn up a few tiles off with a '!',
+     walk you down and hit when they're next to you. double-tap A swings at
+     whoever's next to you (it turns you to face them first). lose to a
+     robber and you wake up with empty pockets, all but the safe slots ── */
+  var mobs = [], spawnClock = -45, lastA = 0, swingFx = 0, hurtUntil = 0, floats = [], lostTo = null;
+  var DOUBLE_TAP = 380, SWING_CD = 330, GIVE_UP = 14;
+  var MOB_LOOK = {
+    bandit:   { H: '#2a2a2a', S: '#b07a5a', C: '#5a4a3a', c: '#3a3020', P: '#2a2420', k: '#111', acc: 'glasses', A: '#14121c' },
+    zombie:   { H: '#3a3a2a', S: '#7fa36a', C: '#4a4a3a', c: '#33332a', P: '#3a3020', k: '#111', E: '#ffe97c', m: '#5a2a2a' },
+    skeleton: { H: '#e8e4d8', B: '#e8e4d8', S: '#e8e4d8', C: '#d8d4c8', c: '#b8b4a8', P: '#d8d4c8', k: '#111', hair: 'buzz' },
+    rogueai:  { H: '#3a3f4a', S: '#8a92a6', C: '#2a2f3d', P: '#2a2f3d', k: '#111', E: '#ff3a4a', m: '#5a6378', hair: 'buzz' },
+    vampire:  { H: '#14121c', S: '#e8e4f0', C: '#14121c', c: '#5a1020', P: '#14121c', k: '#000', E: '#ff3a4a', m: '#8a1a2a' },
+    werewolf: { H: '#5a4632', B: '#5a4632', S: '#7a5e44', C: '#5a4632', P: '#4a3a2a', k: '#1a1410', E: '#ffe97c', fur: 1 },
+    agent:    { H: '#14121c', S: '#e0b48a', C: '#e6e8f0', c: '#b8bcc8', P: '#14121c', k: '#000', hair: 'buzz', acc: 'glasses', A: '#111' }
+  };
+  /* gangs wear their colour; the troop and the revengers are apes */
+  var APE_GANGS = { troop: 1, revengers: 1 };
+  function mobLook(f, seed) {
+    if (MOB_LOOK[f.id]) return MOB_LOOK[f.id];
+    var base = f.sub === 'ape' || APE_GANGS[f.gang] ? crowdLook({ kind: 'ape', seed: seed }) : crowdLook({ seed: seed });
+    var out = {}; for (var k in base) out[k] = base[k];
+    if (f.colour) { out.C = f.colour; out.c = shade(f.colour, 0.7); }
+    return out;
+  }
+  function mobAt(x, y) { for (var i = 0; i < mobs.length; i++) if (mobs[i].x === x && mobs[i].y === y) return mobs[i]; return null; }
+  function zoneNow() { return window.MFStreets ? window.MFStreets.zone(world, me.x, me.y, inside, me.sail) : ''; }
+  function float(x, y, text, col) { floats.push({ x: x, y: y, text: text, col: col || '#fff', t0: performance.now() }); if (floats.length > 12) floats.shift(); }
+  function spawnFoe(zn, force) {
+    var ST = window.MFStreets, C = window.MFCombat, LV = window.MFLevel, di = world.dist[me.y * world.W + me.x];
+    var p = typeof force === 'string' ? { id: force, sub: '', level: 1 } : ST.pick({ s: s, MF: window.MF, A: A, zone: zn, district: di >= 0 ? D[di].id : '', dark: darkness(novaNow()), level: LV ? LV.level(s) : 1 }, Math.random);
+    if (!p) return null;
+    var f = C.foe(p.id, p.sub, p.level, Math.random, p.exact), seed = Math.floor(Math.random() * 1e9);
+    for (var tries = 0; tries < 60; tries++) {
+      var dx = Math.floor(Math.random() * 19) - 9, dy = Math.floor(Math.random() * 11) - 5, d = Math.abs(dx) + Math.abs(dy), x = me.x + dx, y = me.y + dy;
+      if (d < 5 || d > 10 || x < 0 || y < 0 || x >= world.W || y >= world.H || occupied(x, y)) continue;
+      if (ST.zone(world, x, y, inside, false) === '' || (zn === 'city') !== (world.dist[y * world.W + x] !== -2)) continue;
+      var m = { f: f, x: x, y: y, fx: x, fy: y, t: 0, moving: false, dir: 'down', step: 0, cd: 1.2, hurt: 0, lunge: 0,
+                speed: 2.2 + Math.min(2.5, f.ref * 0.12), look: mobLook(f, seed) };
+      mobs.push(m);
+      float(x * TS + 6, y * TS - 4, '!', '#ff4f5e');
+      return m;
+    }
+    return null;
+  }
+  /* the foe next to you: the one you face, else any */
+  function mobNear() {
+    var d = DIRS[me.dir], m = mobAt(me.x + d[0], me.y + d[1]);
+    if (m) return m;
+    for (var k in DIRS) { m = mobAt(me.x + DIRS[k][0], me.y + DIRS[k][1]); if (m) return m; }
+    return null;
+  }
+  function faceTo(dx, dy) { return Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); }
+  /* A with a foe beside you: a double tap swings, a single one just squares up */
+  function attackTap(now) {
+    var m = mobNear();
+    if (!m) return false;
+    me.dir = faceTo(m.x - me.x, m.y - me.y);
+    if (now - lastA < DOUBLE_TAP) { lastA = 0; swingAt(m, now); } else lastA = now;
+    return true;
+  }
+  function swingAt(m, now) {
+    if (now < swingFx + SWING_CD) return;
+    var C = window.MFCombat, LV = window.MFLevel, MF = window.MF, P = C.player(s, LV), r = C.strike(P, m.f), w = C.swing(s);
+    swingFx = now;
+    if (w.broke) float(me.x * TS + 2, me.y * TS - 12, C.WEAPONS[w.key].name.replace(/^an? /, '') + ' breaks!', '#ffb02e');
+    if (!r.hit) { float(m.x * TS + 2, m.y * TS - 6, 'miss', '#9aa0b8'); return; }
+    m.f.hp -= r.dmg; m.hurt = now + 220; m.cd = Math.max(m.cd, 0.35);
+    float(m.x * TS + 3, m.y * TS - 6, (r.crit ? 'CRIT ' : '') + r.dmg, r.crit ? '#ffe97c' : '#fff');
+    if (m.f.hp <= 0) return beaten(m);
+    /* knocked back a tile, if there's room */
+    var kx = m.x + Math.sign(m.x - me.x), ky = m.y + Math.sign(m.y - me.y);
+    if ((kx !== m.x) !== (ky !== m.y) && !occupied(kx, ky)) { m.fx = m.x; m.fy = m.y; m.x = kx; m.y = ky; m.moving = true; m.t = 0.5; }
+  }
+  function beaten(m) {
+    var MF = window.MF;
+    mobs = mobs.filter(function (o) { return o !== m; });
+    if (m.f.joules > 0) { MF.earn(s, m.f.joules); wallet('+' + MF.fmtJ(m.f.joules)); }
+    exp('combat', { xp: m.f.xp });
+    float(m.x * TS, m.y * TS - 8, m.f.name + ' down', '#7cffb2');
+    if (api.save) api.save();
+  }
+  function mobHit(m, now) {
+    var C = window.MFCombat, MF = window.MF, P = C.player(s, window.MFLevel), r = C.strike(m.f, { def: P.def, ref: P.ref, soak: P.soak });
+    m.cd = 1.5 - Math.min(0.7, m.f.ref * 0.03); m.lunge = now + 150;
+    if (!r.hit) { float(me.x * TS + 2, me.y * TS - 6, 'dodge', '#7cf5ff'); return; }
+    MF.hurt(s, r.dmg); hurtUntil = now + 260;
+    if (m.f.drain) m.f.hp = Math.min(m.f.max, m.f.hp + Math.round(r.dmg * m.f.drain));
+    float(me.x * TS + 3, me.y * TS - 6, '-' + r.dmg, '#ff4f5e');
+    drawBody();
+    if (s.body.health <= 0) lose(m, now);
+  }
+  function lose(m, now) {
+    var took = m.f.robs ? window.MFCombat.rob(s, window.MF) : null;
+    lostTo = { name: m.f.name, took: took };
+    mobs = []; floats = [];
+    wallet();
+    faint(now, true);
+  }
+  /* what you wake up to after a beating (wakeUp puts it first) */
+  function lostLines() {
+    var l = lostTo, MF = window.MF; lostTo = null;
+    if (!l) return [];
+    if (!l.took) return ['a ' + l.name + ' left you for dead out there.\nwe got to you before anything else did.'];
+    var n = 0; ['items', 'res'].forEach(function (b) { Object.keys(l.took[b]).forEach(function (k) { n += l.took[b][k]; }); });
+    var kept = window.MF.safeKeys(s).length;
+    return ['a ' + l.name + ' went through your pockets before we found you.\n' + (l.took.joules ? MF.fmtJ(l.took.joules) : 'not a joule') + (n ? ' and ' + n + ' thing' + (n > 1 ? 's' : '') : '') + ' gone.' + (kept ? ' the safe slots held.' : '')];
+  }
+  function tickMobs(dt, now) {
+    var zn = zoneNow();
+    if (!zn) { mobs = []; return; }
+    if (!(s.dev && s.dev.peace) && window.MFStreets) {
+      spawnClock += dt;
+      if (spawnClock >= window.MFStreets.CHECK[zn]) {
+        spawnClock = 0;
+        var di = world.dist[me.y * world.W + me.x];
+        if (window.MFStreets.roll(zn, di >= 0 ? D[di].id : '', darkness(novaNow()), mobs.length, Math.random)) spawnFoe(zn);
+      }
+    }
+    mobs.forEach(function (m) {
+      m.cd -= dt;
+      if (m.moving) { m.t += dt * m.speed; if (m.t >= 1) { m.moving = false; m.t = 0; } return; }
+      var dx = me.x - m.x, dy = me.y - m.y, d = Math.abs(dx) + Math.abs(dy);
+      if (d > GIVE_UP) { m.gone = true; return; }
+      if (d === 1) { m.dir = faceTo(dx, dy); if (m.cd <= 0) mobHit(m, now); return; }
+      var opts = Math.abs(dx) >= Math.abs(dy) ? [[Math.sign(dx), 0], [0, Math.sign(dy)]] : [[0, Math.sign(dy)], [Math.sign(dx), 0]];
+      for (var i = 0; i < opts.length; i++) {
+        var o = opts[i], nx = m.x + o[0], ny = m.y + o[1];
+        if ((!o[0] && !o[1]) || occupied(nx, ny)) continue;
+        m.fx = m.x; m.fy = m.y; m.x = nx; m.y = ny; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]);
+        break;
+      }
+    });
+    mobs = mobs.filter(function (m) { return !m.gone; });
+  }
+  /* bars over heads, numbers that float up, the swing, the sting of a hit */
+  function drawFight(cx, cy, now, ppx, ppy) {
+    mobs.forEach(function (m) {
+      var mx = Math.round((m.moving ? m.fx + (m.x - m.fx) * m.t : m.x) * TS - cx), my = Math.round((m.moving ? m.fy + (m.y - m.fy) * m.t : m.y) * TS - cy);
+      px(ctx, OUT, mx + 1, my - 6, 14, 4); px(ctx, '#3a1218', mx + 2, my - 5, 12, 2);
+      px(ctx, m.f.tier === 'unnamed' && m.f.level > (window.MFLevel ? window.MFLevel.level(s) + 3 : 99) ? '#ff4fd8' : '#ff4f5e', mx + 2, my - 5, Math.max(1, Math.round(12 * m.f.hp / m.f.max)), 2);
+    });
+    if (mobs.length || now < hurtUntil + 1500) {
+      var hx = Math.round(ppx - cx), hy = Math.round(ppy - cy), MF = window.MF;
+      px(ctx, OUT, hx + 1, hy - 6, 14, 4); px(ctx, '#123a22', hx + 2, hy - 5, 12, 2);
+      px(ctx, '#7cffb2', hx + 2, hy - 5, Math.max(0, Math.round(12 * MF.vital(s, 'hp') / MF.maxOf(s, 'hp'))), 2);
+    }
+    if (now < swingFx + 140) {
+      var d = DIRS[me.dir], sx = Math.round(ppx - cx) + 8 + d[0] * 10, sy = Math.round(ppy - cy) + 7 + d[1] * 10;
+      ctx.strokeStyle = '#f4f6ff'; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.arc(sx, sy, 5, Math.atan2(d[1], d[0]) - 1.2, Math.atan2(d[1], d[0]) + 1.2); ctx.stroke();
+    }
+    ctx.font = 'bold 7px monospace'; ctx.textBaseline = 'bottom';
+    floats = floats.filter(function (f) { return now - f.t0 < 900; });
+    floats.forEach(function (f) {
+      var up = (now - f.t0) / 900 * 10, x = Math.round(f.x - cx), y = Math.round(f.y - cy - up);
+      ctx.fillStyle = OUT; ctx.fillText(f.text, x + 1, y + 1); ctx.fillStyle = f.col; ctx.fillText(f.text, x, y);
+    });
+    if (now < hurtUntil) { ctx.fillStyle = 'rgba(255,40,60,.22)'; ctx.fillRect(0, 0, VW * TS, VH * TS); }
+  }
+  /* DEV: someone, right now (an id, or whoever fits here) */
+  function devFoe(id) { var zn = zoneNow(); if (!zn) return 'not out here'; var m = spawnFoe(zn, id || false); return m ? m.f.name + ' lv ' + m.f.level : 'nobody fits here'; }
 
   /* ── night: how dark it is, and the city's lights through it ──
      0 by day; ramps up 18:00-21:00, full till 05:00, lifts by 07:00 */
@@ -2410,6 +2576,11 @@
     if (!inside) { drawLamps(cx, cy); drawLoose(cx, cy, now); drawPiles(cx, cy, now); }
     /* people, back to front */
     var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
+    mobs.forEach(function (m) {
+      var mx = (m.moving ? m.fx + (m.x - m.fx) * m.t : m.x) * TS, my = (m.moving ? m.fy + (m.y - m.fy) * m.t : m.y) * TS;
+      if (now < m.lunge) { var ld = DIRS[m.dir]; mx += ld[0] * 3; my += ld[1] * 3; }
+      who.push({ x: mx, y: my, img: sprite(m.look, m.dir, m.moving && m.t > 0.25 && m.t < 0.75 ? 1 : 0), mob: m });
+    });
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.sail ? 0 : me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1, boat: me.sail });
     if (L && (!inside || inside.place)) L.list().forEach(function (o) {
       var ox = (o.t < 1 ? o.fx + (o.x - o.fx) * o.t : o.x) * TS, oy = (o.t < 1 ? o.fy + (o.y - o.fy) * o.t : o.y) * TS;
@@ -2420,7 +2591,9 @@
     who.forEach(function (p) {
       var bob = p.boat ? Math.floor(now / 450) % 2 : 0;
       if (!p.boat) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(Math.round(p.x - cx) + 4, Math.round(p.y - cy) + 14, 8, 2); }
+      if (p.mob && now < p.mob.hurt && Math.floor(now / 60) % 2) ctx.globalAlpha = 0.35;
       ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2 - (p.boat ? 3 : 0) + bob);
+      ctx.globalAlpha = 1;
       if (p.boat) ctx.drawImage(hull(), Math.round(p.x - cx), Math.round(p.y - cy) + bob);
       /* a real person: a little violet pip over their head */
       if (p.them) { px(ctx, OUT, Math.round(p.x - cx) + 6, Math.round(p.y - cy) - 7, 4, 4); px(ctx, '#b9a8ff', Math.round(p.x - cx) + 7, Math.round(p.y - cy) - 6, 2, 2); }
@@ -2440,6 +2613,7 @@
     var nc = novaNow(), dk = darkness(nc);
     if (nc.phase === 'dawn' || nc.phase === 'dusk' || nc.phase === 'day') { ctx.fillStyle = LIGHT[nc.phase]; ctx.fillRect(0, 0, VW * TS, VH * TS); }
     if (dk > 0) night(dk, cx, cy, now, ppx, ppy);
+    drawFight(cx, cy, now, ppx, ppy);
     ctx.fillStyle = 'rgba(159,140,255,.3)';
     var drops = Math.round(VW * VH / 10);
     for (var r = 0; r < drops; r++) {
@@ -2614,5 +2788,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y }; }); }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
 })();

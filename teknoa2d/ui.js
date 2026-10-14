@@ -474,6 +474,12 @@
     else if (act === 'bill') { if (!s.treasury) s.treasury = { week: -1, spent: 0, arrears: 0 }; s.treasury.week = Math.max(0, Math.floor(MF.clock(Date.now(), s.dev.shift || 0).day / 7) - 1); }
     else if (act === 'piles') s.gathered = { day: '', got: {} };
     else if (act === 'lotto') (s.lotto || []).forEach(function (t) { t.day = '2000-01-01'; });
+    else if (act === 'foe') {
+      var who = $('devFoe').value;
+      if (!(window.MFWorld && window.MFWorld.active)) return devMsg('go outside first.');
+      return devMsg('spawned: ' + window.MFWorld.devFoe(who));
+    }
+    else if (act === 'peace') s.dev.peace = !s.dev.peace;
     else if (act === 'tp') {
       var p = $('devTo')._places[+$('devTo').value];
       if (!p) return;
@@ -485,6 +491,7 @@
       return;
     }
     $('devNoHunger').textContent = 'HUNGER: ' + (s.dev.nohunger ? 'OFF' : 'ON');
+    $('devPeace').textContent = 'FOES: ' + (s.dev.peace ? 'OFF' : 'ON');
     $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev.noweight ? 'OFF' : 'ON');
     if (store) MF.save(s, store);
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.refresh();
@@ -492,7 +499,7 @@
   }
   [].forEach.call(document.querySelectorAll('[data-dev]'), function (b) { b.addEventListener('click', function () { devDo(b.getAttribute('data-dev')); }); });
   $('devBtn').addEventListener('click', function () {
-    toggle('dev', function () { devPlaces(); devMsg(''); $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON'); });
+    toggle('dev', function () { devPlaces(); devMsg(''); $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON'); $('devPeace').textContent = 'FOES: ' + (s.dev && s.dev.peace ? 'OFF' : 'ON'); });
   });
 
   /* SYS lives in the phone now (overworld.js calls this) */
