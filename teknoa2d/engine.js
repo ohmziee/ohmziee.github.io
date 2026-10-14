@@ -20,7 +20,7 @@
   var SAVE_KEY = 'exiled.mf.save';
 
   function newState() {
-    return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {}, power: '' },
+    return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {}, power: '', side: '' },
              flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {},
              world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
@@ -29,6 +29,7 @@
              wear: {},                                       /* uses left in each rod */
              torch: 0,                                       /* seconds of flashlight battery left */
              safe: [],                                       /* the inventory's safe slots: item kinds a mugger can't take */
+             equip: '',                                      /* the weapon in hand (combat.js WEAPONS); '' is fists */
              dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
              stash: {}, hold: { items: {}, res: {} },        /* each apartment's chest, the boat's hold */
              treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
@@ -207,7 +208,9 @@
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
-                 look: p.look && typeof p.look === 'object' ? p.look : {}, power: p.power === 'ibc' || p.power === 'ade' ? p.power : '' };
+                 look: p.look && typeof p.look === 'object' ? p.look : {}, power: p.power === 'ibc' || p.power === 'ade' ? p.power : '',
+                 /* a product: walked out on corpocult, or still theirs */
+                 side: p.side === 'loyal' || p.side === 'defector' ? p.side : '' };
     /* the first four origins were all earthlings from brooklyn: they become
        earthlings and get one chance to pick again (ui.js) */
     if (OLD_ORIGINS[s.player.origin]) { s.player.origin = 'earthling'; s.flags['origin-repick'] = 1; }
