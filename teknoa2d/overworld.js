@@ -986,6 +986,7 @@
         /* any lie-down puts stamina and brainpower back; health once a day */
         var spent = window.MF.vital(s, 'sta') < window.MF.maxOf(s, 'sta') || window.MF.vital(s, 'int') < window.MF.maxOf(s, 'int');
         window.MF.rest(s); winded = false;
+        if (s.items && s.items.flashlight) { spent = spent || s.torch < window.MFShops.GEAR.flashlight.secs; s.torch = window.MFShops.GEAR.flashlight.secs; }
         if (s.body.rested !== today2 && window.MF.vital(s, 'hp') < window.MF.maxOf(s, 'hp')) { s.body.rested = today2; window.MF.heal(s, 25); drawBody(); if (api.save) api.save(); return say(['you lie down for a while. the city hums.\nyou get up feeling better. (+25 health, rested)']); }
         if (spent) { drawBody(); if (api.save) api.save(); return say(['you lie down for a while. the city hums.\nyou get up rested. (stamina and brainpower back)']); }
         if (api.save) api.save();
@@ -1277,6 +1278,7 @@
     var run = running(), sta = MF.exert(s, dt, run);
     if (sta <= 0) winded = true; else if (winded && sta >= MF.RUN_AGAIN) winded = false;
     if (now - staT > 100) { staT = now; drawSta(run); }
+    torchTick(dt);
     var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, run ? 1.5 : 1, tempNow());
     tired = state !== '';
     if (state === 'collapse') return faint(now, true);
@@ -1317,7 +1319,24 @@
     part('BRAINPOWER', MF.vital(s, 'int'), MF.maxOf(s, 'int'), 0.2, 0.08);
     var ld = SH.load(s);
     if (ld > 1) out.push({ name: 'LOAD', crit: ld > SH.FROZEN });
+    if (torchLit && s.torch < 0.2 * SH.GEAR.flashlight.secs) out.push({ name: 'BATTERY', crit: s.torch < 0.08 * SH.GEAR.flashlight.secs });
     return out;
+  }
+  /* ── the dark past the city: districts are lit, the wilds and the water
+     aren't. a flashlight comes on by itself out there at night and runs
+     its battery down (shops.js GEAR); a bed charges it ── */
+  var torchLit = false, darkSaid = 0;
+  function wild() { return !inside && ['vistadelsol', 'bay', 'jormun'].indexOf(whereNow()) >= 0; }
+  function torchTick(dt) {
+    var dark = wild() && darkness(novaNow()) > 0.3, has = !!(s.items && s.items.flashlight);
+    var was = torchLit;
+    torchLit = dark && has && s.torch > 0;
+    if (torchLit) s.torch = Math.max(0, s.torch - dt);
+    if (was && !torchLit && dark && has && !talkBox) say(['your flashlight flickers and dies.\na night in bed will charge it.']);
+    if (dark && !torchLit && !talkBox && !mini && !counter && Date.now() - darkSaid > 90000) {
+      darkSaid = Date.now();
+      say([has ? 'pitch black out here, and the flashlight\'s flat.\nstay close to the city lights.' : 'pitch black out here. you can barely see your hands.\na flashlight would help. the general stores sell them.']);
+    }
   }
   /* the stamina bar: up while you run, and until it's full again */
   function drawSta(run) {
@@ -1560,6 +1579,7 @@
       gauge('🍞', 'food', b.food, 100, 'food');
       gauge('💧', 'drink', b.drink, 100, 'drink');
       line('vrow', '🎒 load ' + SH.carried(s) + ' / ' + SH.CARRY + 'kg');
+      if (s.items && s.items.flashlight) line('vrow', '🔦 flashlight ' + Math.round(100 * s.torch / SH.GEAR.flashlight.secs) + '%' + (torchLit ? ' · on' : ''));
       if (b.buff && b.buffT > 0) line('buff', b.buff + ' · ' + Math.ceil(b.buffT / 60) + 'm left');
     } else if (phone.tab === 'traits') {
       Object.keys(LV.TRAITS).forEach(function (t) {
@@ -2129,12 +2149,30 @@
       var a = now / 1400, bx = (m.x + m.w / 2) * TS - cx, by = m.y * TS - cy + 6;
       for (var j = 1; j <= 5; j++) add(bx + Math.cos(a) * j * 22, by + Math.sin(a) * j * 11, 14 + j * 3, 0.5, '#ffe97c', 0.12);
     });
-    /* you can always see your own feet */
-    add(ppx - cx + 8, ppy - cy + 8, 26, 0.55, null, 0);
+    /* naturia's flora glows: some trees and grass, a slow pulse */
+    var nat = D.findIndex ? D.findIndex(function (d) { return d.id === 'naturia'; }) : -1, BIO = ['#3affc8', '#b28cff', '#7cf5ff'];
+    if (nat >= 0) for (var by = y0; by <= y0 + VH + 1 && by < world.H; by++) for (var bx = x0; bx <= x0 + VW + 1 && bx < world.W; bx++) {
+      var bk = by * world.W + bx, bt = world.tile[bk];
+      if (world.dist[bk] !== nat || (bt !== T.TREE && bt !== T.GRASS)) continue;
+      var bh = hash(bx + 17, by + 29);
+      if (bt === T.GRASS ? bh > 0.18 : bh > 0.6) continue;
+      var pulse = 0.8 + 0.2 * Math.sin(now / 900 + bh * 40);
+      add(bx * TS - cx + 8, by * TS - cy + (bt === T.TREE ? 6 : 10), (bt === T.TREE ? 18 : 10) * pulse, 0.6, BIO[Math.floor(bh * 97) % 3], 0.4 * pulse);
+    }
+    /* you can always see your own feet; out in the wilds, only just */
+    var out = wild();
+    add(ppx - cx + 8, ppy - cy + 8, out ? 14 : 26, out ? 0.4 : 0.55, null, 0);
     var g = lightCv.getContext('2d');
     g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, Hh);
-    g.fillStyle = 'rgba(4,6,24,' + (0.66 * dk).toFixed(3) + ')'; g.fillRect(0, 0, W, Hh);
+    g.fillStyle = 'rgba(2,3,12,' + ((out ? 0.96 : 0.66) * dk).toFixed(3) + ')'; g.fillRect(0, 0, W, Hh);
     g.globalCompositeOperation = 'destination-out';
+    /* the flashlight: a cone the way you face */
+    if (torchLit) {
+      var fd = DIRS[me.dir], ox = ppx - cx + 8, oy = ppy - cy + 8, ang = Math.atan2(fd[1], fd[0]), R = 104;
+      var cg = g.createRadialGradient(ox, oy, 6, ox, oy, R);
+      cg.addColorStop(0, 'rgba(0,0,0,.97)'); cg.addColorStop(0.6, 'rgba(0,0,0,.7)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = cg; g.beginPath(); g.moveTo(ox, oy); g.arc(ox, oy, R, ang - 0.48, ang + 0.48); g.closePath(); g.fill();
+    }
     lights.forEach(function (l) {
       var gr = g.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r);
       gr.addColorStop(0, 'rgba(0,0,0,' + l.a + ')'); gr.addColorStop(0.55, 'rgba(0,0,0,' + (l.a * 0.5) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -2149,6 +2187,12 @@
       gr.addColorStop(0, rgba(l.col, (l.ga * dk).toFixed(3))); gr.addColorStop(1, rgba(l.col, 0));
       ctx.fillStyle = gr; ctx.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
     });
+    if (torchLit) {
+      var fd2 = DIRS[me.dir], tx2 = ppx - cx + 8, ty2 = ppy - cy + 8, a2 = Math.atan2(fd2[1], fd2[0]);
+      var wg = ctx.createRadialGradient(tx2, ty2, 6, tx2, ty2, 104);
+      wg.addColorStop(0, rgba('#fff3b0', (0.16 * dk).toFixed(3))); wg.addColorStop(1, rgba('#fff3b0', 0));
+      ctx.fillStyle = wg; ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.arc(tx2, ty2, 104, a2 - 0.48, a2 + 0.48); ctx.closePath(); ctx.fill();
+    }
     ctx.globalCompositeOperation = 'source-over';
   }
 

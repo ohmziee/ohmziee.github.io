@@ -27,6 +27,7 @@
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
+             torch: 0,                                       /* seconds of flashlight battery left */
              dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
              stash: {}, hold: { items: {}, res: {} },        /* each apartment's chest, the boat's hold */
              treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
@@ -181,6 +182,7 @@
     if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
+    s.torch = Math.max(0, Math.min(3600, +s.torch || 0));
     var tr = s.treasury;
     s.treasury = { week: Math.floor(+tr.week) >= -1 ? Math.floor(+tr.week) : -1, spent: Math.max(0, Math.floor(+tr.spent || 0)), arrears: Math.max(0, Math.floor(+tr.arrears || 0)) };
     s.inbox = (Array.isArray(s.inbox) ? s.inbox : []).filter(function (m) { return m && typeof m.title === 'string' && typeof m.body === 'string'; }).slice(-40);

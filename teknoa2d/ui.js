@@ -402,7 +402,7 @@
       inv.innerHTML = ''; met.innerHTML = '';
       var SH = window.MFShops, gd = function (k) { return SH && SH.goods ? SH.goods(k) : null; };
       Object.keys(s.items).forEach(function (k) {
-        var g = gd(k), worn = SH && SH.TOOLS && SH.TOOLS[k] ? ' (' + SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses)' : '';
+        var g = gd(k), worn = SH && SH.TOOLS && SH.TOOLS[k] ? ' (' + SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses)' : SH && SH.GEAR && SH.GEAR[k] && SH.GEAR[k].secs ? ' (battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%)' : '';
         var row = li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : '') + worn, g ? g.what : D.items[k]);
         /* take-away food: eat or drink it from here */
         if (SH && SH.drop) dropBtn(row, k);
