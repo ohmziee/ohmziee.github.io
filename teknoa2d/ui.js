@@ -18,20 +18,22 @@
   /* ── Chippin' In ────────────────────────────────────────────
      Before anything else the player says who they are: a handle, a look,
      where they come from. Nothing is saved until they chip in. */
-  var look = null, origin = '', power = '';
+  var look = null, origin = '', power = '', side = '';
   function showChip() {
     closePanels();
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
     $('stage').hidden = true; $('shop').hidden = true; document.querySelector('.tools').hidden = true; $('chip').hidden = false;
     origin = D.origins[s.player.origin] ? s.player.origin : '';
     look = Object.keys(s.player.look).length ? A.normalize(s.player.look, origin || undefined) : A.random(null, origin || undefined);
-    power = s.player.power || '';
+    power = s.player.power || ''; side = s.player.side || '';
     var carried = '';
     try { carried = store.getItem('exiled.handle') || ''; } catch (e) {}
     $('handle').value = s.player.handle || MF.cleanHandle(carried);
-    $('chipMsg').textContent = s.flags['origin-repick'] ? 'the origins changed. pick where you come from again; the rest of your run stays.' : '';
+    $('chipMsg').textContent = s.flags['origin-repick'] ? 'the origins changed. pick where you come from again; the rest of your run stays.' : unsided() ? 'products pick a side now. whose are you? the rest of your run stays.' : '';
     drawSlots(); drawOrigins(); drawFace();
   }
+  /* a product from before sides existed picks one, once */
+  function unsided() { return s.player.origin === 'product' && !s.player.side; }
   function drawFace() { $('avBig').innerHTML = A.render(look); drawWalk(); }
   /* the same look, walking: the sprite nova city will see */
   var walkStep = 0, walkTimer = 0;
@@ -80,6 +82,18 @@
         drawOrigins(); drawSlots(); drawFace();
       });
       box.appendChild(b);
+      /* a product picks a side */
+      if (origin === id && MF.ORIGINS[id] && MF.ORIGINS[id].side) {
+        var sd = document.createElement('div'); sd.className = 'power'; sd.setAttribute('role', 'radiogroup'); sd.setAttribute('aria-label', 'whose side');
+        MF.ORIGINS[id].side.forEach(function (sv) {
+          var sb = document.createElement('button'), st = document.createElement('b'), sp = document.createElement('span');
+          sb.type = 'button'; sb.className = 'origin sub'; sb.setAttribute('role', 'radio'); sb.setAttribute('aria-checked', String(side === sv));
+          st.textContent = MF.SIDE[sv].name; sp.textContent = MF.SIDE[sv].what; sb.appendChild(st); sb.appendChild(sp);
+          sb.addEventListener('click', function () { side = sv; drawOrigins(); });
+          sd.appendChild(sb);
+        });
+        box.appendChild(sd);
+      }
       /* an AI picks what keeps it running */
       if (origin !== id || !(MF.ORIGINS[id] && MF.ORIGINS[id].power)) return;
       var sub = document.createElement('div'); sub.className = 'power'; sub.setAttribute('role', 'radiogroup'); sub.setAttribute('aria-label', 'power source');
@@ -100,9 +114,11 @@
     if (!origin) { $('chipMsg').textContent = 'pick where you come from.'; return; }
     var needsPower = MF.ORIGINS[origin] && MF.ORIGINS[origin].power;
     if (needsPower && needsPower.indexOf(power) < 0) { $('chipMsg').textContent = 'pick what keeps you running.'; return; }
+    var needsSide = MF.ORIGINS[origin] && MF.ORIGINS[origin].side;
+    if (needsSide && needsSide.indexOf(side) < 0) { $('chipMsg').textContent = 'whose side are you on?'; return; }
     /* every arrival chips in with a little on the chip */
     if (!MF.chippedIn(s)) MF.earn(s, MF.START_JOULES);
-    s.player = { handle: h, origin: origin, look: A.normalize(look, origin), power: needsPower ? power : '' };
+    s.player = { handle: h, origin: origin, look: A.normalize(look, origin), power: needsPower ? power : '', side: needsSide ? side : '' };
     /* the origin's head start, once (a re-pick after the origins changed gets it too) */
     if (s.flags['origin-repick']) { delete s.flags['origin-repick']; delete s.flags['origin-start']; }
     if (window.MFLevel) window.MFLevel.start(MF, s);
@@ -529,7 +545,7 @@
   });
   /* after a restore, pick up wherever the run now is */
   function resume() {
-    if (!MF.chippedIn(s) || s.flags['origin-repick']) return showChip();
+    if (!MF.chippedIn(s) || s.flags['origin-repick'] || unsided()) return showChip();
     if (window.MFWorld && (!s.scene || MF.view(s, S).kind === 'end')) return showWorld();
     if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start);
     showStage(); render();
@@ -571,7 +587,7 @@
   });
 
   /* mid-conversation: back to it. otherwise: back to the street */
-  if (!MF.chippedIn(s) || s.flags['origin-repick']) showChip();
+  if (!MF.chippedIn(s) || s.flags['origin-repick'] || unsided()) showChip();
   else if (window.MFWorld && (!s.scene || MF.view(s, S).kind === 'end')) showWorld();
   else { if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start); showStage(); render(); }
 })();

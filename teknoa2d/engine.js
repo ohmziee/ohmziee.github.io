@@ -287,10 +287,14 @@
     simian:    { start: { atk: 5 }, carry: 15 },
     ai:        { cold: 1, max: { int: 10 }, power: ['ade', 'ibc'] },
     novan:     { start: { stl: 5 }, street: 0.8 },
-    product:   { max: { hp: -20 }, joules: 600 }
+    product:   { max: { hp: -20 }, joules: 600, side: ['defector', 'loyal'] }
   };
   /* an AI's power: an artificial digestive engine eats like anyone, an
      internal battery core runs on charge (homes, hospital, police) */
+  /* a product's side: walked out on corpocult, or still working for them
+     against teknoa (combat.js hostile reads it). PLACEHOLDER words */
+  var SIDE = { defector: { name: 'walked out', what: 'you left corpocult behind. their agents know a barcode on sight, and they want their property back.' },
+               loyal:    { name: 'still theirs', what: 'you work for corpocult, quietly, against teknoa. their agents leave you be. everyone else had better not find out.' } };
   var POWER = { ade: { name: 'artificial digestive engine (ADE)', what: 'you eat and drink like anyone else.' },
                 ibc: { name: 'internal battery core (IBC)', what: 'no hunger, no thirst, a charge that lasts. charging points: your home, the hospital, the police.' } };
   var OLD_ORIGINS = { local: 1, runner: 1, defector: 1, ghost: 1 }, COLD_AI = -6, IBC_LASTS = 3;
@@ -373,7 +377,7 @@
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
-              ORIGINS: ORIGINS, POWER: POWER, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
+              ORIGINS: ORIGINS, POWER: POWER, SIDE: SIDE, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
               SAFE_SLOTS: SAFE_SLOTS, safeKeys: safeKeys, isSafe: isSafe, toggleSafe: toggleSafe,
               CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
               STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, exert: exert, strain: strain, intCheck: intCheck, rest: rest,

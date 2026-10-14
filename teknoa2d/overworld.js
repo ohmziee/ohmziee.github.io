@@ -1054,7 +1054,8 @@
   /* what someone of this kind says about where you come from, if they can
      tell and have something to say (world.js ORIGIN_TALK) */
   function reaction(kind, seed, said) {
-    var by = M.ORIGIN_TALK[kind], lines = by && by[window.MF.knownOrigin(s, window.MFAvatar)];
+    var seen = window.MF.knownOrigin(s, window.MFAvatar), by = M.ORIGIN_TALK[kind];
+    var lines = by && ((seen === 'product' && s.player.side && by['product-' + s.player.side]) || by[seen]);
     return lines ? lines[(seed + said) % lines.length] : '';
   }
   function chatter(n) {
@@ -1734,7 +1735,7 @@
     if (!LV) { line('who', s.player.handle || 'stranger'); scr.appendChild(box); return; }
     if (phone.tab === 'id') {
       var i = LV.info(s), pk = LV.picks(s), pts = LV.points(s);
-      line('who', (s.player.handle || 'stranger') + (s.player.origin ? ' · ' + s.player.origin + (s.player.power ? ' (' + s.player.power.toUpperCase() + ')' : '') : ''));
+      line('who', (s.player.handle || 'stranger') + (s.player.origin ? ' · ' + s.player.origin + (s.player.power ? ' (' + s.player.power.toUpperCase() + ')' : '') + (s.player.side ? ' (' + window.MF.SIDE[s.player.side].name + ')' : '') : ''));
       line('lv', 'LVL ' + i.level);
       bar(i.need ? i.into / i.need : 1);
       line('', i.need ? i.into + ' / ' + i.need + ' EXP to LVL ' + (i.level + 1) : 'max level');

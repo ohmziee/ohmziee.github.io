@@ -632,7 +632,8 @@
   };
   /* what each kind says once it can tell where you come from (MF.knownOrigin:
      bodies show, accents give you away, a product only when the barcode
-     shows). no entry, no remark. PLACEHOLDER lines */
+     shows). no entry, no remark. 'product-loyal' is for the few who'd know
+     which side a product is on (corpocult's own). PLACEHOLDER lines */
   var ORIGIN_TALK = {
     novan: {
       earthling: ['earth accent. fresh off the crossing?\nit wears off. mostly.', 'you still flinch at the rain here.\nearth rain must be polite.',
@@ -664,7 +665,10 @@
       earthling: ['from earth? lovely. the paperwork must have been a nightmare.\ndid you keep copies?'],
       ai:        ['what firmware are you on?\nno reason.'],
       simian:    ['interesting specimen. sorry. person.\ninteresting person.'],
-      novan:     ['a local. wonderful.\nyou\'d know everyone, then.']
+      novan:     ['a local. wonderful.\nyou\'d know everyone, then.'],
+      /* one of their own, still on the books */
+      'product-loyal': ['evening, colleague.\nthe office says hello. so do i.', 'cover the stamp, colleague.\nwe know you. they don\'t need to.',
+                        'quarterly targets are up.\nkeep doing whatever it is you do.']
     },
     tweaker: {
       product:   ['YOU\'RE FROM THE VATS. i know the smell.\nthey grow you in the rain.'],
