@@ -28,6 +28,7 @@
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
              torch: 0,                                       /* seconds of flashlight battery left */
+             safe: [],                                       /* the inventory's safe slots: item kinds a mugger can't take */
              dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
              stash: {}, hold: { items: {}, res: {} },        /* each apartment's chest, the boat's hold */
              treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
@@ -183,6 +184,7 @@
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
     s.torch = Math.max(0, Math.min(3600, +s.torch || 0));
+    s.safe = s.safe.filter(function (k, i, a) { return typeof k === 'string' && k && a.indexOf(k) === i; }).slice(0, SAFE_SLOTS);
     var tr = s.treasury;
     s.treasury = { week: Math.floor(+tr.week) >= -1 ? Math.floor(+tr.week) : -1, spent: Math.max(0, Math.floor(+tr.spent || 0)), arrears: Math.max(0, Math.floor(+tr.arrears || 0)) };
     s.inbox = (Array.isArray(s.inbox) ? s.inbox : []).filter(function (m) { return m && typeof m.title === 'string' && typeof m.body === 'string'; }).slice(-40);
@@ -210,6 +212,19 @@
        earthlings and get one chance to pick again (ui.js) */
     if (OLD_ORIGINS[s.player.origin]) { s.player.origin = 'earthling'; s.flags['origin-repick'] = 1; }
     return s;
+  }
+  /* ── safe slots: SAFE_SLOTS kinds of thing, the whole stack of each, that
+     a mugging leaves alone. a slot frees itself once the stack is gone ── */
+  var SAFE_SLOTS = 3;
+  function held(s, k) { return (s.items && s.items[k] > 0) || (s.res && s.res[k] > 0); }
+  function safeKeys(s) { return (s.safe || []).filter(function (k) { return held(s, k); }); }
+  function isSafe(s, k) { return safeKeys(s).indexOf(k) >= 0; }
+  function toggleSafe(s, k) {
+    if (isSafe(s, k)) { s.safe = safeKeys(s).filter(function (x) { return x !== k; }); return { ok: true, safe: false }; }
+    if (!held(s, k)) return { ok: false, why: 'you have none of that' };
+    if (safeKeys(s).length >= SAFE_SLOTS) return { ok: false, why: 'the safe slots are full' };
+    s.safe = safeKeys(s).concat([k]);
+    return { ok: true, safe: true };
   }
   function exportCode(s) { var j = JSON.stringify(s); return 'MF1.' + b64e(j) + '.' + sum(j); }
   function importCode(code) {
@@ -356,6 +371,7 @@
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
               ORIGINS: ORIGINS, POWER: POWER, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
+              SAFE_SLOTS: SAFE_SLOTS, safeKeys: safeKeys, isSafe: isSafe, toggleSafe: toggleSafe,
               CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
               STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,

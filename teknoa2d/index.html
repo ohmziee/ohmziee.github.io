@@ -18,6 +18,7 @@
 <script src="engine.js" defer></script>
 <script src="level.js" defer></script>
 <script src="avatar.js" defer></script>
+<script src="icons.js" defer></script>
 <script src="shops.js" defer></script>
 <script src="world.js" defer></script>
 <script src="backup.js" defer></script>
@@ -35,7 +36,6 @@
     <a class="back" href="../index.html">&lt;&lt; EXiLED</a>
     <span class="chan">TEKNOA 2D</span>
     <span class="tools" hidden>
-      <button type="button" id="invBtn" aria-controls="inv" aria-expanded="false">INV</button>
       <button type="button" id="devBtn" aria-controls="dev" aria-expanded="false" hidden>DEV</button>
     </span>
   </header>
@@ -130,14 +130,6 @@
     </div>
   </main>
 
-  <aside class="panel" id="inv" hidden aria-label="inventory">
-    <div class="op"><div class="avatar" id="avSmall"></div><p><b id="opHandle"></b><span id="opOrigin" class="d"></span></p></div>
-    <p class="purse"><span>TEKNOAN JOULES</span><b id="opJ"></b></p>
-    <h2>INVENTORY</h2>
-    <ul id="invList"></ul>
-    <h2>CONTACTS</h2>
-    <ul id="metList"></ul>
-  </aside>
 
 
   <!-- the owner's test drawer: only shown when this browser holds the owner key -->

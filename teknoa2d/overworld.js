@@ -1430,7 +1430,7 @@
     if (!bTap.busy && !bTap.moved && Date.now() - bTap.at < 260 && active) phoneTap();
   }
   var phone = null, pPrev = {}, pDrawn = 0;
-  var APPS = [['id', 'ID', '#ff9de2', '◉'], ['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
+  var APPS = [['id', 'ID', '#ff9de2', '◉'], ['inv', 'INV', '#7cc8ff', '▦'], ['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
   var MAP_LAYERS = ['terranova', 'nova sea', 'nova city'], ZOOM_MAX = [6, 6, 16];
   var MAPIMG = {
     biomes: { src: 'maps/biomes.png', here: [0.629, 0.797] }, states: { src: 'maps/states.png', here: [0.629, 0.797] },
@@ -1438,6 +1438,7 @@
   };
   function phoneTap() {
     if (!phone) { if (talkBox || mini || counter || table || fainting) return; openPhone(); return; }
+    if (phone.app === 'inv' && phone.act >= 0) { phone.act = -1; drawPhone(); return; }
     if (phone.app !== 'home') { phone.app = 'home'; $('wPhone').classList.remove('lifted'); drawPhone(); return; }
     closePhone();
   }
@@ -1451,8 +1452,8 @@
   function closePhone() { phone = null; $('wPhone').hidden = true; $('wPhone').classList.remove('lifted'); }
   function openApp(id) {
     if (id === 'sys') { closePhone(); if (window.MFUI) window.MFUI.openSys(); return; }
-    phone.app = id; phone.msel = 0; phone.open = -1;
-    $('wPhone').classList.toggle('lifted', id === 'map');
+    phone.app = id; phone.msel = 0; phone.open = -1; phone.isel = 0; phone.act = -1; phone.imsg = '';
+    $('wPhone').classList.toggle('lifted', id === 'map' || id === 'inv');
     drawPhone();
   }
   function tickPhone(now) {
@@ -1475,6 +1476,8 @@
       }
     } else if (phone.app === 'id') {
       tickId(up, dn, lf, rt, a);
+    } else if (phone.app === 'inv') {
+      tickInv(up, dn, lf, rt, a);
     } else if (phone.app === 'map') {
       /* hold the arrows to pan; A zooms in */
       var px = (held.right ? 1 : 0) - (held.left ? 1 : 0), py = (held.down ? 1 : 0) - (held.up ? 1 : 0);
@@ -1536,13 +1539,141 @@
         hint.textContent = '▲ ▼ pick · A read · tap B: home';
       }
       scr.appendChild(list);
+    } else if (phone.app === 'inv') {
+      drawInv(scr);
+      hint.textContent = phone.act >= 0 ? '◀ ▶ pick · A do it · tap B: back' : 'arrows pick · A use · tap B: home';
     } else if (phone.app === 'map') drawMap();
   }
+  /* ── the INV app: what you carry, as icons. the safe slots up top (a
+     mugging leaves those alone: MF.toggleSafe), then everything else, then
+     your keys and the boat. it lifts to fill the screen like MAP. arrows
+     pick, A opens what you can do with it, B backs out ── */
+  function invEntries() {
+    var MF = window.MF, SH = window.MFShops, safe = MF.safeKeys(s), out = [], seen = {};
+    safe.forEach(function (k) { seen[k] = 1; out.push({ key: k, safe: true }); });
+    Object.keys(s.items || {}).concat(Object.keys(s.res || {})).forEach(function (k) {
+      if (!seen[k] && ((s.items || {})[k] > 0 || (s.res || {})[k] > 0)) { seen[k] = 1; out.push({ key: k }); }
+    });
+    Object.keys(s.homes || {}).forEach(function (k) { if (SH.HOMES[k]) out.push({ key: '@key', home: k }); });
+    if (s.boat) out.push({ key: '@boat' });
+    return out;
+  }
+  function invInfo(e) {
+    var MF = window.MF, SH = window.MFShops, k = e.key;
+    if (e.home) { var h = SH.HOMES[e.home]; return { name: 'key: ' + h.name, what: h.where + (s.wake === e.home ? '. you wake up here.' : '.'), acts: [] }; }
+    if (k === '@boat') return { name: 'a boat', what: 'moored wherever you left the water. face the sea and press A to sail.', acts: [] };
+    var g = SH.goods(k), n = ((s.items || {})[k] || 0) + ((s.res || {})[k] || 0), acts = [];
+    var note = SH.TOOLS[k] ? SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses left' : SH.GEAR[k] && SH.GEAR[k].secs ? 'battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%' : '';
+    if (SH.FOODS[k]) acts.push([SH.FOODS[k].food ? 'EAT' : 'DRINK', function () { var r = SH.eat(MF, s, k); return r.ok ? 'down it goes.' : r.why; }]);
+    if (SH.MEDS[k]) acts.push(['USE', function () { var r = SH.useMed(MF, s, k); return r.ok ? 'patched up. health ' + Math.round(MF.vital(s, 'hp')) + '/' + MF.maxOf(s, 'hp') + '.' : r.why; }]);
+    acts.push([MF.isSafe(s, k) ? 'TAKE OUT' : 'SAFE', function () { var r = MF.toggleSafe(s, k); return !r.ok ? r.why : r.safe ? 'locked in a safe slot. muggers can\'t touch it.' : 'out of the safe slot.'; }]);
+    acts.push(['DROP', function () { return SH.drop(s, k) ? 'dropped one.' : 'nothing to drop.'; }]);
+    return { name: g ? g.name : k, n: n, what: g ? g.what : '', note: note, kg: SH.weightOf(k), acts: acts };
+  }
+  function runInv(e, i) {
+    var act = invInfo(e).acts[i];
+    if (!act) return;
+    phone.imsg = act[1]();
+    if (api.save) api.save();
+    refresh();
+    /* the pick follows the thing (into or out of the safe row); if it's all
+       gone, it stays where it was */
+    var es = invEntries(), at = -1;
+    es.forEach(function (x, i) { if (at < 0 && x.key === e.key && x.home === e.home) at = i; });
+    if (at >= 0) { phone.isel = at; phone.act = Math.min(phone.act, invInfo(es[at]).acts.length - 1); }
+    else { phone.isel = Math.max(0, Math.min(phone.isel, es.length - 1)); phone.act = -1; }
+    drawPhone();
+  }
+  /* arrows move to the nearest icon that way (the grid wraps with the screen) */
+  function invStep(dx, dy) {
+    var cells = phone.cells || [], me0 = cells[phone.isel], best = -1, bd = 1e9;
+    if (!me0) return;
+    cells.forEach(function (c, i) {
+      if (i === phone.isel) return;
+      var ox = c.x - me0.x, oy = c.y - me0.y;
+      if (dy ? oy * dy <= 4 : (Math.abs(oy) > 4 || ox * dx <= 0)) return;
+      var d = dy ? Math.abs(oy) * 4 + Math.abs(ox) : Math.abs(ox);
+      if (d < bd) { bd = d; best = i; }
+    });
+    if (best >= 0) { phone.isel = best; phone.imsg = ''; }
+  }
+  function tickInv(up, dn, lf, rt, a) {
+    var es = invEntries();
+    if (phone.act >= 0) {
+      var acts = es[phone.isel] ? invInfo(es[phone.isel]).acts : [];
+      if (!acts.length) { phone.act = -1; drawPhone(); return; }
+      if (lf || up) { phone.act = (phone.act + acts.length - 1) % acts.length; drawPhone(); }
+      if (rt || dn) { phone.act = (phone.act + 1) % acts.length; drawPhone(); }
+      if (a) runInv(es[phone.isel], phone.act);
+      return;
+    }
+    if (lf || rt || up || dn) { invStep(lf ? -1 : rt ? 1 : 0, up ? -1 : dn ? 1 : 0); drawPhone(); }
+    if (a && es[phone.isel] && invInfo(es[phone.isel]).acts.length) { phone.act = 0; drawPhone(); }
+  }
+  function drawInv(scr) {
+    var MF = window.MF, SH = window.MFShops, I = window.MFIcons, es = invEntries(), box = document.createElement('div'); box.className = 'pinv';
+    if (phone.isel >= es.length) phone.isel = Math.max(0, es.length - 1);
+    var top = document.createElement('div'); top.className = 'itop';
+    top.textContent = MF.fmtJ(MF.joules(s)) + ' · 🎒 ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg' + (SH.load(s) > SH.FROZEN ? ' · too heavy to move' : SH.load(s) > 1 ? ' · overloaded' : '');
+    box.appendChild(top);
+    var cellsEl = [];
+    function cell(e, i) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'icell' + (i === phone.isel ? ' sel' : '');
+      b.appendChild(I.canvas(e.key, 36, SH));
+      var n = ((s.items || {})[e.key] || 0) + ((s.res || {})[e.key] || 0);
+      if (n > 1) { var c = document.createElement('b'); c.textContent = n; b.appendChild(c); }
+      b.setAttribute('aria-label', invInfo(e).name);
+      /* tap once to look, tap again for what you can do */
+      b.addEventListener('click', function (ev) { ev.preventDefault(); phone.act = phone.isel === i && invInfo(e).acts.length ? 0 : -1; phone.isel = i; phone.imsg = ''; drawPhone(); });
+      cellsEl[i] = b;
+      return b;
+    }
+    var lab = document.createElement('div'); lab.className = 'ilab'; lab.textContent = '🔒 SAFE · a mugging leaves these alone'; box.appendChild(lab);
+    var safeRow = document.createElement('div'); safeRow.className = 'igrid isafe';
+    var nsafe = 0;
+    for (var j = 0; j < MF.SAFE_SLOTS; j++) {
+      if (es[j] && es[j].safe) { safeRow.appendChild(cell(es[j], j)); nsafe++; }
+      else { var em = document.createElement('span'); em.className = 'icell empty'; safeRow.appendChild(em); }
+    }
+    box.appendChild(safeRow);
+    var lab2 = document.createElement('div'); lab2.className = 'ilab'; lab2.textContent = 'CARRYING'; box.appendChild(lab2);
+    var grid = document.createElement('div'); grid.className = 'igrid';
+    for (j = nsafe; j < es.length; j++) grid.appendChild(cell(es[j], j));
+    if (es.length === nsafe) { var none = document.createElement('p'); none.className = 'inone'; none.textContent = nsafe ? 'nothing else.' : 'nothing yet.'; grid.appendChild(none); }
+    box.appendChild(grid);
+    var e = es[phone.isel];
+    if (e) {
+      var inf = invInfo(e), det = document.createElement('div'); det.className = 'idet';
+      var nm = document.createElement('b'); nm.textContent = inf.name + (inf.n > 1 ? ' x' + inf.n : '') + (e.safe ? ' 🔒' : ''); det.appendChild(nm);
+      if (inf.note || inf.kg) { var nt = document.createElement('div'); nt.className = 'inote'; nt.textContent = [inf.note, inf.kg ? inf.kg + 'kg each' : ''].filter(Boolean).join(' · '); det.appendChild(nt); }
+      if (inf.what) { var wh = document.createElement('div'); wh.textContent = inf.what; det.appendChild(wh); }
+      var row = document.createElement('div'); row.className = 'iacts';
+      inf.acts.forEach(function (ac, i) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'iact' + (i === phone.act ? ' sel' : ''); b.textContent = ac[0];
+        b.addEventListener('click', function (ev) { ev.preventDefault(); phone.act = i; runInv(e, i); });
+        row.appendChild(b);
+      });
+      if (inf.acts.length) det.appendChild(row);
+      box.appendChild(det);
+    }
+    if (phone.imsg) { var mg = document.createElement('div'); mg.className = 'imsg'; mg.textContent = phone.imsg; box.appendChild(mg); }
+    if (me.sail) {
+      var hb = document.createElement('button'); hb.type = 'button'; hb.className = 'iact'; hb.textContent = 'BOAT HOLD';
+      hb.addEventListener('click', function (ev) { ev.preventDefault(); closePhone(); openHold(); });
+      box.appendChild(hb);
+    }
+    if (SH.FISH && Object.keys(s.fishlog || {}).length) { var fl = document.createElement('div'); fl.className = 'inote'; fl.textContent = 'fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds'; box.appendChild(fl); }
+    scr.appendChild(box);
+    phone.cells = cellsEl.map(function (b) { return b ? { x: b.offsetLeft + b.offsetWidth / 2, y: b.offsetTop + b.offsetHeight / 2 } : { x: -1e6, y: -1e6 }; });
+    var on = cellsEl[phone.isel];
+    if (on && on.scrollIntoView && phone.act < 0) on.scrollIntoView({ block: 'nearest' });
+  }
+
   /* ── the ID app: you, your level and level-up pick (ID), your vitals,
      your traits, and (DEV key only, for now) the perk trees.
      ◀ ▶ switch tab, ▲ ▼ pick, A choose; everything can be tapped too ── */
   function isDev() { try { return !!localStorage.getItem('exiled.owner'); } catch (e) { return false; } }
-  function idTabs() { return isDev() ? ['id', 'vitals', 'traits', 'perks'] : ['id', 'vitals', 'traits']; }
+  function idTabs() { return isDev() ? ['id', 'vitals', 'traits', 'contacts', 'perks'] : ['id', 'vitals', 'traits', 'contacts']; }
   /* the rows A can act on in this tab: [label, run] */
   function idRows() {
     var LV = window.MFLevel, MF = window.MF, rows = [];
@@ -1618,6 +1749,10 @@
         var q = document.createElement('b'); q.textContent = 'lv ' + ti.level; r.appendChild(q);
         box.appendChild(r); bar(ti.need ? ti.into / ti.need : 1, 'trait');
       });
+    } else if (phone.tab === 'contacts') {
+      var who = (window.MF_DATA && window.MF_DATA.who) || {}, ks = Object.keys(s.met || {});
+      if (!ks.length) line('', 'no one yet.');
+      ks.forEach(function (k) { var r = document.createElement('div'); r.className = 'vrow'; var n = document.createElement('span'); n.textContent = who[k] || k; r.appendChild(n); var q = document.createElement('b'); q.textContent = 'since ' + s.met[k]; r.appendChild(q); box.appendChild(r); });
     } else if (phone.tab === 'perks') {
       line('pts', 'perk points: ' + LV.points(s) + ' · DEV: draft trees');
       rows();

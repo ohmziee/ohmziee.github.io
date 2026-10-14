@@ -393,7 +393,7 @@
     if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
     if (e.key === 'Escape') { if (!$('shop').hidden) return leaveShop(); return closePanels(); }
     if ($('stage').hidden) return;               /* out in the street, the keys are the world's */
-    if (!$('inv').hidden || !$('sys').hidden) return;
+    if (!$('sys').hidden) return;
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); return; }
     if (current && current.kind === 'choose' && /^[1-9]$/.test(e.key)) {
       var c = current.choices[+e.key - 1];
@@ -403,7 +403,7 @@
 
   /* ── panels ─────────────────────────────────────────────── */
   function closePanels() {
-    ['inv', 'sys', 'dev'].forEach(function (p) { $(p).hidden = true; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
+    ['sys', 'dev'].forEach(function (p) { $(p).hidden = true; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
   }
   function toggle(p, fillIt) {
     var was = !$(p).hidden;
@@ -411,68 +411,6 @@
     if (was) return;
     fillIt(); $(p).hidden = false; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'true');
   }
-  function li(title, desc) {
-    var el = document.createElement('li');
-    el.textContent = title;
-    if (desc) { var d = document.createElement('span'); d.className = 'd'; d.textContent = desc; el.appendChild(d); }
-    return el;
-  }
-  function empty(text) { var el = document.createElement('li'); el.className = 'empty'; el.textContent = text; return el; }
-  $('invBtn').addEventListener('click', function () {
-    toggle('inv', function () {
-      var inv = $('invList'), met = $('metList'), o = D.origins[s.player.origin];
-      $('avSmall').innerHTML = A.render(s.player.look);
-      $('opHandle').textContent = s.player.handle;
-      $('opOrigin').textContent = o ? o.title : '';
-      $('opJ').textContent = MF.fmtJ(MF.joules(s));
-      inv.innerHTML = ''; met.innerHTML = '';
-      var SH = window.MFShops, gd = function (k) { return SH && SH.goods ? SH.goods(k) : null; };
-      Object.keys(s.items).forEach(function (k) {
-        var g = gd(k), worn = SH && SH.TOOLS && SH.TOOLS[k] ? ' (' + SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses)' : SH && SH.GEAR && SH.GEAR[k] && SH.GEAR[k].secs ? ' (battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%)' : '';
-        var row = li((g ? g.name : k) + (s.items[k] > 1 ? ' x' + s.items[k] : '') + worn, g ? g.what : D.items[k]);
-        /* take-away food: eat or drink it from here */
-        if (SH && SH.drop) dropBtn(row, k);
-        if (SH && SH.MEDS && SH.MEDS[k]) {
-          var ub = document.createElement('button'); ub.type = 'button'; ub.className = 'eat'; ub.textContent = 'USE';
-          ub.addEventListener('click', function () { if (SH.useMed(MF, s, k).ok) { if (store) MF.save(s, store); if (window.MFWorld) window.MFWorld.refresh(); $('invBtn').click(); $('invBtn').click(); } });
-          row.appendChild(ub);
-        }
-        if (SH && SH.FOODS && SH.FOODS[k]) {
-          var b = document.createElement('button'); b.type = 'button'; b.className = 'eat';
-          b.textContent = SH.FOODS[k].food ? 'EAT' : 'DRINK';
-          b.addEventListener('click', function () { if (SH.eat(MF, s, k).ok) { if (store) MF.save(s, store); $('invBtn').click(); $('invBtn').click(); } });
-          row.appendChild(b);
-        }
-        inv.appendChild(row);
-      });
-      if (s.body) inv.insertBefore(li('health ' + Math.round(MF.vital(s, 'hp')) + '/' + MF.maxOf(s, 'hp') + ' · food ' + Math.round(s.body.food) + '% · drink ' + Math.round(s.body.drink) + '%', s.body.buff && s.body.buffT > 0 ? s.body.buff + ', ' + Math.ceil(s.body.buffT / 60) + ' more minutes' : ''), inv.firstChild);
-      if (SH && SH.FISH && Object.keys(s.fishlog || {}).length) inv.appendChild(li('fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds', Object.keys(s.fishlog).map(function (k) { return SH.FISH[k] ? SH.FISH[k].name.replace(/^(a|an) /, '') : k; }).join(', ') + '.'));
-      var RS = (window.MFShops && window.MFShops.RES) || {};
-      function dropBtn(row, k) {
-        var b = document.createElement('button'); b.type = 'button'; b.className = 'eat drop'; b.textContent = 'DROP';
-        b.addEventListener('click', function () { if (SH.drop(s, k)) { if (store) MF.save(s, store); if (window.MFWorld) window.MFWorld.refresh(); $('invBtn').click(); $('invBtn').click(); } });
-        row.appendChild(b);
-      }
-      if (SH && SH.carried) {
-        var top = li('carrying ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg', SH.load(s) > SH.FROZEN ? 'too heavy to move. drop something or stash it.' : SH.load(s) > 1 ? 'overloaded: you can barely walk.' : '');
-        if (window.MFWorld && window.MFWorld.sailing) {
-          var hb = document.createElement('button'); hb.type = 'button'; hb.className = 'eat'; hb.textContent = 'BOAT HOLD';
-          hb.addEventListener('click', function () { closePanels(); window.MFWorld.openHold(); });
-          top.appendChild(hb);
-        }
-        inv.appendChild(top);
-      }
-      Object.keys(s.res || {}).forEach(function (k) { if (RS[k]) { var r = li(RS[k].name + ' x' + s.res[k] + ' · ' + SH.weightOf(k) + 'kg each', RS[k].what); dropBtn(r, k); inv.appendChild(r); } });
-      if (s.boat) inv.appendChild(li('a boat', 'moored wherever you left the water. face the sea and press A to sail.'));
-      var HM = (window.MFShops && window.MFShops.HOMES) || {};
-      Object.keys(s.homes || {}).forEach(function (k) { if (HM[k]) inv.appendChild(li('key: ' + HM[k].name, HM[k].where + (s.wake === k ? '. you wake up here.' : '.'))); });
-      if (!inv.children.length) inv.appendChild(empty('nothing yet.'));
-      Object.keys(s.met).forEach(function (k) { met.appendChild(li(name(k), 'contact established ' + s.met[k])); });
-      if (!met.children.length) met.appendChild(empty('no one yet.'));
-    });
-  });
-
-
   /* the backup: the whole site's progress (backup.js), not just this run.
      Old game-only MF1 codes still load. */
   var wipeArmed = 0, B = window.EXBackup;
