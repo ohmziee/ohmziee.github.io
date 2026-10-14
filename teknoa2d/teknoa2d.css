@@ -350,6 +350,8 @@ a{color:var(--lavender)}
 .pinv .icell{position:relative;width:2.9rem;height:2.9rem;display:flex;align-items:center;justify-content:center;background:#141a2e;border:2px solid #3a3150;border-radius:6px;padding:0;cursor:pointer}
 .pinv .icell canvas{width:2.25rem;height:2.25rem;image-rendering:pixelated}
 .pinv .icell b{position:absolute;right:.1rem;bottom:0;font-size:.75em;font-weight:normal;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}
+.pinv .icell i{position:absolute;left:.1rem;top:0;font-style:normal;font-size:.7em}
+.pinv .icell.held{border-color:#ff9de2}
 .pinv .icell.sel{border-color:#7cffb2;background:#1c1736}
 .pinv .isafe .icell{border-color:#c9a24a}
 .pinv .isafe .icell.sel{border-color:#7cffb2}

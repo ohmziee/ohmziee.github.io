@@ -63,6 +63,14 @@
              '..kkkk.kakak', '.......k.k.k', '............', '............', '............'],
     boat:   ['............', '.....k......', '.....kw.....', '.....kww....', '.....kwww...', '.....kwwww..', '.....k......',
              'kkkkkkkkkkkk', 'kaaaaaaaaaak', '.kbaaaaaabk.', '..kkkkkkkk..', '............'],
+    pipe:   ['..........kk', '.........kak', '........kak.', '.......kak..', '......kbk...', '.....kak....', '....kak.....',
+             '...kbk......', '..kak.......', '.kask.......', '.kkk........', '............'],
+    knife:  ['............', '.........kk.', '........kwk.', '.......kwsk.', '......kwsk..', '.....kwsk...', '....kwsk....',
+             '...kkkk.....', '..kaak......', '.kaak.......', '.kkk........', '............'],
+    bat:    ['.........kkk', '........kaak', '.......kaaak', '......kaaak.', '.....ksaak..', '....kaask...', '...kaak.....',
+             '..kbak......', '.kbbk.......', 'kkbk........', 'kkk.........', '............'],
+    baton:  ['..........y.', '.........kyk', '........kaak', '.......kaak.', '......kaak..', '.....kaak...', '....kbak....',
+             '...kkkk.....', '..kssk......', '.kssk.......', '.kkk........', '............'],
     crate:  ['............', '............', '.kkkkkkkkkk.', '.kaaaaaaaak.', '.kakbbbbkak.', '.kabkbbkbak.', '.kabbkkbbak.',
              '.kabkbbkbak.', '.kakbbbbkak.', '.kaaaaaaaak.', '.kkkkkkkkkk.', '............']
   };
@@ -78,7 +86,7 @@
     grilled1: ['fish', '#b8743a'], grilled2: ['fish', '#a0602a'], grilled3: ['fish', '#8a4a1e'], charred: ['fish', '#3a2a22'],
     boot: ['boot', '#5a4632'], can: ['can', '#8a8f99'],
     rod: ['rod', '#a07a4a'], tuned: ['rod', '#7cc8ff'], jormun: ['rod', '#f2c94c'],
-    flashlight: ['torch', '#5a6378'], medkit: ['medkit', '#e0475b'], bandage: ['bandage', '#ead9b8'],
+    flashlight: ['torch', '#5a6378'], pipe: ['pipe', '#8a8f99'], knife: ['knife', '#3a3f4a'], bat: ['bat', '#b07a45'], baton: ['baton', '#2a2f3d'], medkit: ['medkit', '#e0475b'], bandage: ['bandage', '#ead9b8'],
     timber: ['log', '#9a6a3a'], fibre: ['bundle', '#9fbf5a'], scrap: ['nut', '#8a8f99'], fruit: ['fruit', '#ff7a45'],
     snowglobe: ['globe', '#bfe9ff'], pager: ['pager', '#3a3f4a'], compass: ['compass', '#c9a24a'], cassette: ['cassette', '#ff4fd8'],
     shell: ['shell', '#ffc6a8'], lighter: ['lighter', '#7cffb2'],

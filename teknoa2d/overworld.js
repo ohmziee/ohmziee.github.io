@@ -1563,8 +1563,10 @@
     if (e.home) { var h = SH.HOMES[e.home]; return { name: 'key: ' + h.name, what: h.where + (s.wake === e.home ? '. you wake up here.' : '.'), acts: [] }; }
     if (k === '@boat') return { name: 'a boat', what: 'moored wherever you left the water. face the sea and press A to sail.', acts: [] };
     var g = SH.goods(k), n = ((s.items || {})[k] || 0) + ((s.res || {})[k] || 0), acts = [];
-    var note = SH.TOOLS[k] ? SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses left' : SH.GEAR[k] && SH.GEAR[k].secs ? 'battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%' : '';
+    var C = window.MFCombat, arm = C && C.isWeapon(k);
+    var note = arm ? C.usesLeft(s, k) + '/' + C.WEAPONS[k].dur + ' uses left' + (C.wielded(s) === k ? ' · in hand' : '') : SH.TOOLS[k] ? SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses left' : SH.GEAR[k] && SH.GEAR[k].secs ? 'battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%' : '';
     if (SH.FOODS[k]) acts.push([SH.FOODS[k].food ? 'EAT' : 'DRINK', function () { var r = SH.eat(MF, s, k); return r.ok ? 'down it goes.' : r.why; }]);
+    if (arm) acts.push([C.wielded(s) === k ? 'UNEQUIP' : 'EQUIP', function () { var on = C.wielded(s) !== k, r = C.equip(s, on ? k : 'fists'); return !r.ok ? r.why : on ? 'in hand: ' + C.WEAPONS[k].name + '.' : 'back to your fists.'; }]);
     if (SH.MEDS[k]) acts.push(['USE', function () { var r = SH.useMed(MF, s, k); return r.ok ? 'patched up. health ' + Math.round(MF.vital(s, 'hp')) + '/' + MF.maxOf(s, 'hp') + '.' : r.why; }]);
     acts.push([MF.isSafe(s, k) ? 'TAKE OUT' : 'SAFE', function () { var r = MF.toggleSafe(s, k); return !r.ok ? r.why : r.safe ? 'locked in a safe slot. muggers can\'t touch it.' : 'out of the safe slot.'; }]);
     acts.push(['DROP', function () { return SH.drop(s, k) ? 'dropped one.' : 'nothing to drop.'; }]);
@@ -1614,7 +1616,8 @@
     var MF = window.MF, SH = window.MFShops, I = window.MFIcons, es = invEntries(), box = document.createElement('div'); box.className = 'pinv';
     if (phone.isel >= es.length) phone.isel = Math.max(0, es.length - 1);
     var top = document.createElement('div'); top.className = 'itop';
-    top.textContent = MF.fmtJ(MF.joules(s)) + ' · 🎒 ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg' + (SH.load(s) > SH.FROZEN ? ' · too heavy to move' : SH.load(s) > 1 ? ' · overloaded' : '');
+    var C = window.MFCombat, inHand = C ? C.wielded(s) : 'fists';
+    top.textContent = MF.fmtJ(MF.joules(s)) + ' · ✊ ' + (inHand === 'fists' ? 'fists' : C.WEAPONS[inHand].name.replace(/^an? /, '')) + ' · 🎒 ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg' + (SH.load(s) > SH.FROZEN ? ' · too heavy to move' : SH.load(s) > 1 ? ' · overloaded' : '');
     box.appendChild(top);
     var cellsEl = [];
     function cell(e, i) {
@@ -1622,6 +1625,7 @@
       b.appendChild(I.canvas(e.key, 36, SH));
       var n = ((s.items || {})[e.key] || 0) + ((s.res || {})[e.key] || 0);
       if (n > 1) { var c = document.createElement('b'); c.textContent = n; b.appendChild(c); }
+      if (C && C.wielded(s) === e.key) { b.classList.add('held'); var hd = document.createElement('i'); hd.textContent = '✊'; b.appendChild(hd); }
       b.setAttribute('aria-label', invInfo(e).name);
       /* tap once to look, tap again for what you can do */
       b.addEventListener('click', function (ev) { ev.preventDefault(); phone.act = phone.isel === i && invInfo(e).acts.length ? 0 : -1; phone.isel = i; phone.imsg = ''; drawPhone(); });

@@ -444,6 +444,7 @@
     if (act === 'j1k') MF.earn(s, 1000); else if (act === 'j10k') MF.earn(s, 10000); else if (act === 'j100k') MF.earn(s, 100000); else if (act === 'j0') s.joules = 0;
     else if (act === 'mats') Object.keys(SH.RES).forEach(function (k) { s.res[k] = (s.res[k] || 0) + 20; });
     else if (act === 'rods') Object.keys(SH.TOOLS).forEach(function (k) { s.items[k] = 1; if (!s.wear) s.wear = {}; s.wear[k] = SH.TOOLS[k].dur; });
+    else if (act === 'arms') Object.keys(SH.ARMS()).forEach(function (k) { s.items[k] = 1; if (!s.wear) s.wear = {}; s.wear[k] = SH.ARMS()[k].dur; });
     else if (act === 'boat') s.boat = 1;
     else if (act === 'homes') Object.keys(SH.HOMES).forEach(function (k) { s.homes[k] = 1; });
     else if (act === 'fish') Object.keys(SH.FISH).forEach(function (k) { s.items[k] = (s.items[k] || 0) + 1; });

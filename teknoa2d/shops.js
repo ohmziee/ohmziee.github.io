@@ -150,10 +150,10 @@
   };
   var STORES = {
     'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 }, tools: ['rod', 'tuned', 'jormun'], gear: ['flashlight'], foods: ['water', 'bar', 'electro'] },
-    'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 }, tools: ['rod'], gear: ['flashlight'], foods: ['water', 'bar'] },
-    'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 }, tools: ['rod'], gear: ['flashlight'], foods: ['water', 'bar', 'electro'] },
-    'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'], tools: ['rod'], gear: ['flashlight'] },
-    'lantern-loans':    { kind: 'pawn', name: 'LANTERN LOANS', district: 'majinryu', line: 'everything here was somebody\'s once. now it\'s nobody\'s. could be yours.', buys: { timber: 9, fibre: 7, scrap: 12, fruit: 6 }, curios: ['compass', 'cassette', 'shell'] }
+    'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 }, tools: ['rod'], gear: ['flashlight'], foods: ['water', 'bar'], arms: ['pipe'] },
+    'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 }, tools: ['rod'], gear: ['flashlight'], foods: ['water', 'bar', 'electro'], arms: ['baton'] },
+    'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'], tools: ['rod'], gear: ['flashlight'], arms: ['pipe', 'knife', 'bat'] },
+    'lantern-loans':    { kind: 'pawn', name: 'LANTERN LOANS', district: 'majinryu', line: 'everything here was somebody\'s once. now it\'s nobody\'s. could be yours.', buys: { timber: 9, fibre: 7, scrap: 12, fruit: 6 }, curios: ['compass', 'cassette', 'shell'], arms: ['knife', 'bat'] }
   };
   /* fishing (overworld.js casts, minigames.js reels): rods are tools sold at
      general stores; fish live in spots (world.js fishZone), each with its own
@@ -349,7 +349,7 @@
   var CARRY = 40, FROZEN = 1.5, STASH_CAP = 200, HOLD_CAP = 40;
   var RES_KG = { timber: 2, fibre: 0.5, scrap: 1.5, fruit: 0.3 };
   var TIER_KG = { junk: 0.6, common: 0.4, uncommon: 1, rare: 2.5, legendary: 7 };
-  var KG = { boot: 1, can: 0.1, sardine: 0.2, grouper: 9, glassfish: 4, rod: 1.5, tuned: 2, jormun: 4, snowglobe: 1, flashlight: 0.4, compass: 0.3, pager: 0.2, cassette: 0.1, shell: 0.5, lighter: 0.1 };
+  var KG = { pipe: 1.2, knife: 0.3, bat: 1, baton: 0.8, boot: 1, can: 0.1, sardine: 0.2, grouper: 9, glassfish: 4, rod: 1.5, tuned: 2, jormun: 4, snowglobe: 1, flashlight: 0.4, compass: 0.3, pager: 0.2, cassette: 0.1, shell: 0.5, lighter: 0.1 };
   function weightOf(key) {
     if (KG[key] !== undefined) return KG[key];
     if (RES_KG[key] !== undefined) return RES_KG[key];
@@ -392,6 +392,8 @@
     if (tab === 'sell' && weighs(box) + weightOf(key) > cap) return { ok: false, why: 'it\'s full (' + cap + 'kg)' };
     from[kind][key]--; if (!from[kind][key]) delete from[kind][key];
     to[kind][key] = (to[kind][key] || 0) + 1;
+    /* put away, it's out of your hand (the wear stays with it) */
+    if (tab === 'sell' && s.equip === key && !(s.items[key] > 0)) s.equip = '';
     return { ok: true, price: 0, name: nameOf(key), moved: tab === 'buy' ? 'took' : 'stored' };
   }
   /* throw one away */
@@ -399,8 +401,13 @@
     var b = RES[key] ? s.res : s.items;
     if (!b || !b[key]) return false;
     b[key]--; if (!b[key]) delete b[key];
-    if (TOOLS[key] && !b[key] && s.wear) delete s.wear[key];
+    if (!b[key]) letGo(s, key);
     return true;
+  }
+  /* the last one is gone: forget its wear, and it's out of your hand */
+  function letGo(s, key) {
+    if ((TOOLS[key] || ARMS()[key]) && s.wear) delete s.wear[key];
+    if (s.equip === key) s.equip = '';
   }
 
   /* ── the nova city treasury: one letter a nova city week (7 days). upkeep
@@ -492,7 +499,11 @@
     MF.consume(s, f.food, f.drink, f.buff, f.secs, f.mind);
     return { ok: true, name: f.name };
   }
-  function goods(key) { return RES[key] || CURIOS[key] || TOOLS[key] || GEAR[key] || FISH[key] || FOODS[key] || MEDS[key] || null; }
+  /* weapons are combat.js's; asked for late, since it loads after this file */
+  function ARMS() { var C = root.MFCombat, out = {}; if (C) Object.keys(C.WEAPONS).forEach(function (k) { if (C.isWeapon(k)) out[k] = C.WEAPONS[k]; }); return out; }
+  /* a weapon sells for half, less for the wear on it */
+  function armsPrice(s, k) { var C = root.MFCombat, w = C.WEAPONS[k]; return Math.max(1, Math.floor(w.price / 2 * C.usesLeft(s, k) / w.dur)); }
+  function goods(key) { return RES[key] || CURIOS[key] || TOOLS[key] || GEAR[key] || FISH[key] || FOODS[key] || MEDS[key] || ARMS()[key] || null; }
   function nameOf(key) { var g = goods(key); return g ? g.name : key; }
   /* the counter's rows for a tab: what you can buy here, or what they'll buy off you */
   function storeRows(MF, s, id, tab) {
@@ -518,11 +529,13 @@
       if (st.curios) st.curios.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: CURIOS[k].price, have: items[k] || 0 }); });
       if (st.tools) st.tools.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: TOOLS[k].price, have: items[k] || 0 }); });
       if (st.gear) st.gear.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: GEAR[k].price, have: items[k] || 0 }); });
+      if (st.arms) st.arms.forEach(function (k) { var w = ARMS()[k]; if (w) rows.push({ key: k, label: w.name + ' · ' + w.dur + ' uses', price: w.price, have: items[k] || 0 }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
     } else if (st.kind === 'pawn') {
       Object.keys(st.buys).forEach(function (k) { if (res[k]) rows.push({ key: k, label: nameOf(k), price: st.buys[k], have: res[k], ok: true }); });
       Object.keys(CURIOS).forEach(function (k) { if (items[k]) rows.push({ key: k, label: nameOf(k), price: Math.floor(CURIOS[k].price / 2), have: items[k], ok: true }); });
       Object.keys(FISH).forEach(function (k) { if (items[k]) rows.push({ key: k, label: nameOf(k), price: FISH[k].price, have: items[k], ok: true }); });
+      Object.keys(ARMS()).forEach(function (k) { if (items[k]) rows.push({ key: k, label: nameOf(k) + ' · ' + root.MFCombat.usesLeft(s, k) + ' uses left', price: armsPrice(s, k), have: items[k], ok: true }); });
     }
     return rows;
   }
@@ -552,21 +565,22 @@
       return { ok: true, price: row.price, name: f.name, ate: true, buff: f.buff };
     }
     /* one rod of each kind is plenty */
-    if (tab === 'buy' && (TOOLS[key] || GEAR[key]) && s.items[key]) return { ok: false, why: 'you already have one' };
+    if (tab === 'buy' && (TOOLS[key] || GEAR[key] || ARMS()[key]) && s.items[key]) return { ok: false, why: 'you already have one' };
     if (tab === 'buy') {
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
       into[key] = (into[key] || 0) + 1;
       if (TOOLS[key]) { if (!s.wear) s.wear = {}; s.wear[key] = TOOLS[key].dur; }
       if (GEAR[key] && GEAR[key].secs) s.torch = GEAR[key].secs;
+      if (ARMS()[key]) { if (!s.wear) s.wear = {}; s.wear[key] = ARMS()[key].dur; }
       return { ok: true, price: row.price, name: row.label };
     }
-    into[key]--; if (!into[key]) delete into[key];
+    into[key]--; if (!into[key]) { delete into[key]; letGo(s, key); }
     MF.earn(s, row.price);
     return { ok: true, price: row.price, name: row.label };
   }
 
   root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, BOATS: BOATS, boatShort: boatShort, buildBoat: buildBoat, buyBoat: buyBoat,
-                   CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade,
+                   CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade, ARMS: ARMS,
                    FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, MEDS: MEDS, TREAT: TREAT, useMed: useMed, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, GEAR: GEAR, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
                    WEAR: WEAR, rodLeft: rodLeft, wearRod: wearRod,
