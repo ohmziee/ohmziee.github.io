@@ -23,8 +23,8 @@
     closePanels();
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
     $('stage').hidden = true; $('shop').hidden = true; document.querySelector('.tools').hidden = true; $('chip').hidden = false;
-    look = Object.keys(s.player.look).length ? A.normalize(s.player.look) : A.random();
     origin = D.origins[s.player.origin] ? s.player.origin : '';
+    look = Object.keys(s.player.look).length ? A.normalize(s.player.look, origin || undefined) : A.random(null, origin || undefined);
     power = s.player.power || '';
     var carried = '';
     try { carried = store.getItem('exiled.handle') || ''; } catch (e) {}
@@ -47,7 +47,7 @@
   }
   function drawSlots() {
     var box = $('slots'); box.innerHTML = '';
-    A.SLOTS.forEach(function (sl) {
+    A.slots(look).forEach(function (sl) {
       var row = document.createElement('div'), l = document.createElement('span'), v = document.createElement('span');
       row.className = 'slot'; l.className = 'l'; l.textContent = sl.label; v.className = 'v';
       function paint() {
@@ -58,7 +58,7 @@
       function arrow(step, glyph, name) {
         var b = document.createElement('button');
         b.type = 'button'; b.textContent = glyph; b.setAttribute('aria-label', name + ' ' + sl.label);
-        b.addEventListener('click', function () { look = A.cycle(look, sl.key, step); paint(); drawFace(); });
+        b.addEventListener('click', function () { look = A.cycle(look, sl.key, step, origin || undefined); paint(); drawFace(); });
         return b;
       }
       row.appendChild(l); row.appendChild(arrow(-1, '◀', 'previous')); row.appendChild(v); row.appendChild(arrow(1, '▶', 'next'));
@@ -72,7 +72,13 @@
       b.type = 'button'; b.className = 'origin'; b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(origin === id));
       t.textContent = o.title; d.textContent = o.blurb; b.appendChild(t); b.appendChild(d);
-      b.addEventListener('click', function () { origin = id; drawOrigins(); });
+      b.addEventListener('click', function () {
+        var was = origin; origin = id;
+        /* the origin decides the body: an ape, an android, a human; a product comes stamped */
+        look = A.normalize(look, id);
+        if (id === 'product' && was !== 'product' && look.marks === 'none') look.marks = 'barcode';
+        drawOrigins(); drawSlots(); drawFace();
+      });
       box.appendChild(b);
       /* an AI picks what keeps it running */
       if (origin !== id || !(MF.ORIGINS[id] && MF.ORIGINS[id].power)) return;
@@ -87,7 +93,7 @@
       box.appendChild(sub);
     });
   }
-  $('avRand').addEventListener('click', function () { look = A.random(); drawSlots(); drawFace(); });
+  $('avRand').addEventListener('click', function () { look = A.random(null, origin || undefined); drawSlots(); drawFace(); });
   $('chipGo').addEventListener('click', function () {
     var h = MF.cleanHandle($('handle').value);
     if (!h) { $('chipMsg').textContent = 'the line needs a handle.'; return; }
@@ -96,7 +102,7 @@
     if (needsPower && needsPower.indexOf(power) < 0) { $('chipMsg').textContent = 'pick what keeps you running.'; return; }
     /* every arrival chips in with a little on the chip */
     if (!MF.chippedIn(s)) MF.earn(s, MF.START_JOULES);
-    s.player = { handle: h, origin: origin, look: A.normalize(look), power: needsPower ? power : '' };
+    s.player = { handle: h, origin: origin, look: A.normalize(look, origin), power: needsPower ? power : '' };
     /* the origin's head start, once (a re-pick after the origins changed gets it too) */
     if (s.flags['origin-repick']) { delete s.flags['origin-repick']; delete s.flags['origin-start']; }
     if (window.MFLevel) window.MFLevel.start(MF, s);
@@ -132,7 +138,7 @@
   function openShop(id) {
     var sh = SH && SH.SHOPS[id];
     if (!sh) return;
-    shopId = id; trying = A.normalize(s.player.look);
+    shopId = id; trying = A.normalize(s.player.look, s.player.origin || undefined);
     closePanels();
     window.MFWorld.hide();
     $('stage').hidden = true; $('chip').hidden = true; document.querySelector('.tools').hidden = true;
@@ -156,8 +162,11 @@
     var q = SH.quote(shopId, s.player.look, trying, A), have = MF.joules(s);
     $('shopAv').innerHTML = A.render(trying); drawShopWalk();
     box.innerHTML = '';
-    kind.slots.forEach(function (ks) {
-      var sl = A.SLOTS.filter(function (x) { return x.key === ks.key; })[0];
+    /* only what fits this body: no haircuts for fur */
+    var mine = kind.slots.filter(function (ks) { return A.slots(trying).some(function (x) { return x.key === ks.key; }); });
+    if (!mine.length) { var none = document.createElement('p'); none.className = 'dim'; none.textContent = 'nothing in here for you. (no offence.)'; box.appendChild(none); }
+    mine.forEach(function (ks) {
+      var sl = A.slots(trying).filter(function (x) { return x.key === ks.key; })[0];
       var row = document.createElement('div'), l = document.createElement('span'), v = document.createElement('span');
       var changed = trying[ks.key] !== A.normalize(s.player.look)[ks.key];
       row.className = 'slot' + (changed ? ' changed' : ''); l.className = 'l'; v.className = 'v';
@@ -168,7 +177,7 @@
       function arrow(step, glyph, name) {
         var b = document.createElement('button');
         b.type = 'button'; b.textContent = glyph; b.setAttribute('aria-label', name + ' ' + ks.label);
-        b.addEventListener('click', function () { trying = A.cycle(trying, ks.key, step); $('shopMsg').textContent = ''; drawShop(); });
+        b.addEventListener('click', function () { trying = A.cycle(trying, ks.key, step, s.player.origin || undefined); $('shopMsg').textContent = ''; drawShop(); });
         return b;
       }
       row.appendChild(l); row.appendChild(arrow(-1, '◀', 'previous')); row.appendChild(v); row.appendChild(arrow(1, '▶', 'next'));
@@ -188,13 +197,13 @@
     $('shopPay').textContent = short ? 'NOT ENOUGH JOULES' : q.lines.length ? 'PAY ' + MF.fmtJ(q.total) : 'PAY';
   }
   function leaveShop() { if ($('shop').hidden) return; clearInterval(shopTimer); $('shop').hidden = true; showWorld(); }
-  $('shopUndo').addEventListener('click', function () { trying = A.normalize(s.player.look); $('shopMsg').textContent = ''; drawShop(); });
+  $('shopUndo').addEventListener('click', function () { trying = A.normalize(s.player.look, s.player.origin || undefined); $('shopMsg').textContent = ''; drawShop(); });
   $('shopLeave').addEventListener('click', leaveShop);
   $('shopPay').addEventListener('click', function () {
     var r = SH.buy(MF, A, s, shopId, trying);
     if (!r.ok) { $('shopMsg').classList.remove('ok'); $('shopMsg').textContent = r.why + '.'; return drawShop(); }
     if (store) MF.save(s, store);
-    trying = A.normalize(s.player.look);
+    trying = A.normalize(s.player.look, s.player.origin || undefined);
     $('shopMsg').classList.add('ok');
     $('shopMsg').textContent = 'paid ' + MF.fmtJ(r.total) + '. "' + SH.SHOPS[shopId].bye + '"';
     drawShop();

@@ -821,9 +821,14 @@
     return '#' + c(r) + c(g) + c(b);
   }
   function lookOf(raw) {
-    var l = A ? A.normalize(raw) : {};
-    return { H: l.hairC || '#3a2a20', B: shade(l.hairC || '#3a2a20', 0.85), S: l.skin || '#c88a64', C: l.topC || '#9f8cff', c: shade(l.topC || '#9f8cff', 0.7),
-             A: l.accC, P: '#22263a', k: '#0b0b10', hair: l.hair, beard: l.beard, marks: l.marks, top: l.top, acc: l.acc };
+    var l = A ? A.normalize(raw) : {}, g = A && A.group ? A.group(l.kind) : 'human';
+    var out = { H: l.hairC || '#3a2a20', B: shade(l.hairC || '#3a2a20', 0.85), S: l.skin || '#c88a64', C: l.topC || '#9f8cff', c: shade(l.topC || '#9f8cff', 0.7),
+                A: l.accC, P: '#22263a', k: '#0b0b10', hair: l.hair, beard: l.beard, marks: l.marks, top: l.top, acc: l.acc };
+    /* a simian: fur where the hair goes and down the arms, its species' face */
+    if (g === 'ape') { out.H = out.B = l.skin; out.S = A.FACE[l.kind]; out.P = shade(l.skin, 0.8); out.fur = 1; out.hair = out.beard = undefined; }
+    /* an android: its chassis for skin, eyes that glow */
+    if (g === 'android') { out.E = l.eyeC; out.m = shade(l.skin, 0.7); }
+    return out;
   }
   function playerLook() { return lookOf(s.player.look); }
 
