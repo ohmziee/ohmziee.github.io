@@ -18,17 +18,18 @@
   /* ── Chippin' In ────────────────────────────────────────────
      Before anything else the player says who they are: a handle, a look,
      where they come from. Nothing is saved until they chip in. */
-  var look = null, origin = '';
+  var look = null, origin = '', power = '';
   function showChip() {
     closePanels();
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
     $('stage').hidden = true; $('shop').hidden = true; document.querySelector('.tools').hidden = true; $('chip').hidden = false;
     look = Object.keys(s.player.look).length ? A.normalize(s.player.look) : A.random();
     origin = D.origins[s.player.origin] ? s.player.origin : '';
+    power = s.player.power || '';
     var carried = '';
     try { carried = store.getItem('exiled.handle') || ''; } catch (e) {}
     $('handle').value = s.player.handle || MF.cleanHandle(carried);
-    $('chipMsg').textContent = '';
+    $('chipMsg').textContent = s.flags['origin-repick'] ? 'the origins changed. pick where you come from again; the rest of your run stays.' : '';
     drawSlots(); drawOrigins(); drawFace();
   }
   function drawFace() { $('avBig').innerHTML = A.render(look); drawWalk(); }
@@ -73,6 +74,17 @@
       t.textContent = o.title; d.textContent = o.blurb; b.appendChild(t); b.appendChild(d);
       b.addEventListener('click', function () { origin = id; drawOrigins(); });
       box.appendChild(b);
+      /* an AI picks what keeps it running */
+      if (origin !== id || !(MF.ORIGINS[id] && MF.ORIGINS[id].power)) return;
+      var sub = document.createElement('div'); sub.className = 'power'; sub.setAttribute('role', 'radiogroup'); sub.setAttribute('aria-label', 'power source');
+      MF.ORIGINS[id].power.forEach(function (pw) {
+        var pb = document.createElement('button'), pt = document.createElement('b'), pd = document.createElement('span');
+        pb.type = 'button'; pb.className = 'origin sub'; pb.setAttribute('role', 'radio'); pb.setAttribute('aria-checked', String(power === pw));
+        pt.textContent = MF.POWER[pw].name; pd.textContent = MF.POWER[pw].what; pb.appendChild(pt); pb.appendChild(pd);
+        pb.addEventListener('click', function () { power = pw; drawOrigins(); });
+        sub.appendChild(pb);
+      });
+      box.appendChild(sub);
     });
   }
   $('avRand').addEventListener('click', function () { look = A.random(); drawSlots(); drawFace(); });
@@ -80,9 +92,14 @@
     var h = MF.cleanHandle($('handle').value);
     if (!h) { $('chipMsg').textContent = 'the line needs a handle.'; return; }
     if (!origin) { $('chipMsg').textContent = 'pick where you come from.'; return; }
+    var needsPower = MF.ORIGINS[origin] && MF.ORIGINS[origin].power;
+    if (needsPower && needsPower.indexOf(power) < 0) { $('chipMsg').textContent = 'pick what keeps you running.'; return; }
     /* every arrival chips in with a little on the chip */
     if (!MF.chippedIn(s)) MF.earn(s, MF.START_JOULES);
-    s.player = { handle: h, origin: origin, look: A.normalize(look) };
+    s.player = { handle: h, origin: origin, look: A.normalize(look), power: needsPower ? power : '' };
+    /* the origin's head start, once (a re-pick after the origins changed gets it too) */
+    if (s.flags['origin-repick']) { delete s.flags['origin-repick']; delete s.flags['origin-start']; }
+    if (window.MFLevel) window.MFLevel.start(MF, s);
     /* with nova city loaded they land in the street; the story starts
        when they talk to someone */
     if (window.MFWorld) { s.scene = null; if (store) MF.save(s, store); return showWorld(); }
@@ -428,7 +445,7 @@
         row.appendChild(b);
       }
       if (SH && SH.carried) {
-        var top = li('carrying ' + SH.carried(s) + ' / ' + SH.CARRY + 'kg', SH.load(s) > SH.FROZEN ? 'too heavy to move. drop something or stash it.' : SH.load(s) > 1 ? 'overloaded: you can barely walk.' : '');
+        var top = li('carrying ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg', SH.load(s) > SH.FROZEN ? 'too heavy to move. drop something or stash it.' : SH.load(s) > 1 ? 'overloaded: you can barely walk.' : '');
         if (window.MFWorld && window.MFWorld.sailing) {
           var hb = document.createElement('button'); hb.type = 'button'; hb.className = 'eat'; hb.textContent = 'BOAT HOLD';
           hb.addEventListener('click', function () { closePanels(); window.MFWorld.openHold(); });
@@ -555,7 +572,7 @@
   });
   /* after a restore, pick up wherever the run now is */
   function resume() {
-    if (!MF.chippedIn(s)) return showChip();
+    if (!MF.chippedIn(s) || s.flags['origin-repick']) return showChip();
     if (window.MFWorld && (!s.scene || MF.view(s, S).kind === 'end')) return showWorld();
     if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start);
     showStage(); render();
@@ -597,7 +614,7 @@
   });
 
   /* mid-conversation: back to it. otherwise: back to the street */
-  if (!MF.chippedIn(s)) showChip();
+  if (!MF.chippedIn(s) || s.flags['origin-repick']) showChip();
   else if (window.MFWorld && (!s.scene || MF.view(s, S).kind === 'end')) showWorld();
   else { if (!s.scene && !Object.keys(s.seen).length) MF.enter(s, S, D.start); showStage(); render(); }
 })();

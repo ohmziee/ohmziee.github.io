@@ -1132,6 +1132,7 @@
     if (L) { L.setRoom(lobbyRoom()); L.moved(me.x, me.y, me.dir); }
     s.world = here();
     if (api.save) api.save();
+    if (charging() && s.body.food < 95 && !talkBox) say(['you find a socket and plug in.\ncharging. stay a minute.']);
   }
   function goOut() {
     var d = doorOf(inside.id);
@@ -1250,7 +1251,7 @@
     $('wCounterTabs').hidden = st.kind !== 'pawn' && st.kind !== 'stash';
     $('wCounterTabs').children[0].textContent = st.kind === 'stash' ? 'TAKE' : 'BUY';
     $('wCounterTabs').children[1].textContent = st.kind === 'stash' ? 'STORE' : 'SELL';
-    if (st.kind === 'stash') { var bx = window.MFShops.stashOf(s, st.where); counter.msg = counter.msg || st.line; $('wCounterT').textContent = st.name + ' · ' + window.MFShops.weighs(bx) + '/' + st.cap + 'kg · you ' + window.MFShops.carried(s) + '/' + window.MFShops.CARRY + 'kg'; }
+    if (st.kind === 'stash') { var bx = window.MFShops.stashOf(s, st.where); counter.msg = counter.msg || st.line; $('wCounterT').textContent = st.name + ' · ' + window.MFShops.weighs(bx) + '/' + st.cap + 'kg · you ' + window.MFShops.carried(s) + '/' + window.MFShops.cap(s) + 'kg'; }
     [].forEach.call($('wCounterTabs').children, function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === counter.tab ? 'true' : 'false'); });
     list.innerHTML = '';
     rows.forEach(function (r, i) {
@@ -1279,11 +1280,12 @@
     if (sta <= 0) winded = true; else if (winded && sta >= MF.RUN_AGAIN) winded = false;
     if (now - staT > 100) { staT = now; drawSta(run); }
     torchTick(dt);
+    if (charging()) s.body.food = Math.min(100, s.body.food + 100 * dt / CHARGE_SECS);
     var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, run ? 1.5 : 1, tempNow());
     tired = state !== '';
     if (state === 'collapse') return faint(now, true);
     if (state === 'faint') return faint(now);
-    if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
+    if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([MF.ibc(s) ? 'core at ' + Math.round(s.body.food) + '%. you\'re running on fumes.\ncharge at home, the hospital or the police. no running till then.' : s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
     if (!tired) warned = false;
     if (now - bodyT > 400) { bodyT = now; drawBody(); weekly(); }
   }
@@ -1314,8 +1316,8 @@
     var MF = window.MF, SH = window.MFShops, b = s.body, out = [];
     function part(name, v, max, low, crit) { if (v < crit * max) out.push({ name: name, crit: true }); else if (v < low * max) out.push({ name: name, crit: false }); }
     part('HEALTH', MF.vital(s, 'hp'), MF.maxOf(s, 'hp'), 0.25, 0.1);
-    part('FOOD', b.food, 100, MF.WEAK / 100, 0.08);
-    part('DRINK', b.drink, 100, MF.WEAK / 100, 0.08);
+    if (MF.ibc(s)) part('CHARGE', b.food, 100, MF.WEAK / 100, 0.08);
+    else { part('FOOD', b.food, 100, MF.WEAK / 100, 0.08); part('DRINK', b.drink, 100, MF.WEAK / 100, 0.08); }
     part('BRAINPOWER', MF.vital(s, 'int'), MF.maxOf(s, 'int'), 0.2, 0.08);
     var ld = SH.load(s);
     if (ld > 1) out.push({ name: 'LOAD', crit: ld > SH.FROZEN });
@@ -1326,6 +1328,13 @@
      aren't. a flashlight comes on by itself out there at night and runs
      its battery down (shops.js GEAR); a bed charges it ── */
   var torchLit = false, darkSaid = 0;
+  /* an IBC core charges inside your own place or a government building */
+  var CHARGE_AT = { hospital: 1, ncpd: 1 }, CHARGE_SECS = 60;
+  function charging() {
+    if (!inside || !window.MF.ibc(s)) return false;
+    var r = M.room(inside.id);
+    return !!(CHARGE_AT[inside.id] || (r && r.home));
+  }
   function wild() { return !inside && ['vistadelsol', 'bay', 'jormun'].indexOf(whereNow()) >= 0; }
   function torchTick(dt) {
     var dark = wild() && darkness(novaNow()) > 0.3, has = !!(s.items && s.items.flashlight);
@@ -1567,7 +1576,7 @@
     if (!LV) { line('who', s.player.handle || 'stranger'); scr.appendChild(box); return; }
     if (phone.tab === 'id') {
       var i = LV.info(s), pk = LV.picks(s), pts = LV.points(s);
-      line('who', (s.player.handle || 'stranger') + (s.player.origin ? ' · ' + s.player.origin : ''));
+      line('who', (s.player.handle || 'stranger') + (s.player.origin ? ' · ' + s.player.origin + (s.player.power ? ' (' + s.player.power.toUpperCase() + ')' : '') : ''));
       line('lv', 'LVL ' + i.level);
       bar(i.need ? i.into / i.need : 1);
       line('', i.need ? i.into + ' / ' + i.need + ' EXP to LVL ' + (i.level + 1) : 'max level');
@@ -1576,9 +1585,9 @@
     } else if (phone.tab === 'vitals') {
       var b = s.body, SH = window.MFShops;
       Object.keys(MF.CORE).forEach(function (k) { var c = MF.CORE[k]; gauge(c.icon, c.pool, MF.vital(s, k), MF.maxOf(s, k), k); });
-      gauge('🍞', 'food', b.food, 100, 'food');
-      gauge('💧', 'drink', b.drink, 100, 'drink');
-      line('vrow', '🎒 load ' + SH.carried(s) + ' / ' + SH.CARRY + 'kg');
+      if (MF.ibc(s)) gauge('🔋', 'charge' + (charging() ? ' · charging' : ''), b.food, 100, 'sta');
+      else { gauge('🍞', 'food', b.food, 100, 'food'); gauge('💧', 'drink', b.drink, 100, 'drink'); }
+      line('vrow', '🎒 load ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg');
       if (s.items && s.items.flashlight) line('vrow', '🔦 flashlight ' + Math.round(100 * s.torch / SH.GEAR.flashlight.secs) + '%' + (torchLit ? ' · on' : ''));
       if (b.buff && b.buffT > 0) line('buff', b.buff + ' · ' + Math.ceil(b.buffT / 60) + 'm left');
     } else if (phone.tab === 'traits') {

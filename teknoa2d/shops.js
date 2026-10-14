@@ -366,7 +366,9 @@
   }
   function carried(s) { return weighs({ res: s.res, items: s.items }); }
   /* 0..1 is fine; over 1 you crawl; over FROZEN you're stuck */
-  function load(s) { return s.dev && s.dev.noweight ? 0 : carried(s) / CARRY; }
+  /* what you can carry: CARRY, plus what your origin adds (a simian's back) */
+  function cap(s) { var MF = root.MF; return CARRY + (MF && MF.originFx ? MF.originFx(s).carry || 0 : 0); }
+  function load(s) { return s.dev && s.dev.noweight ? 0 : carried(s) / cap(s); }
   function stashOf(s, where) {
     if (where === 'hold') { if (!s.hold || typeof s.hold !== 'object') s.hold = { items: {}, res: {} }; return s.hold; }
     if (!s.stash) s.stash = {};
@@ -485,6 +487,7 @@
     if (MEDS[key]) return useMed(MF, s, key);
     var f = FOODS[key];
     if (!f || !s.items || !s.items[key]) return { ok: false, why: 'nothing to eat' };
+    if (MF.ibc(s)) return { ok: false, why: 'no stomach. you run on charge' };
     s.items[key]--; if (!s.items[key]) delete s.items[key];
     MF.consume(s, f.food, f.drink, f.buff, f.secs, f.mind);
     return { ok: true, name: f.name };
@@ -505,7 +508,9 @@
       return rows;
     }
     if (tab === 'buy' && st.menu) {
-      st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : '') + (f.mind ? ' · +' + f.mind + ' brainpower' : ''), price: f.price, have: 0, here: true }); });
+      /* a novan knows the carts: street food for less */
+      var street = st.kind === 'vendor' ? MF.originFx(s).street || 1 : 1;
+      st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : '') + (f.mind ? ' · +' + f.mind + ' brainpower' : ''), price: Math.max(1, Math.round(f.price * street)), have: 0, here: true }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
     } else if (tab === 'buy') {
       if (st.foods) st.foods.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: FOODS[k].price, have: items[k] || 0 }); });
@@ -540,6 +545,7 @@
     }
     /* a cart or a restaurant: you eat it there and then */
     if (tab === 'buy' && row.here) {
+      if (MF.ibc(s)) return { ok: false, why: 'no stomach. you run on charge' };
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
       var f = FOODS[key];
       MF.consume(s, f.food, f.drink, f.buff, f.secs, f.mind);
@@ -565,6 +571,6 @@
                    TOOLS: TOOLS, GEAR: GEAR, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,
                    WEAR: WEAR, rodLeft: rodLeft, wearRod: wearRod,
                    UPKEEP: UPKEEP, LEVY: LEVY, levy: levy, bill: bill, treasury: treasury,
-                   CARRY: CARRY, FROZEN: FROZEN, STASH_CAP: STASH_CAP, HOLD_CAP: HOLD_CAP, weightOf: weightOf, weighs: weighs, carried: carried, load: load, stashOf: stashOf, drop: drop,
+                   CARRY: CARRY, cap: cap, FROZEN: FROZEN, STASH_CAP: STASH_CAP, HOLD_CAP: HOLD_CAP, weightOf: weightOf, weighs: weighs, carried: carried, load: load, stashOf: stashOf, drop: drop,
                    price: price, quote: quote, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

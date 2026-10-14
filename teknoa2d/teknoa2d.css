@@ -178,6 +178,9 @@ a{color:var(--lavender)}
 .origin span{color:var(--rain);font-size:.85rem}
 .chip .origin[aria-checked="true"]{border-color:var(--live);background:rgba(124,255,178,.07)}
 .origin[aria-checked="true"] b{color:var(--live)}
+.chip .power{display:grid;gap:.4rem;margin:-.2rem 0 .2rem 1.2rem;padding-left:.6rem;border-left:2px solid var(--live)}
+.chip .origin.sub{padding:.5rem .7rem}
+.chip .origin.sub b{font-size:.85rem}
 .chip .msg{min-height:1.2em;color:var(--glitch-b);margin:.8rem 0 .4rem}
 .chip .go{width:100%;padding:.8rem;font-family:var(--font-display);font-weight:700;font-size:1.15rem;letter-spacing:.25em;
   color:var(--live);border-color:var(--live);background:rgba(124,255,178,.06)}

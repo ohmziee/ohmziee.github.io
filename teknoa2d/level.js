@@ -92,7 +92,8 @@
     var t = d.trait || src.trait;
     if (!TRAITS[t]) throw new Error('unknown trait: ' + t);
     ready(s);
-    var n = Math.max(0, Math.floor(src.xp(d))), before = level(s), tb = traitLevel(s, t);
+    var fx = root.MF && root.MF.originFx ? root.MF.originFx(s) : {};
+    var n = Math.max(0, Math.floor(src.xp(d) * (fx.xp || 1))), before = level(s), tb = traitLevel(s, t);
     s.xp.total = Math.max(0, Math.floor(+s.xp.total || 0)) + n;
     s.xp.by[source] = (Math.floor(+s.xp.by[source]) || 0) + n;
     s.skills[t] = (Math.floor(+s.skills[t]) || 0) + n;
@@ -128,7 +129,24 @@
   /* a trait's tree, drafts left out unless dev */
   function tree(t, dev) { return Object.keys(PERKS).filter(function (k) { return PERKS[k].trait === t && (dev || !PERKS[k].draft); }); }
 
-  root.MFLevel = { MAX_LEVEL: MAX_LEVEL, MAX_TRAIT: MAX_TRAIT, TRAITS: TRAITS, SOURCES: SOURCES, PERKS: PERKS,
+  /* ── an origin's head start, once per run, at Chippin' In: traits at
+     their starting level, the joules it brings, vitals filled to the top ── */
+  function start(MF, s) {
+    ready(s);
+    if (s.flags['origin-start']) return false;
+    s.flags['origin-start'] = 1;
+    var fx = MF.originFx(s);
+    Object.keys(fx.start || {}).forEach(function (t) {
+      var n = 0; for (var l = 1; l < fx.start[t]; l++) n += needT(l);
+      s.skills[t] = Math.max(Math.floor(+s.skills[t]) || 0, n);
+    });
+    if (fx.joules && fx.joules > MF.START_JOULES) MF.earn(s, fx.joules - MF.START_JOULES);
+    s.body.health = MF.maxOf(s, 'hp'); MF.rest(s);
+    if (MF.ibc(s)) { s.body.food = 100; s.body.drink = 100; }
+    return true;
+  }
+
+  root.MFLevel = { start: start, MAX_LEVEL: MAX_LEVEL, MAX_TRAIT: MAX_TRAIT, TRAITS: TRAITS, SOURCES: SOURCES, PERKS: PERKS,
                    need: need, needT: needT, info: info, level: level, traitInfo: traitInfo, traitLevel: traitLevel, award: award,
                    picks: picks, pickCore: pickCore, points: points, has: has, blocked: blocked, take: take, tree: tree, ready: ready };
 })(typeof window !== 'undefined' ? window : globalThis);

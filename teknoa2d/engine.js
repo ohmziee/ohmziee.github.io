@@ -20,7 +20,7 @@
   var SAVE_KEY = 'exiled.mf.save';
 
   function newState() {
-    return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {} },
+    return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {}, power: '' },
              flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {},
              world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
@@ -205,7 +205,10 @@
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
-                 look: p.look && typeof p.look === 'object' ? p.look : {} };
+                 look: p.look && typeof p.look === 'object' ? p.look : {}, power: p.power === 'ibc' || p.power === 'ade' ? p.power : '' };
+    /* the first four origins were all earthlings from brooklyn: they become
+       earthlings and get one chance to pick again (ui.js) */
+    if (OLD_ORIGINS[s.player.origin]) { s.player.origin = 'earthling'; s.flags['origin-repick'] = 1; }
     return s;
   }
   function exportCode(s) { var j = JSON.stringify(s); return 'MF1.' + b64e(j) + '.' + sum(j); }
@@ -229,15 +232,20 @@
   var FOOD_SECS = 45 * 60, DRINK_SECS = 30 * 60, WEAK = 20, WAKE = 40;
   /* temp (°C), if given: heat dries you out, cold makes you hungry */
   function drain(s, secs, factor, temp) {
-    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0), heat = 1, cold = 1;
-    if (temp !== undefined) { heat = 1 + Math.max(0, temp - 28) * 0.08; cold = 1 + Math.max(0, 20 - temp) * 0.06; }
-    b.food = Math.max(0, b.food - 100 * f * cold / FOOD_SECS);
-    b.drink = Math.max(0, b.drink - 100 * f * heat / DRINK_SECS);
+    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0), heat = 1, cold = 1, fx = originFx(s), chill = fx.cold ? COLD_AI : 20;
+    if (temp !== undefined) { heat = 1 + Math.max(0, temp - 28) * 0.08; cold = 1 + Math.max(0, chill - temp) * 0.06; }
+    if (ibc(s)) {
+      /* a battery core: one charge, no hunger or thirst, lasts IBC_LASTS times longer */
+      b.food = Math.max(0, b.food - 100 * f / (FOOD_SECS * IBC_LASTS)); b.drink = 100;
+    } else {
+      b.food = Math.max(0, b.food - 100 * f * cold / FOOD_SECS);
+      b.drink = Math.max(0, b.drink - 100 * f * heat / DRINK_SECS);
+    }
     if (b.buffT > 0) { b.buffT = Math.max(0, b.buffT - (+secs || 0)); if (!b.buffT) b.buff = ''; }
     /* health: starving or parched wears it down, bitter cold or heat too;
        eating well brings it back */
     var mins = Math.max(0, +secs || 0) / 60, hp = b.health === undefined ? 100 : b.health;
-    var exposed = temp !== undefined && (temp < 14 || temp > 34);
+    var exposed = temp !== undefined && (temp < (fx.cold ? COLD_AI : 14) || temp > 34);
     if (weak(s)) hp -= 2 * mins;
     if (exposed) hp -= mins;
     else if (!weak(s) && b.food > 60 && b.drink > 60) hp += 3 * mins;
@@ -250,13 +258,34 @@
   function hurt(s, n) { s.body.health = Math.max(0, num0(s.body.health, maxOf(s, 'hp')) - n); return s.body.health; }
   function heal(s, n) { s.body.health = Math.min(maxOf(s, 'hp'), num0(s.body.health, maxOf(s, 'hp')) + n); return s.body.health; }
 
+  /* ── origins: where the player comes from (content/origins.scene has the
+     words). each can: scale exp (xp), start traits at a level (start),
+     shift a vital's maximum (max), add carry kg (carry), shrug off cold
+     (cold), discount street food (street), start with more joules
+     (joules), offer a power source (power). level.js start() applies
+     the one-off parts at Chippin' In ───────────────────────────────── */
+  var ORIGINS = {
+    earthling: { xp: 1.1 },
+    simian:    { start: { atk: 5 }, carry: 15 },
+    ai:        { cold: 1, max: { int: 10 }, power: ['ade', 'ibc'] },
+    novan:     { start: { stl: 5 }, street: 0.8 },
+    product:   { max: { hp: -20 }, joules: 600 }
+  };
+  /* an AI's power: an artificial digestive engine eats like anyone, an
+     internal battery core runs on charge (homes, hospital, police) */
+  var POWER = { ade: { name: 'artificial digestive engine (ADE)', what: 'you eat and drink like anyone else.' },
+                ibc: { name: 'internal battery core (IBC)', what: 'no hunger, no thirst, a charge that lasts. charging points: your home, the hospital, the police.' } };
+  var OLD_ORIGINS = { local: 1, runner: 1, defector: 1, ghost: 1 }, COLD_AI = -6, IBC_LASTS = 3;
+  function originFx(s) { return ORIGINS[s.player && s.player.origin] || {}; }
+  function ibc(s) { return !!(s.player && s.player.origin === 'ai' && s.player.power === 'ibc'); }
+
   /* ── the three core vitals. every level-up the player picks one and its
      maximum goes up by CORE_STEP (level.js pickCore) ─────────────────── */
   /* name: the maximum, raised at level-up. pool: what you spend and get back
      (using your mind tires it like running tires the body) */
   var CORE = { hp: { name: 'health', pool: 'health', icon: '♥', key: 'health' }, sta: { name: 'stamina', pool: 'stamina', icon: '💪', key: 'sta' }, int: { name: 'intelligence', pool: 'brainpower', icon: '🧠', key: 'int' } };
   var CORE_BASE = 100, CORE_STEP = 10, MAX_PICKS = 98;
-  function maxOf(s, k) { return CORE_BASE + CORE_STEP * Math.max(0, Math.floor(+(s.core && s.core[k]) || 0)); }
+  function maxOf(s, k) { return CORE_BASE + ((originFx(s).max || {})[k] || 0) + CORE_STEP * Math.max(0, Math.floor(+(s.core && s.core[k]) || 0)); }
   function vital(s, k) { return num0(s.body[CORE[k].key], maxOf(s, k)); }
   /* put some back, never past the top */
   function restore(s, k, n) { s.body[CORE[k].key] = Math.max(0, Math.min(maxOf(s, k), vital(s, k) + (+n || 0))); return s.body[CORE[k].key]; }
@@ -317,6 +346,7 @@
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
+              ORIGINS: ORIGINS, POWER: POWER, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc,
               CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
               STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
