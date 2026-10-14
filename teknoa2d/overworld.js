@@ -2475,5 +2475,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
 })();

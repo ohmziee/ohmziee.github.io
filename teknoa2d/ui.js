@@ -560,6 +560,8 @@
   function openSys() {
     toggle('sys', function () { $('code').value = code(); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; onlineLabel(); });
   }
+  /* SYS opens from the phone, so BACK goes back to the phone */
+  $('sysBack').addEventListener('click', function () { closePanels(); if (window.MFWorld && window.MFWorld.active) window.MFWorld.openPhone(); });
   window.MFUI = { openSys: openSys };
   /* the shared streets: on unless they say otherwise */
   function onlineLabel() { $('onlineBtn').textContent = window.MFWorld && window.MFWorld.offline ? 'GO ONLINE' : 'GO OFFLINE'; }
