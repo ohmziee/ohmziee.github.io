@@ -25,6 +25,7 @@
              world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
+             yard: {},                                       /* materials left with a boat builder, per yard: { slip: { scrap: 12 } } */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
              torch: 0,                                       /* seconds of flashlight battery left */
@@ -192,6 +193,7 @@
     function counts(o) { var out = {}; Object.keys(o && typeof o === 'object' ? o : {}).forEach(function (k) { var n = Math.floor(+o[k] || 0); if (n > 0) out[k] = n; }); return out; }
     function box(b) { return { items: counts(b && b.items), res: counts(b && b.res) }; }
     s.hold = box(s.hold);
+    var yd = s.yard; s.yard = {}; Object.keys(yd).forEach(function (k) { var c = counts(yd[k]); if (Object.keys(c).length) s.yard[k] = c; });
     Object.keys(s.stash).forEach(function (k) { s.stash[k] = box(s.stash[k]); });
     Object.keys(s.wear).forEach(function (k) { var n = Math.floor(+s.wear[k] || 0); if (n > 0) s.wear[k] = n; else delete s.wear[k]; });
     var co = s.core;

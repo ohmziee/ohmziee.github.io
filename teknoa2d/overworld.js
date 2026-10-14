@@ -1017,8 +1017,9 @@
   function shipwright() {
     var SH = window.MFShops, MF = window.MF;
     if (s.boat) return say(['she\'s yours. face the water anywhere\nand press A to set sail.', 'mind the east coast. the reef\'s further out than it looks.'], 'SHIPWRIGHT');
-    var short = SH.boatShort(MF, s), need = SH.BOAT.need, res = s.res || {};
-    var list = Object.keys(need).map(function (k) { return SH.RES[k].name + ' ' + (res[k] || 0) + '/' + need[k]; }).join('\n') + '\n' + MF.fmtJ(MF.joules(s)) + ' of ' + MF.fmtJ(SH.BOAT.joules);
+    var short = SH.boatShort(MF, s, 'yard'), need = SH.BOAT.need;
+    var list = Object.keys(need).map(function (k) { return SH.RES[k].name + ' ' + SH.haveFor(s, 'yard', k) + '/' + need[k]; }).join('\n') + '\n' + MF.fmtJ(MF.joules(s)) + ' of ' + MF.fmtJ(SH.BOAT.joules);
+    if (short.length && canLeave('yard')) return leaveWith('yard', 'SHIPWRIGHT');
     var pitch = 'a boat? i can build you one. it gets you past the shore:\nvistadelsol, the islands, the whole nova sea.';
     if (short.length) return say([pitch, 'bring me ' + need.timber + ' timber, ' + need.fibre + ' palm fibre,\n' + need.scrap + ' scrap metal, and ' + MF.fmtJ(SH.BOAT.joules) + ' for my time.', 'what you\'ve got:\n' + list, 'timber\'s in naturia, by the trees. fibre in yucayeque.\nscrap round the labs, or over in redrum.'], 'SHIPWRIGHT');
     ask([pitch, 'that\'s everything. ' + need.timber + ' timber, ' + need.fibre + ' fibre, ' + need.scrap + ' scrap and ' + MF.fmtJ(SH.BOAT.joules) + '.\nbuild it?'], function () {
@@ -1030,10 +1031,26 @@
       say(['sawing. hammering. a lot of swearing.', 'done. she\'s moored at the end of the pier.\nface the water anywhere and press A to set sail.'], 'SHIPWRIGHT');
     });
   }
+  /* a builder holds what you bring a load at a time */
+  function canLeave(yard) {
+    var SH = window.MFShops, B = SH.BOATS[yard], bank = SH.banked(s, yard);
+    return Object.keys(B.need).some(function (k) { return ((s.res || {})[k] || 0) > 0 && (bank[k] || 0) < B.need[k]; });
+  }
+  function leaveWith(yard, who) {
+    var SH = window.MFShops, MF = window.MF, B = SH.BOATS[yard];
+    ask(['you\'ve brought some of what the boat needs.\nleave it with me? i\'ll keep it till there\'s enough.'], function () {
+      var moved = SH.leaveMats(s, yard), bank = SH.banked(s, yard);
+      if (api.save) api.save();
+      var got = Object.keys(moved).map(function (k) { return moved[k] + ' ' + SH.RES[k].name; }).join(', ');
+      var still = SH.boatShort(MF, s, yard).map(function (x) { return x.kind === 'joules' ? MF.fmtJ(x.need) + ' for the labour' : (x.need - x.have) + ' more ' + SH.RES[x.kind].name; });
+      say(['left with me: ' + got + '.\nheld for you: ' + Object.keys(B.need).map(function (k) { return (bank[k] || 0) + '/' + B.need[k] + ' ' + SH.RES[k].name; }).join(', ') + '.',
+           still.length ? 'still need ' + still.join(', ') + '.' : 'that\'s everything. talk to me again and i\'ll build it.'], who);
+    }, null);
+  }
   /* the scrapper on redrum's slip: a skiff out of scrap, or one for cash.
      the only way off the island. PLACEHOLDER lines */
   function scrapper() {
-    var SH = window.MFShops, MF = window.MF, B = SH.BOATS.slip, have = (s.res || {}).scrap || 0;
+    var SH = window.MFShops, MF = window.MF, B = SH.BOATS.slip, have = SH.haveFor(s, 'slip', 'scrap');
     if (s.boat) return say(['you\'ve got a boat. go on, the city\'s right there.\nface the water and press A.'], 'SCRAPPER');
     var pitch = 'the city? no bridge. never was.\nyou want across, you want a boat.';
     var terms = 'i\'ll knock you a skiff together: ' + B.need.scrap + ' scrap and ' + MF.fmtJ(B.joules) + ' for the labour.\nor ' + MF.fmtJ(B.buy) + ' and you take the one tied up out back.';
@@ -1045,7 +1062,8 @@
       if (api.save) api.save();
       say(['banging. welding. one swear word, very long.', 'there. she floats. mostly.\nface the water anywhere and press A to set sail.'], 'SCRAPPER');
     }
-    if (!build && !buy) return say([pitch, terms, mine, 'scrap\'s lying about all over redrum.\nthe pawn shop pays for it too, if you need joules more.'], 'SCRAPPER');
+    if (!build && !buy && canLeave('slip')) return leaveWith('slip', 'SCRAPPER');
+    if (!build && !buy) return say([pitch, terms, mine, 'scrap\'s lying about all over redrum.\nbring it a load at a time. i\'ll keep it for you.'], 'SCRAPPER');
     if (build) return ask([pitch, terms, mine + '\nbuild it?'], function () { if (SH.buildBoat(MF, s, 'slip').ok) done(B.joules, true); }, buy ? function () { if (SH.buyBoat(MF, s, 'slip').ok) done(B.buy); } : null, buy ? 'A: build it    B: just buy one' : null);
     ask([pitch, terms, mine + '\nbuy one?'], function () { if (SH.buyBoat(MF, s, 'slip').ok) done(B.buy); });
   }

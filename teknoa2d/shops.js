@@ -103,16 +103,34 @@
   };
   /* two places to get a boat: the boatyard in yucayeque builds a proper one,
      the slip on redrum knocks a skiff together out of scrap, or sells one
-     outright to anyone who'd rather not wait. either one floats */
+     outright to anyone who'd rather not wait. either one floats. it's more
+     than you can carry in one go, so the builder keeps what you drop off
+     (s.yard) till there's enough. PLACEHOLDER amounts */
   var BOATS = {
-    yard: { joules: 1500, need: { timber: 12, fibre: 8, scrap: 6 } },
-    slip: { joules: 400, need: { scrap: 20 }, buy: 2500 }
+    yard: { joules: 3000, need: { timber: 24, fibre: 16, scrap: 12 } },
+    slip: { joules: 800, need: { scrap: 40 }, buy: 5000 }
   };
+  /* what you've left with a builder */
+  function banked(s, yard) { return (s.yard && s.yard[yard]) || {}; }
+  function haveFor(s, yard, k) { return ((s.res || {})[k] || 0) + (banked(s, yard)[k] || 0); }
+  /* leave what's in your pockets that the boat still needs: { k: n } moved */
+  function leaveMats(s, yard) {
+    var B = BOATS[yard] || BOATS.yard, moved = {};
+    if (!s.yard) s.yard = {};
+    var bank = s.yard[yard] = s.yard[yard] || {};
+    Object.keys(B.need).forEach(function (k) {
+      var want = B.need[k] - (bank[k] || 0), n = Math.min(want, (s.res || {})[k] || 0);
+      if (n <= 0) return;
+      bank[k] = (bank[k] || 0) + n; s.res[k] -= n; if (!s.res[k]) delete s.res[k];
+      moved[k] = n;
+    });
+    return moved;
+  }
   var BOAT = BOATS.yard;
   /* what's still missing for the boat: [] when it can be built */
   function boatShort(MF, s, yard) {
-    var BOAT = BOATS[yard] || BOATS.yard, out = [], res = s.res || {};
-    Object.keys(BOAT.need).forEach(function (k) { if ((res[k] || 0) < BOAT.need[k]) out.push({ kind: k, have: res[k] || 0, need: BOAT.need[k] }); });
+    var BOAT = BOATS[yard] || BOATS.yard, out = [];
+    Object.keys(BOAT.need).forEach(function (k) { var h = haveFor(s, yard || 'yard', k); if (h < BOAT.need[k]) out.push({ kind: k, have: h, need: BOAT.need[k] }); });
     if (MF.joules(s) < BOAT.joules) out.push({ kind: 'joules', have: MF.joules(s), need: BOAT.joules });
     return out;
   }
@@ -123,7 +141,13 @@
     var short = boatShort(MF, s, yard);
     if (short.length) return { ok: false, why: 'short', short: short };
     if (!MF.spend(s, BOAT.joules)) return { ok: false, why: 'short' };
-    Object.keys(BOAT.need).forEach(function (k) { s.res[k] -= BOAT.need[k]; if (!s.res[k]) delete s.res[k]; });
+    /* what they're holding goes in first, your pockets make up the rest */
+    var bank = banked(s, yard || 'yard');
+    Object.keys(BOAT.need).forEach(function (k) {
+      var from = Math.min(bank[k] || 0, BOAT.need[k]), rest = BOAT.need[k] - from;
+      if (from) { bank[k] -= from; if (!bank[k]) delete bank[k]; }
+      if (rest) { s.res[k] -= rest; if (!s.res[k]) delete s.res[k]; }
+    });
     s.boat = 1;
     return { ok: true };
   }
@@ -579,7 +603,7 @@
     return { ok: true, price: row.price, name: row.label };
   }
 
-  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, BOATS: BOATS, boatShort: boatShort, buildBoat: buildBoat, buyBoat: buyBoat,
+  root.MFShops = { KINDS: KINDS, SHOPS: SHOPS, HOMES: HOMES, RES: RES, BOAT: BOAT, BOATS: BOATS, boatShort: boatShort, buildBoat: buildBoat, buyBoat: buyBoat, banked: banked, haveFor: haveFor, leaveMats: leaveMats,
                    CURIOS: CURIOS, STORES: STORES, storeRows: storeRows, trade: trade, ARMS: ARMS,
                    FOODS: FOODS, VENDORS: VENDORS, place: place, eat: eat, MEDS: MEDS, TREAT: TREAT, useMed: useMed, FIRES: FIRES, GRILL: GRILL, cookRows: cookRows, cook: cook,
                    TOOLS: TOOLS, GEAR: GEAR, FISH: FISH, ZONES: ZONES, TIER_HARD: TIER_HARD, pickFish: pickFish, bestRod: bestRod, goods: goods,

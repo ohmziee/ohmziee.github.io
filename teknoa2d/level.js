@@ -61,6 +61,8 @@
     charm:       { trait: 'prs', name: 'charm',        need: 40, after: 'silver', what: 'they like you. it shows.', draft: 1 }
   };
 
+  /* every gain is cut to this: levels come slower, and the start on redrum lasts. PLACEHOLDER */
+  var EXP_RATE = 0.6;
   /* exp to go from level n to n+1. character: 100, 283, 520 ... trait: 25, 59, 99 ... */
   function need(n) { return Math.round(100 * Math.pow(n, 1.5)); }
   function needT(n) { return Math.round(25 * Math.pow(n, 1.25)); }
@@ -93,7 +95,7 @@
     if (!TRAITS[t]) throw new Error('unknown trait: ' + t);
     ready(s);
     var fx = root.MF && root.MF.originFx ? root.MF.originFx(s) : {};
-    var n = Math.max(0, Math.floor(src.xp(d) * (fx.xp || 1))), before = level(s), tb = traitLevel(s, t);
+    var rate = root.MFLevel ? root.MFLevel.EXP_RATE : EXP_RATE, raw = src.xp(d) * (fx.xp || 1), n = raw > 0 ? Math.max(1, Math.floor(raw * rate)) : 0, before = level(s), tb = traitLevel(s, t);
     s.xp.total = Math.max(0, Math.floor(+s.xp.total || 0)) + n;
     s.xp.by[source] = (Math.floor(+s.xp.by[source]) || 0) + n;
     s.skills[t] = (Math.floor(+s.skills[t]) || 0) + n;
@@ -146,7 +148,7 @@
     return true;
   }
 
-  root.MFLevel = { start: start, MAX_LEVEL: MAX_LEVEL, MAX_TRAIT: MAX_TRAIT, TRAITS: TRAITS, SOURCES: SOURCES, PERKS: PERKS,
+  root.MFLevel = { EXP_RATE: EXP_RATE, start: start, MAX_LEVEL: MAX_LEVEL, MAX_TRAIT: MAX_TRAIT, TRAITS: TRAITS, SOURCES: SOURCES, PERKS: PERKS,
                    need: need, needT: needT, info: info, level: level, traitInfo: traitInfo, traitLevel: traitLevel, award: award,
                    picks: picks, pickCore: pickCore, points: points, has: has, blocked: blocked, take: take, tree: tree, ready: ready };
 })(typeof window !== 'undefined' ? window : globalThis);
