@@ -86,7 +86,21 @@
     }
     if (t === T.GROUND || t === T.STALL) {
       px(g, p.ground, 0, 0, TS, TS);
-      if ((v & 7) === 0) { px(g, p.line, 5, 6, 2, 1); px(g, p.line, 11, 11, 1, 1); }
+      var gDk = shade(p.ground, 0.8), gLt = shade(p.ground, 1.2), id = di >= 0 ? D[di].id : '';
+      if (id && id !== 'naturia') {
+        /* pavement: two rows of slabs, staggered, lit on the top edge */
+        var sx = v & 1 ? 4 : 11;
+        px(g, gDk, 0, 7, TS, 1); px(g, gDk, 0, 15, TS, 1);
+        px(g, gDk, sx, 0, 1, 7); px(g, gDk, (sx + 7) % TS, 8, 1, 7);
+        px(g, gLt, 0, 0, TS, 1); px(g, gLt, 0, 8, TS, 1);
+        var gk = v % 8;
+        if (gk === 2) { px(g, gDk, 2, 2, 2, 1); px(g, gDk, 4, 3, 1, 2); px(g, gDk, 5, 5, 2, 1); }        /* a cracked slab */
+        else if (gk === 5) { px(g, p.leaf, sx - 1, 6, 1, 1); px(g, p.leaf, sx + 1, 6, 1, 1); px(g, p.leaf, sx, 5, 1, 2); }  /* a weed in the seam */
+        else if (gk === 6) { px(g, p.glow[v % p.glow.length], 10, 11, 2, 1); px(g, gDk, 10, 12, 2, 1); }  /* litter catching the light */
+      } else {
+        /* naturia and the outskirts: packed dirt and pebbles */
+        [[3, 4], [11, 2], [7, 11], [13, 13]].forEach(function (d, j) { if ((v >> j) & 1) { px(g, gDk, d[0], d[1] + 1, 2, 1); px(g, gLt, d[0], d[1], 2, 1); } });
+      }
       if (t === T.STALL) {
         /* a market stall: striped awning, counter, a few things for sale */
         px(g, OUT, 0, 1, TS, 7);
@@ -97,14 +111,39 @@
       return;
     }
     if (t === T.ROAD) {
+      var rDk = shade(p.road, 0.78), rLt = shade(p.road, 1.2), kLt = shade(p.line, 1.15), kDk = shade(p.line, 0.65), all4 = N && S && E && Wd;
       px(g, p.road, 0, 0, TS, TS);
-      /* a kerb wherever the road stops */
-      if (!N) px(g, p.line, 0, 0, TS, 1); if (!S) px(g, p.line, 0, 15, TS, 1);
-      if (!E) px(g, p.line, 15, 0, 1, TS); if (!Wd) px(g, p.line, 0, 0, 1, TS);
+      /* asphalt grain: a few fixed flecks per variant */
+      for (i = 0; i < 6; i++) px(g, i % 2 ? rDk : rLt, (v * 7 + i * 13) % TS, (v * 11 + i * 5) % TS, 1, 1);
+      var rk = v % 16;
+      if (rk === 3 && all4) {
+        /* a manhole cover */
+        px(g, OUT, 5, 4, 6, 8); px(g, OUT, 4, 5, 8, 6); px(g, rDk, 5, 5, 6, 6);
+        px(g, rLt, 6, 6, 4, 1); px(g, rLt, 6, 8, 4, 1); px(g, rLt, 6, 10, 4, 1);
+      } else if (rk === 7 || rk === 12) {
+        /* a crack */
+        px(g, rDk, 3, 9, 3, 1); px(g, rDk, 6, 8, 2, 1); px(g, rDk, 8, 9, 1, 2); px(g, rDk, 9, 11, 3, 1);
+      } else if ((rk === 5 || rk === 14) && all4) {
+        /* a puddle with the neon in it */
+        var pud = shade(p.road, 0.6), glint = p.glow[v % p.glow.length];
+        px(g, pud, 4, 8, 8, 3); px(g, pud, 3, 9, 10, 1); px(g, glint, 6, 9, 3, 1); px(g, shade(glint, 0.6), 9, 9, 2, 1);
+      }
+      /* lane dashes down the middle of a single-lane street */
+      if (!N && !S) { px(g, shade(p.line, 1.3), 1, 7, 5, 1); px(g, shade(p.line, 1.3), 9, 7, 5, 1); }
+      else if (!E && !Wd) { px(g, shade(p.line, 1.3), 7, 1, 1, 5); px(g, shade(p.line, 1.3), 7, 9, 1, 5); }
+      /* a raised kerb wherever the road stops: lit on top, shadowed below */
+      if (!N) { px(g, kLt, 0, 0, TS, 1); px(g, p.line, 0, 1, TS, 1); px(g, rDk, 0, 2, TS, 1); }
+      if (!S) { px(g, rDk, 0, 13, TS, 1); px(g, p.line, 0, 14, TS, 1); px(g, kDk, 0, 15, TS, 1); }
+      if (!E) { px(g, rDk, 13, 0, 1, TS); px(g, p.line, 14, 0, 1, TS); px(g, kDk, 15, 0, 1, TS); }
+      if (!Wd) { px(g, kLt, 0, 0, 1, TS); px(g, p.line, 1, 0, 1, TS); px(g, rDk, 2, 0, 1, TS); }
       return;
     }
     if (t === T.GRASS) {
       px(g, p.grass, 0, 0, TS, TS);
+      /* a shadow line wherever the grass gives way */
+      var gEdge = shade(p.grass, 0.65);
+      if (N) px(g, gEdge, 0, 0, TS, 1); if (S) px(g, gEdge, 0, 15, TS, 1);
+      if (E) px(g, gEdge, 15, 0, 1, TS); if (Wd) px(g, gEdge, 0, 0, 1, TS);
       /* tufts: little ^^ pairs on a grid, the way the old games did it */
       (v & 1 ? [[2, 3], [10, 10]] : [[10, 2], [3, 10]]).forEach(function (c) {
         px(g, p.leaf, c[0], c[1] + 1); px(g, p.leaf, c[0] + 1, c[1]); px(g, p.leaf, c[0] + 2, c[1] + 1);
@@ -236,7 +275,22 @@
       /* the tower stands in the open: ground under its whole footprint */
       if (m.id === 'tower') for (var yy = m.y; yy < m.y + m.h; yy++) for (var xx = m.x; xx < m.x + m.w; xx++) under[yy * w.W + xx] = 1;
     });
-    return { roof: roof, door: door, under: under };
+    /* streetlamps: on the pavement beside a road, never two within 4 tiles.
+       side: which way the road is, so the post stands at the kerb.
+       the city only; rooms have their own light */
+    var lamps = [], near = {};
+    if (w.dist && w.W > 60) for (var ly = 1; ly < w.H - 1; ly++) for (var lx = 1; lx < w.W - 1; lx++) {
+      var lk = ly * w.W + lx;
+      if (w.tile[lk] !== T.GROUND || w.dist[lk] < 0 || hash(lx, ly + 991) > 0.22 || under[lk]) continue;
+      if ((w.marks || []).some(function (m) { return lx >= m.x - 1 && lx <= m.x + m.w && ly >= m.y - 1 && ly <= m.y + m.h; })) continue;
+      var side = w.tile[lk + w.W] === T.ROAD ? 'down' : w.tile[lk - w.W] === T.ROAD ? 'up' : w.tile[lk + 1] === T.ROAD ? 'right' : w.tile[lk - 1] === T.ROAD ? 'left' : '';
+      if (!side) continue;
+      var cell = Math.floor(lx / 4) + ',' + Math.floor(ly / 4);
+      if (near[cell]) continue;
+      near[cell] = 1;
+      lamps.push({ x: lx, y: ly, side: side });
+    }
+    return { roof: roof, door: door, under: under, lamps: lamps };
   }
 
   /* landmarks: one picture across their whole footprint */
@@ -2020,6 +2074,84 @@
     }
   }
 
+  /* ── night: how dark it is, and the city's lights through it ──
+     0 by day; ramps up 18:00-21:00, full till 05:00, lifts by 07:00 */
+  function darkness(c) {
+    var h = c.hour + c.minute / 60;
+    return h >= 21 || h < 5 ? 1 : h >= 18 ? (h - 18) / 3 : h < 7 ? 1 - (h - 5) / 2 : 0;
+  }
+  function rgba(hex, a) { var n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
+  /* each landmark's neon; the rest take their district's first glow */
+  var MARK_GLOW = { tower: '#9f8cff', ncpd: '#2a6aff', hospital: '#ff4f6a', pagoda: '#ffd36a', greattree: '#3affc8', market: '#ffd36a', arcade: '#ff4fd8',
+                    casino: '#f2c94c', sapphire: '#7cf5ff', noorborj: '#ffe97c', noodlebar: '#ffd36a', teahouse: '#ff6a3a', fountain: '#7cf5ff', boatyard: '#ffd36a' };
+  /* a streetlamp: a post at the kerb, a head leaning over the road */
+  var LAMP_AT = { down: [7, 9], up: [7, 0], right: [12, 4], left: [2, 4] };
+  function lampHead(l, cx, cy) { var o = LAMP_AT[l.side]; return [l.x * TS - cx + o[0] + 1, l.y * TS - cy + o[1] - 6]; }
+  function drawLamps(cx, cy) {
+    var lit = darkness(novaNow()) > 0.3;
+    (deco.lamps || []).forEach(function (l) {
+      var sx = l.x * TS - cx, sy = l.y * TS - cy;
+      if (sx < -TS || sy < -2 * TS || sx > VW * TS || sy > VH * TS + TS) return;
+      var o = LAMP_AT[l.side], bx = sx + o[0], by = sy + o[1];
+      px(ctx, 'rgba(0,0,0,.35)', bx - 1, by + 5, 5, 2);
+      px(ctx, OUT, bx, by - 8, 3, 14); px(ctx, '#5a6070', bx + 1, by - 7, 1, 12);
+      px(ctx, OUT, bx - 2, by - 10, 7, 4); px(ctx, lit ? '#fff3b0' : '#8a92a6', bx - 1, by - 9, 5, 2);
+    });
+  }
+  var lightCv = null;
+  function night(dk, cx, cy, now, ppx, ppy) {
+    var W = VW * TS, Hh = VH * TS, lights = [];
+    if (!lightCv) lightCv = document.createElement('canvas');
+    if (lightCv.width !== W || lightCv.height !== Hh) { lightCv.width = W; lightCv.height = Hh; }
+    function add(x, y, r, a, col, ga) { if (x > -r && y > -r && x < W + r && y < Hh + r) lights.push({ x: x, y: y, r: r, a: a, col: col, ga: ga }); }
+    /* lamps: a warm pool on the road */
+    (deco.lamps || []).forEach(function (l) { var h = lampHead(l, cx, cy); add(h[0], h[1] + 10, 40, 0.95, '#ffcf7a', 0.2); });
+    /* lit windows and doors on every building front in view */
+    var x0 = Math.max(0, Math.floor(cx / TS) - 1), y0 = Math.max(0, Math.floor(cy / TS) - 1);
+    for (var y = y0; y <= y0 + VH + 1 && y < world.H; y++) for (var x = x0; x <= x0 + VW + 1 && x < world.W; x++) {
+      var k = y * world.W + x;
+      if (world.tile[k] !== T.BUILDING || (y + 1 < world.H && world.tile[k + world.W] === T.BUILDING)) continue;
+      var p = pal(world.dist[k]), v = Math.floor(hash(x, y) * 32), tx = x * TS - cx, ty = y * TS - cy;
+      if (deco.door[k]) { add(tx + 8, ty + 12, 16, 0.75, p.glow[v % p.glow.length], 0.3); continue; }
+      for (var i = 0; i < 2; i++) if ((v >> (i + 2)) & 1 || (v & 3) === 1) add(tx + (i ? 11 : 4), ty + 9, 11, 0.6, p.glow[(v + i) % p.glow.length], 0.3);
+    }
+    /* landmarks' neon, and fires that flicker */
+    world.marks.forEach(function (m) {
+      var mx = (m.x + m.w / 2) * TS - cx, my = m.y * TS - cy;
+      if (m.fire) { var f = 1 + 0.12 * Math.sin(now / 90 + m.x) + 0.08 * Math.sin(now / 37 + m.y); add(mx, my + 8, 34 * f, 0.95, '#ff8a3a', 0.35 * f); return; }
+      var col = MARK_GLOW[m.id] || pal(world.dist[m.y * world.W + m.x]).glow[0];
+      add(mx, my + m.h * TS * 0.45, Math.max(m.w, m.h) * 11 + 10, 0.7, col, 0.22);
+      if (m.room || m.home) { var dc = doorCols(m); add((dc[0] + dc.length / 2) * TS - cx, (m.y + m.h) * TS - cy - 2, 18, 0.8, '#ffe97c', 0.15); }
+    });
+    /* the lighthouse sweeps */
+    world.marks.forEach(function (m) {
+      if (m.id !== 'noorborj') return;
+      var a = now / 1400, bx = (m.x + m.w / 2) * TS - cx, by = m.y * TS - cy + 6;
+      for (var j = 1; j <= 5; j++) add(bx + Math.cos(a) * j * 22, by + Math.sin(a) * j * 11, 14 + j * 3, 0.5, '#ffe97c', 0.12);
+    });
+    /* you can always see your own feet */
+    add(ppx - cx + 8, ppy - cy + 8, 26, 0.55, null, 0);
+    var g = lightCv.getContext('2d');
+    g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, Hh);
+    g.fillStyle = 'rgba(4,6,24,' + (0.66 * dk).toFixed(3) + ')'; g.fillRect(0, 0, W, Hh);
+    g.globalCompositeOperation = 'destination-out';
+    lights.forEach(function (l) {
+      var gr = g.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r);
+      gr.addColorStop(0, 'rgba(0,0,0,' + l.a + ')'); gr.addColorStop(0.55, 'rgba(0,0,0,' + (l.a * 0.5) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
+    });
+    ctx.drawImage(lightCv, 0, 0);
+    /* and the colour of each light, added on top */
+    ctx.globalCompositeOperation = 'lighter';
+    lights.forEach(function (l) {
+      if (!l.col) return;
+      var gr = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r * 0.8);
+      gr.addColorStop(0, rgba(l.col, (l.ga * dk).toFixed(3))); gr.addColorStop(1, rgba(l.col, 0));
+      ctx.fillStyle = gr; ctx.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
   function draw(now) {
     var wave = Math.floor(now / 600) % 2;
     var ppx = (me.moving ? me.fx + (me.x - me.fx) * me.t : me.x) * TS, ppy = (me.moving ? me.fy + (me.y - me.fy) * me.t : me.y) * TS;
@@ -2040,12 +2172,13 @@
         var o = nb[b], hit;
         if (t === T.BUILDING) hit = o === T.BUILDING;
         else if (t === T.ROAD) hit = o === T.ROAD || o === T.BRIDGE;
+        else if (t === T.GRASS) hit = !inside && o !== T.GRASS && o !== T.TREE && !wet(o) && o !== T.DEEP;
         else if (wet(t)) hit = !wet(o) && o !== T.BRIDGE;
         else if (t === T.BRIDGE) hit = wet(o);
         if (hit) m |= 1 << b;
       }
       if (t === T.BUILDING) { rv = deco.roof[k]; dr = deco.door[k]; }
-      else if (t !== T.STALL) v &= 7;
+      else if (t !== T.STALL && t !== T.ROAD && t !== T.GROUND) v &= 7;
       var w = wet(t) ? wave : 0;
       var key = t + '.' + di + '.' + v + '.' + m + '.' + w + '.' + rv + dr;
       ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
@@ -2061,7 +2194,7 @@
       px(ctx, OUT, sx + 2, sy + 2, 12, 8); px(ctx, '#c8a878', sx + 3, sy + 3, 10, 6);
       px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1); px(ctx, '#8a6a48', sx + 4, sy + 7, 6, 1);
     });
-    if (!inside) { drawLoose(cx, cy, now); drawPiles(cx, cy, now); }
+    if (!inside) { drawLamps(cx, cy); drawLoose(cx, cy, now); drawPiles(cx, cy, now); }
     /* people, back to front */
     var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.sail ? 0 : me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1, boat: me.sail });
@@ -2088,9 +2221,12 @@
       px(ctx, OUT, bx - 1, by - 1 + dip, 5, 5); px(ctx, '#ff4f5e', bx, by + dip, 3, 2); px(ctx, '#f4f6ff', bx, by + 2 + dip, 3, 1);
       if (g.phase === 'bite') { var hx = Math.round(ppx - cx) + 6, hy = Math.round(ppy - cy) - 12; px(ctx, OUT, hx - 1, hy - 1, 5, 10); px(ctx, '#ffe97c', hx, hy, 3, 5); px(ctx, '#ffe97c', hx, hy + 6, 3, 2); }
     }
-    /* a little night over everything, and the rain the main page has */
-    ctx.fillStyle = inside ? 'rgba(5,6,11,.1)' : LIGHT[novaNow().phase]; ctx.fillRect(0, 0, VW * TS, VH * TS);
-    if (inside) return;
+    /* the hour's light over everything (night lets the city's lights
+       through), and the rain the main page has */
+    if (inside) { ctx.fillStyle = 'rgba(5,6,11,.1)'; ctx.fillRect(0, 0, VW * TS, VH * TS); return; }
+    var nc = novaNow(), dk = darkness(nc);
+    if (nc.phase === 'dawn' || nc.phase === 'dusk' || nc.phase === 'day') { ctx.fillStyle = LIGHT[nc.phase]; ctx.fillRect(0, 0, VW * TS, VH * TS); }
+    if (dk > 0) night(dk, cx, cy, now, ppx, ppy);
     ctx.fillStyle = 'rgba(159,140,255,.3)';
     var drops = Math.round(VW * VH / 10);
     for (var r = 0; r < drops; r++) {
