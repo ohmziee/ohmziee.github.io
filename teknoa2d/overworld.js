@@ -938,8 +938,15 @@
       if (n.game) return openTable(n.game, n.house || 'street');
       if (n.vend) return openCounter(n.vend);
       if (n.name && n.lines) { n.said = ((n.said || 0) + 1) % n.lines.length; return say([n.lines[n.said]], n.name); }
-      if (n.koga) { n.said = ((n.said || 0) + 1) % M.KOGA.length; return say([M.KOGA[n.said]], 'Koga'); }
+      if (n.koga) {
+        var kin = M.KOGA_ORIGIN[window.MF.knownOrigin(s, window.MFAvatar)];
+        if (kin && !n.knew) { n.knew = 1; return say([kin], 'Koga'); }
+        n.said = ((n.said || 0) + 1) % M.KOGA.length; return say([M.KOGA[n.said]], 'Koga');
+      }
       if (n.pool !== undefined && n.kind) return say([chatter(n)]);
+      /* an ape or an android indoors notices you the way the crowd does */
+      var r = reaction(n.look, n.x * 31 + n.y, n.said || 0);
+      if (r && !n.knew) { n.knew = 1; return say([r]); }
       var said = n.said || 0;
       n.said = (said + 1) % n.lines.length;
       return say([n.lines[said]]);
@@ -1043,6 +1050,12 @@
   }
   /* the crowd: their district's pool, in their own order, and now and then
      something about you, if there's something to say (world.js TALK) */
+  /* what someone of this kind says about where you come from, if they can
+     tell and have something to say (world.js ORIGIN_TALK) */
+  function reaction(kind, seed, said) {
+    var by = M.ORIGIN_TALK[kind], lines = by && by[window.MF.knownOrigin(s, window.MFAvatar)];
+    return lines ? lines[(seed + said) % lines.length] : '';
+  }
   function chatter(n) {
     var ctx = [], hour = new Date().getHours();
     if (s.boat) ctx.push('boat');
@@ -1051,6 +1064,9 @@
     if (hour < 5) ctx.push('late');
     if (Object.keys(s.homes || {}).length) ctx.push('home');
     var said = n.said = (n.said || 0) + 1, seed = (n.seed || 7) >>> 0, roll = hash(seed, said);
+    /* where you're from, if they can tell: likely the first time, now and then after */
+    var r = reaction(n.kind, seed, said);
+    if (r && hash(seed + 17, said) < (said === 1 ? 0.6 : 0.15)) return r;
     if (ctx.length && roll < 0.25) {
       var talk = M.TALK[ctx[(seed + said) % ctx.length]];
       return talk[(seed + said * 3) % talk.length];

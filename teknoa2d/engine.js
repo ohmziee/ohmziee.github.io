@@ -278,6 +278,15 @@
   var OLD_ORIGINS = { local: 1, runner: 1, defector: 1, ghost: 1 }, COLD_AI = -6, IBC_LASTS = 3;
   function originFx(s) { return ORIGINS[s.player && s.player.origin] || {}; }
   function ibc(s) { return !!(s.player && s.player.origin === 'ai' && s.player.power === 'ibc'); }
+  /* where people can tell you come from: an ape or an android body shows,
+     earthlings and novans give themselves away the moment they talk, and a
+     product passes for human unless the barcode shows (A is MFAvatar) */
+  function knownOrigin(s, A) {
+    var o = s.player && s.player.origin;
+    if (!ORIGINS[o]) return '';
+    if (o !== 'product') return o;
+    return A && A.stampShows && A.stampShows(s.player.look) ? 'product' : '';
+  }
 
   /* ── the three core vitals. every level-up the player picks one and its
      maximum goes up by CORE_STEP (level.js pickCore) ─────────────────── */
@@ -346,7 +355,7 @@
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
-              ORIGINS: ORIGINS, POWER: POWER, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc,
+              ORIGINS: ORIGINS, POWER: POWER, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
               CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
               STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,

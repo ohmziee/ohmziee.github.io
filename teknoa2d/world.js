@@ -630,6 +630,58 @@
     tweaker:     ['LUCIFER\'S BASTARD. i saw him.\nin the rain. he looked right at me.', 'demonblood. demonblood.\nthey cut him and it wasn\'t red.',
                   'the demidemon isn\'t dead.\nyou can\'t kill what\'s only half of something.']
   };
+  /* what each kind says once it can tell where you come from (MF.knownOrigin:
+     bodies show, accents give you away, a product only when the barcode
+     shows). no entry, no remark. PLACEHOLDER lines */
+  var ORIGIN_TALK = {
+    novan: {
+      earthling: ['earth accent. fresh off the crossing?\nit wears off. mostly.', 'you still flinch at the rain here.\nearth rain must be polite.',
+                  'earthling, right? welcome.\nthe first year\'s the loud one.'],
+      simian:    ['morning. from naturia?\nsorry. not everyone is. i know that.', 'my kid wants to be an ape when she grows up.\ni said that\'s not how it works. is it?'],
+      ai:        ['android, right? or someone in one.\nis there a polite way to ask?', 'you need a socket, the hospital\'s got them.\nso i hear. i don\'t need one.'],
+      novan:     ['born here? me too.\nyou can always tell.', 'a novan. you walk like you know where the puddles are.'],
+      product:   ['that\'s a corpocult stamp on your neck.\n...i didn\'t see anything.', 'cover that up.\nnot everyone round here is as nice as me.']
+    },
+    ape: {
+      simian:    ['sibling.\n(a nod. the kind only apes give each other.)', 'one of us. good.\nthe city goes easier with company.',
+                  'the chainsmasher would be glad\nto see you walking free.'],
+      earthling: ['earth. we came from there too.\nin crates.', 'you look at me like the zoo taught you to.\nlook again.'],
+      ai:        ['you don\'t smell of anything.\nunsettling. it\'s fine.'],
+      novan:     ['born here, like my daughter.\nshe thinks earth is a story.'],
+      product:   ['a number on your neck.\nwe had those. we took ours off.', 'the vats made you. the cages made us.\nnobody picks where they start.']
+    },
+    android: {
+      ai:        ['another mind on borrowed hardware.\nhello. truly.', 'down from cyberia too?\nor did you wake up somewhere stranger.',
+                  'run a diagnostic tonight.\nthe damp gets into everything.'],
+      earthling: ['earth made the first of us.\nit didn\'t mean to make me.'],
+      simian:    ['apes and androids. both made by someone\nwho wanted something else.'],
+      novan:     ['novans never ask me if i\'m real.\ni appreciate that.'],
+      product:   ['your barcode is readable from here.\nso is every scanner\'s.']
+    },
+    sleeper: {
+      product:   ['that stamp. what batch are you?\n...never mind. lovely evening.', 'rejects are meant to be recycled.\nyou look very un-recycled.',
+                  'someone will want to know you\'re walking around.\nnot me. obviously.'],
+      earthling: ['from earth? lovely. the paperwork must have been a nightmare.\ndid you keep copies?'],
+      ai:        ['what firmware are you on?\nno reason.'],
+      simian:    ['interesting specimen. sorry. person.\ninteresting person.'],
+      novan:     ['a local. wonderful.\nyou\'d know everyone, then.']
+    },
+    tweaker: {
+      product:   ['YOU\'RE FROM THE VATS. i know the smell.\nthey grow you in the rain.'],
+      ai:        ['are you recording? you\'re recording.\nstop recording.']
+    },
+    hashshashin: {
+      product:   ['you walk like someone trained you to.\nwho trained you?'],
+      simian:    ['the mountain clans respect strength.\nyou carry yours well.'],
+      ai:        ['no heartbeat.\nan assassin\'s dream.']
+    }
+  };
+  /* what koga makes of you, the first time he can tell. PLACEHOLDER */
+  var KOGA_ORIGIN = {
+    simian:  'Ah. One of our own. Welcome home, sibling.\nThe moss already likes you. I can tell.',
+    product: 'That mark on your neck. I know whose it is.\nIn Naturia, nobody is what they were stamped as.'
+  };
+
   /* koga speaks like nobody else in the city (vault: Koga). PLACEHOLDER lines */
   var KOGA = ['Ah. A new face. Naturia welcomes you,\nthough the moss may take some convincing.',
               'My old friend would have liked you, I think.\nHe liked most people who didn\'t put him in a cage.',
@@ -1064,5 +1116,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, reachAll: reachAll, loose: loose };
+  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, ORIGIN_TALK: ORIGIN_TALK, KOGA_ORIGIN: KOGA_ORIGIN, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, reachAll: reachAll, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);

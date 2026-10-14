@@ -249,8 +249,7 @@
     if (g === 'ape') draw(SPECIES[l.kind]);
     if (g === 'android') draw(SEAMS);
     draw(PARTS.top[l.top]); draw(PARTS.eyes[l.eyes]);
-    /* a high collar hides the barcode */
-    if (!(l.marks === 'barcode' && /^(turtleneck|hoodie|coat)$/.test(l.top))) draw(PARTS.marks[l.marks]);
+    if (l.marks !== 'barcode' || stampShows(l)) draw(PARTS.marks[l.marks]);
     if (g !== 'ape') { draw(PARTS.beard[l.beard]); draw(PARTS.hair[l.hair]); }
     draw(PARTS.acc[l.acc]);
     return px;
@@ -273,7 +272,10 @@
       ' shape-rendering="crispEdges" role="img" aria-label="your operator">' + out.join('') + '</svg>';
   }
 
+  /* a product's barcode shows unless a high collar hides it */
+  function stampShows(look) { var l = normalize(look); return l.marks === 'barcode' && !/^(turtleneck|hoodie|coat)$/.test(l.top); }
+
   root.MFAvatar = { W: W, H: H, PARTS: PARTS, COLORS: COLORS, SLOTS: SLOTS, options: options, slots: slots, group: group, kindFor: kindFor,
                     KINDS: KINDS, KINDS_OF: KINDS_OF, APES: APES, FACE: FACE,
-                    normalize: normalize, random: random, cycle: cycle, grid: grid, render: render };
+                    normalize: normalize, random: random, cycle: cycle, grid: grid, render: render, stampShows: stampShows };
 })(typeof window !== 'undefined' ? window : globalThis);
