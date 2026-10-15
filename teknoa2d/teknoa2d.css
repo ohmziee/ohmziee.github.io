@@ -222,6 +222,9 @@ a{color:var(--lavender)}
 .wtalk b{display:block;color:var(--glitch-a);font-size:.9em;letter-spacing:.08em;margin-bottom:.2rem}
 .wtalk b:empty{display:none}
 .wtalk p{margin:.15rem 0 0}
+.wtalk .wmenu{display:flex;flex-direction:column;align-items:flex-start;margin-top:.3rem}
+.wtalk .wmenu[hidden]{display:none}
+.wtalk.menu .more{display:none}
 .wtalk .more{position:absolute;right:.6rem;bottom:.3rem;color:#f4f6ff;font-size:.6rem;animation:moreblink 1s steps(2) infinite}
 @keyframes moreblink{50%{opacity:0}}
 .whelp{margin:0;font-size:.66rem;color:var(--rain);letter-spacing:.06em;text-align:center}

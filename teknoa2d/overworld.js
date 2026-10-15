@@ -898,8 +898,36 @@
     $('wTalk').hidden = false;
     showLine();
   }
+  /* a little menu in the talk box: ▲ ▼ pick, A choose, B never mind (or tap
+     one). opts: [[label, run], ...]; a 'never mind' row is added at the end */
+  var menuPrev = {};
+  function menu(title, opts, who) {
+    talkBox = { lines: [title], who: who || '', menu: opts.concat([['never mind', null]]), sel: 0 };
+    menuPrev = { up: !!held.up, down: !!held.down, b: !!held.b };
+    $('wTalk').hidden = false;
+    showLine();
+  }
+  function pickMenu(i) {
+    var row = talkBox && talkBox.menu && talkBox.menu[i];
+    if (!row) return;
+    talkBox = null; $('wTalk').hidden = true; $('wMenu').hidden = true;
+    if (row[1]) row[1]();
+  }
+  function tickMenu() {
+    var up = !!held.up && !menuPrev.up, dn = !!held.down && !menuPrev.down, n = talkBox.menu.length;
+    menuPrev = { up: !!held.up, down: !!held.down, b: menuPrev.b && !!held.b };
+    if (up || dn) { talkBox.sel = (talkBox.sel + (dn ? 1 : n - 1)) % n; showLine(); }
+  }
   function showLine() {
     $('wWho').textContent = talkBox.who;
+    var mb = $('wMenu');
+    mb.hidden = !talkBox.menu; mb.innerHTML = '';
+    $('wTalk').classList.toggle('menu', !!talkBox.menu);
+    if (talkBox.menu) talkBox.menu.forEach(function (row, i) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'crow' + (i === talkBox.sel ? ' sel' : ''); b.textContent = row[0];
+      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); pickMenu(i); });
+      mb.appendChild(b);
+    });
     var last = talkBox.yes && talkBox.lines.length === 1;
     $('wLine').textContent = talkBox.lines[0].replace(/\$handle\b/g, s.player.handle || 'stranger') + (last ? '\n\n' + (talkBox.label || 'A: yes    B: no') : '');
   }
@@ -963,7 +991,7 @@
     if (!inside && M.water(world, tx, ty) && !npcs.some(function (n) { return n.x === tx && n.y === ty; })) {
       var rod = window.MFShops.bestRod(s);
       if (me.sail && rod) return cast(tx, ty, rod);
-      if (!me.sail && rod && s.boat) return ask(['the water\'s right there.'], function () { cast(tx, ty, rod); }, function () { me.sail = true; step(tx, ty, me.dir); }, 'A: cast a line    B: set sail');
+      if (!me.sail && rod && s.boat) return menu('the water\'s right there. what now?', [['🎣 cast a line', function () { cast(tx, ty, rod); }], ['⛵ set sail', function () { me.sail = true; step(tx, ty, me.dir); }]]);
       if (!me.sail && rod) return cast(tx, ty, rod);
       if (!me.sail && s.boat) return setSail(tx, ty);
     }
@@ -2243,6 +2271,10 @@
     if (counter) { tickCounter(); return; }
     if (table) { tickTable(); return; }
     if (talkBox && talkBox.yes && talkBox.lines.length === 1 && held.b) { held.b = false; answer(false); }
+    if (talkBox && talkBox.menu) {
+      if (held.b && !menuPrev.b) { held.b = false; pickMenu(talkBox.menu.length - 1); }
+      else { tickMenu(); if (pressedA) { pressedA = false; pickMenu(talkBox.sel); } }
+    }
     if (pressedA) {
       pressedA = false;
       if (talkBox && talkBox.yes && talkBox.lines.length === 1) answer(true);

@@ -41,10 +41,12 @@
             GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14, CHECK: 15 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
 
-  /* r is in tiles: sqrt(area) scaled, so the islands keep their real
-     proportions. style picks how the streets are laid. Redrum sits well out
-     in the bay, no bridge to it: you start there, and the only way across to
-     the rest of the city is a boat. Noorborj is the city's northernmost point. */
+  /* km is each district's real area (it sets its share of nova city's
+     island); seat is where in that island it sits. style picks how the
+     streets are laid. Redrum is its own island out west past the strait, no
+     bridge to it: far enough off that the NCPD doesn't raid it every night.
+     you start there, and the only way across is a boat. Noorborj, its
+     lighthouse, stands on its northern tip. */
   var DISTRICTS = [
     { id: 'worldwood', name: 'WORLDWOOD', sub: 'district 1 // the neon heart', km: 132, seat: [0.5, 0.5], style: 'grid', block: 5, seed: 11 },
     { id: 'yucayeque', name: 'YUCAYEQUE', sub: 'district 2 // markets and old songs', km: 222, seat: [0.72, 0.2], style: 'village', block: 4, seed: 23 },
