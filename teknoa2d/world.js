@@ -686,8 +686,8 @@
      which side a product is on (corpocult's own). PLACEHOLDER lines */
   var ORIGIN_TALK = {
     novan: {
-      earthling: ['earth accent. fresh off the crossing?\nit wears off. mostly.', 'you still flinch at the rain here.\nearth rain must be polite.',
-                  'earthling, right? welcome.\nthe first year\'s the loud one.'],
+      sapien:    ['earth accent. fresh off the crossing?\nit wears off. mostly.', 'you still flinch at the rain here.\nearth rain must be polite.',
+                  'sapien, right? straight from earth? welcome.\nthe first year\'s the loud one.'],
       simian:    ['morning. from naturia?\nsorry. not everyone is. i know that.', 'my kid wants to be an ape when she grows up.\ni said that\'s not how it works. is it?'],
       ai:        ['android, right? or someone in one.\nis there a polite way to ask?', 'you need a socket, the hospital\'s got them.\nso i hear. i don\'t need one.'],
       novan:     ['born here? me too.\nyou can always tell.', 'a novan. you walk like you know where the puddles are.'],
@@ -696,7 +696,7 @@
     ape: {
       simian:    ['sibling.\n(a nod. the kind only apes give each other.)', 'one of us. good.\nthe city goes easier with company.',
                   'the chainsmasher would be glad\nto see you walking free.'],
-      earthling: ['earth. we came from there too.\nin crates.', 'you look at me like the zoo taught you to.\nlook again.'],
+      sapien:    ['earth. we came from there too.\nin crates.', 'you look at me like the zoo taught you to.\nlook again.'],
       ai:        ['you don\'t smell of anything.\nunsettling. it\'s fine.'],
       novan:     ['born here, like my daughter.\nshe thinks earth is a story.'],
       product:   ['a number on your neck.\nwe had those. we took ours off.', 'the vats made you. the cages made us.\nnobody picks where they start.']
@@ -704,7 +704,7 @@
     android: {
       ai:        ['another mind on borrowed hardware.\nhello. truly.', 'down from cyberia too?\nor did you wake up somewhere stranger.',
                   'run a diagnostic tonight.\nthe damp gets into everything.'],
-      earthling: ['earth made the first of us.\nit didn\'t mean to make me.'],
+      sapien:    ['earth made the first of us.\nit didn\'t mean to make me.'],
       simian:    ['apes and androids. both made by someone\nwho wanted something else.'],
       novan:     ['novans never ask me if i\'m real.\ni appreciate that.'],
       product:   ['your barcode is readable from here.\nso is every scanner\'s.']
@@ -712,7 +712,7 @@
     sleeper: {
       product:   ['that stamp. what batch are you?\n...never mind. lovely evening.', 'rejects are meant to be recycled.\nyou look very un-recycled.',
                   'someone will want to know you\'re walking around.\nnot me. obviously.'],
-      earthling: ['from earth? lovely. the paperwork must have been a nightmare.\ndid you keep copies?'],
+      sapien:    ['from earth? lovely. the paperwork must have been a nightmare.\ndid you keep copies?'],
       ai:        ['what firmware are you on?\nno reason.'],
       simian:    ['interesting specimen. sorry. person.\ninteresting person.'],
       novan:     ['a local. wonderful.\nyou\'d know everyone, then.'],

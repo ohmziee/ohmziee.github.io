@@ -213,9 +213,11 @@
                  look: p.look && typeof p.look === 'object' ? p.look : {}, power: p.power === 'ibc' || p.power === 'ade' ? p.power : '',
                  /* a product: walked out on corpocult, or still theirs */
                  side: p.side === 'loyal' || p.side === 'defector' ? p.side : '' };
-    /* the first four origins were all earthlings from brooklyn: they become
-       earthlings and get one chance to pick again (ui.js) */
-    if (OLD_ORIGINS[s.player.origin]) { s.player.origin = 'earthling'; s.flags['origin-repick'] = 1; }
+    /* the first four origins were all from earth (brooklyn): they become
+       sapiens and get one chance to pick again (ui.js) */
+    if (OLD_ORIGINS[s.player.origin]) { s.player.origin = 'sapien'; s.flags['origin-repick'] = 1; }
+    /* earthlings were renamed sapiens (Oms, 2026-10-14): same people, same perks */
+    if (s.player.origin === 'earthling') s.player.origin = 'sapien';
     return s;
   }
   /* ── safe slots: SAFE_SLOTS kinds of thing, the whole stack of each, that
@@ -285,7 +287,7 @@
      (joules), offer a power source (power). level.js start() applies
      the one-off parts at Chippin' In ───────────────────────────────── */
   var ORIGINS = {
-    earthling: { xp: 1.1 },
+    sapien:    { xp: 1.1 },
     simian:    { start: { atk: 5 }, carry: 15 },
     ai:        { cold: 1, max: { int: 10 }, power: ['ade', 'ibc'] },
     novan:     { start: { stl: 5 }, street: 0.8 },
@@ -303,7 +305,7 @@
   function originFx(s) { return ORIGINS[s.player && s.player.origin] || {}; }
   function ibc(s) { return !!(s.player && s.player.origin === 'ai' && s.player.power === 'ibc'); }
   /* where people can tell you come from: an ape or an android body shows,
-     earthlings and novans give themselves away the moment they talk, and a
+     sapiens and novans give themselves away the moment they talk, and a
      product passes for human unless the barcode shows (A is MFAvatar) */
   function knownOrigin(s, A) {
     var o = s.player && s.player.origin;

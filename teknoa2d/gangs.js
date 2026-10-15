@@ -22,7 +22,7 @@
    adjust; the rest is the vault's. */
 (function (root) {
   'use strict';
-  var HUMAN = ['earthling', 'novan', 'product'];
+  var HUMAN = ['sapien', 'novan', 'product'];
   var GANGS = {
     intergang: {
       code: 'ITG', name: 'Intergang', one: 'gangoon',
