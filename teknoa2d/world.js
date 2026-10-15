@@ -2,20 +2,41 @@
    map from a description and answers questions about it; overworld.js draws
    it and walks the player around. Runs under node for the tests.
 
-   FIRST DRAFT, from the vault: six islands in the Nova Sea, bridged, with the
-   Vistadelsol mainland across the water to the north. Each island's size is
-   its real area (km²) and its place is its compass point, packed so the
-   gaps are a short bridge, not a voyage. Change a number here and the city
-   is rebuilt; nothing is hand-painted yet.
+   The land is the terranova map's (azgaar, GEO below): vistadelsol's coast
+   round the nova sea, nova city's island in the bay cut into five district
+   islands (bridged, each its share of the vault's km²), and redrum's island
+   out west past the strait. The islands are drawn E times their real size so
+   the streets fit; everything else is to scale. Streets, buildings and
+   people are laid by rule on top of that, so nothing is hand-painted.
 
    Tiles:  0 deep water  1 shallow  2 sand  3 ground  4 road  5 building
            6 tree  7 bridge  8 grass  9 landmark  10 mainland  11 stall
            indoors: 12 floor  13 wall  14 door mat  15 tiled floor */
 (function (root) {
-  var W = 460, H = 370;
+  /* the terranova map's coast round the nova sea, in map units (azgaar:
+     Terranova_2036 2026-04-12, the svg's feature paths flattened: land =
+     the mainland, clipped to the bay, and the persepolis islet; nova and
+     redrum are the two islands). win is the part of the map the game shows */
+  var GEO = { win: [918.0, 645.0, 1090.0, 775.0],
+    land: ["1094.0,641.0,1094.0,779.0,998.3,779.0,997.5,778.3,996.7,777.7,996.0,777.3,995.5,777.0,994.9,776.7,994.2,776.2,993.2,775.4,991.9,774.5,990.6,773.5,989.3,772.7,988.1,772.0,987.0,771.4,985.9,770.7,984.8,769.8,983.7,768.5,982.6,767.0,981.6,765.4,980.8,764.0,980.4,762.9,980.2,762.1,980.4,761.4,981.0,760.7,981.9,759.9,983.2,759.2,984.7,758.7,986.5,758.7,988.5,759.2,990.5,760.1,992.5,761.0,994.5,761.8,996.3,762.3,997.8,762.4,999.2,762.2,1000.2,762.0,1000.9,761.7,1001.4,761.4,1001.6,760.9,1001.7,760.2,1001.6,759.2,1001.4,758.0,1000.9,756.7,1000.2,755.5,999.2,754.5,998.0,753.5,996.9,752.5,996.0,751.3,995.4,750.0,995.1,748.5,994.9,747.2,994.8,746.0,994.7,745.2,994.5,744.5,994.2,743.8,994.0,743.0,993.8,741.9,993.5,740.5,993.4,739.1,993.3,738.0,993.4,737.2,993.6,736.4,994.1,735.6,994.7,734.5,995.5,732.9,996.5,731.0,997.6,729.2,998.7,727.7,999.6,726.7,1000.5,726.3,1001.4,726.2,1002.3,726.5,1003.4,727.0,1004.5,727.5,1005.5,728.0,1006.5,728.5,1007.3,728.8,1008.0,729.1,1008.8,729.5,1009.8,730.2,1011.1,731.2,1012.5,732.5,1013.8,733.9,1014.8,735.0,1015.5,735.8,1015.9,736.5,1016.2,737.0,1016.5,737.7,1017.0,738.5,1017.6,739.5,1018.6,740.6,1019.7,741.7,1021.0,742.6,1022.5,743.5,1024.0,744.5,1025.3,745.5,1026.4,746.7,1027.3,748.0,1027.9,749.4,1028.2,750.7,1028.2,751.9,1028.0,753.0,1027.9,754.2,1028.0,755.5,1028.4,756.9,1029.2,758.4,1030.2,759.8,1031.5,761.0,1032.9,761.8,1034.5,762.4,1035.9,762.8,1037.2,763.2,1038.2,763.6,1038.9,764.0,1039.6,764.4,1040.3,764.7,1041.1,764.9,1042.0,764.9,1042.9,764.9,1043.7,764.8,1044.4,764.7,1044.9,764.5,1045.4,764.3,1045.8,764.2,1046.2,764.1,1046.6,763.9,1047.2,763.7,1048.0,763.2,1049.1,762.4,1050.5,761.4,1051.9,760.4,1053.2,759.3,1054.2,758.4,1054.8,757.5,1055.3,756.5,1055.5,755.3,1055.5,754.0,1055.4,752.5,1055.2,751.1,1055.0,749.8,1054.8,748.8,1054.6,748.0,1054.6,747.2,1054.8,746.2,1055.3,744.9,1056.0,743.5,1056.7,742.1,1057.2,740.8,1057.4,739.8,1057.5,739.0,1057.6,738.2,1057.8,737.2,1058.3,735.9,1059.0,734.5,1059.7,733.0,1060.3,731.7,1060.7,730.5,1061.0,729.5,1061.4,728.5,1062.0,727.3,1062.9,726.0,1064.1,724.7,1065.4,723.8,1066.8,723.5,1068.2,724.1,1069.3,725.2,1070.3,726.7,1071.0,728.3,1071.3,729.7,1071.5,730.9,1071.5,732.1,1071.7,733.2,1072.1,734.3,1072.7,735.4,1073.6,736.2,1074.7,736.8,1076.0,737.0,1077.5,736.8,1079.0,736.3,1080.3,735.5,1081.4,734.5,1082.3,733.4,1083.0,732.0,1083.5,730.3,1083.8,728.5,1083.9,726.6,1083.9,724.7,1083.8,723.2,1083.7,722.0,1083.3,721.1,1082.8,720.3,1082.0,719.5,1080.8,718.5,1079.4,717.5,1077.7,716.6,1076.0,715.8,1074.3,715.3,1072.6,715.0,1071.0,714.8,1069.7,714.5,1068.6,714.0,1067.7,713.3,1067.0,712.4,1066.5,711.2,1066.2,709.7,1066.1,708.0,1066.1,706.3,1066.3,704.7,1066.6,703.3,1067.0,702.0,1067.4,700.9,1067.8,699.7,1068.2,698.4,1068.5,696.9,1068.7,695.4,1068.8,693.7,1068.9,691.9,1069.1,690.0,1069.3,688.3,1069.7,686.7,1070.3,685.3,1071.0,684.0,1071.7,682.9,1072.2,681.7,1072.4,680.4,1072.2,679.0,1071.7,677.8,1070.8,676.7,1069.5,675.8,1068.0,675.1,1066.4,674.7,1065.0,674.5,1063.9,674.4,1063.1,674.5,1062.3,674.7,1061.5,674.8,1060.5,674.9,1059.5,675.0,1058.5,675.1,1057.5,675.2,1056.7,675.3,1056.0,675.5,1055.3,675.7,1054.5,675.8,1053.5,675.9,1052.5,676.0,1051.4,676.1,1050.3,676.2,1049.4,676.3,1048.5,676.4,1047.5,676.5,1046.3,676.3,1045.0,675.9,1043.6,675.3,1042.2,674.4,1041.2,673.3,1040.5,672.0,1040.0,670.5,1039.7,668.9,1039.2,667.3,1038.4,665.9,1037.5,664.6,1036.5,663.6,1035.5,662.8,1034.7,662.3,1034.1,662.1,1033.5,662.1,1033.0,662.2,1032.5,662.3,1032.0,662.6,1031.4,663.2,1030.7,664.0,1029.9,665.2,1029.1,666.6,1028.4,668.1,1028.0,669.7,1027.9,671.1,1028.1,672.5,1028.3,673.7,1028.5,675.0,1028.6,676.3,1028.5,677.4,1028.4,678.5,1028.5,679.5,1028.7,680.3,1029.0,681.1,1029.4,681.9,1029.7,683.0,1029.9,684.4,1030.0,686.0,1030.2,687.6,1030.5,689.0,1031.0,690.1,1031.5,691.0,1032.0,692.0,1032.3,693.2,1032.5,694.7,1032.4,696.5,1032.1,698.3,1031.7,699.8,1031.1,701.0,1030.4,701.9,1029.7,702.8,1028.8,703.7,1027.9,704.8,1026.8,706.0,1025.5,707.2,1023.8,708.2,1021.8,708.9,1019.5,709.4,1017.3,709.7,1015.3,710.0,1013.8,710.2,1012.7,710.5,1011.9,710.9,1011.2,711.3,1010.6,711.9,1010.0,712.5,1009.4,713.2,1008.8,713.8,1008.1,714.4,1007.4,714.9,1006.3,715.3,1005.0,715.5,1003.3,715.6,1001.5,715.6,999.6,715.7,997.8,716.2,996.3,717.0,995.1,718.0,993.9,719.1,992.7,720.0,991.4,720.6,990.0,721.0,988.5,721.3,987.0,721.8,985.5,722.6,984.1,723.5,982.8,724.4,981.7,725.2,980.8,725.7,980.0,725.9,979.2,725.9,978.2,725.7,976.9,725.4,975.5,725.0,974.1,724.5,972.8,724.0,971.8,723.5,971.1,722.9,970.6,722.3,970.3,721.5,970.1,720.5,970.2,719.4,970.4,718.1,971.0,716.7,971.9,715.1,973.0,713.5,974.0,712.0,974.8,710.7,975.2,709.5,975.1,708.5,974.5,707.4,973.2,706.2,971.3,704.7,969.0,702.9,966.7,700.9,964.8,698.8,963.5,696.7,962.6,694.5,961.9,692.5,961.2,690.5,960.2,688.7,958.9,687.2,957.6,685.9,956.2,685.0,954.8,684.4,953.5,683.9,952.3,683.4,951.2,682.5,950.1,681.1,949.1,679.5,948.3,677.8,947.8,676.3,947.6,675.3,947.6,674.6,947.7,674.2,947.8,673.8,947.9,673.4,947.9,672.9,947.7,672.2,947.2,671.3,946.4,670.2,945.6,668.9,944.9,667.4,944.5,665.8,944.6,664.2,945.2,662.6,945.9,661.2,946.8,660.0,947.7,659.2,948.5,658.4,949.2,657.6,949.8,656.5,950.4,654.9,950.9,652.8,951.3,650.5,951.5,648.0,951.6,645.5,951.6,643.1,951.7,641.0", "928.5,653.2,928.9,654.5,929.4,656.1,929.8,657.7,930.0,659.3,929.8,660.7,929.4,661.9,928.6,662.8,927.8,663.5,926.9,664.0,926.0,664.4,925.1,664.5,924.2,664.3,923.3,663.9,922.6,663.3,922.1,662.4,921.8,661.3,921.9,660.0,922.2,658.5,922.7,656.9,923.5,655.5,924.5,654.2,925.5,653.2,926.4,652.3,927.2,651.8,927.7,651.6,928.2,652.3,928.5,653.2"],
+    nova: '1031.7,716.8,1030.8,717.4,1030.2,718.0,1029.8,718.5,1029.5,719.1,1029.5,719.7,1029.5,720.3,1029.6,721.0,1029.8,721.8,1030.0,722.5,1030.1,723.3,1030.3,724.0,1030.3,724.8,1030.3,725.5,1030.1,726.3,1030.0,727.0,1029.9,727.7,1029.7,728.3,1029.7,729.0,1029.7,729.7,1029.9,730.3,1030.1,731.1,1030.4,731.8,1030.7,732.6,1031.0,733.5,1031.3,734.4,1031.7,735.4,1032.0,736.5,1032.4,737.5,1032.8,738.4,1033.2,739.2,1033.6,739.9,1034.1,740.4,1034.6,740.8,1035.2,741.1,1035.9,741.4,1036.7,741.5,1037.6,741.5,1038.5,741.5,1039.5,741.3,1040.5,741.0,1041.4,740.5,1042.2,739.8,1042.9,739.0,1043.4,738.0,1043.9,737.0,1044.2,736.0,1044.5,735.0,1044.8,734.2,1045.0,733.5,1045.2,733.0,1045.4,732.5,1045.4,732.1,1045.4,731.6,1045.2,731.0,1044.9,730.3,1044.5,729.4,1044.0,728.4,1043.6,727.3,1043.2,726.2,1043.0,725.0,1042.9,723.8,1043.0,722.7,1043.1,721.6,1043.2,720.5,1043.4,719.4,1043.5,718.5,1043.6,717.6,1043.5,716.8,1043.4,716.1,1043.2,715.5,1043.0,714.9,1042.8,714.5,1042.5,714.1,1042.2,713.9,1041.8,713.7,1041.2,713.6,1040.5,713.6,1039.5,713.8,1038.3,714.1,1036.9,714.6,1035.5,715.1,1034.1,715.6,1032.8,716.2,1031.7,716.8',
+    redrum: '954.3,750.3,953.5,750.7,952.8,751.1,952.1,751.6,951.5,752.2,950.9,753.0,950.5,753.8,950.1,754.8,949.8,755.9,949.6,757.0,949.6,758.2,949.6,759.4,949.7,760.5,949.9,761.5,950.2,762.5,950.7,763.3,951.3,764.1,952.0,764.7,952.8,765.2,953.8,765.5,954.9,765.7,956.0,765.8,957.1,765.8,958.3,765.6,959.3,765.3,960.2,764.9,961.1,764.5,961.9,763.9,962.5,763.2,963.0,762.5,963.5,761.7,963.9,760.8,964.1,759.9,964.3,758.9,964.4,757.9,964.3,756.9,964.0,755.8,963.6,754.7,963.0,753.7,962.4,752.6,961.6,751.7,960.7,750.9,959.8,750.3,958.9,749.9,958.0,749.7,957.0,749.7,956.1,749.8,955.2,750.0,954.3,750.3',
+    /* the vistadelsol towns (burgs) */
+    burgs: { 'fort-freyja': [992.2, 719.8], 'port-tropics': [1000.7, 726.6], folkvangr: [987.1, 681.5], persepolis: [927.5, 652.8] } };
+  var S = 5.5, E = 1.3, CHANNEL = 3;            /* tiles per map unit; islands drawn E times their size; half a channel's width */
+  var W = Math.round((GEO.win[2] - GEO.win[0]) * S), H = Math.round((GEO.win[3] - GEO.win[1]) * S);
+  /* map units to tiles, an island grown E times about its middle */
+  function pts(str) { var n = str.split(',').map(Number), out = []; for (var i = 0; i + 1 < n.length; i += 2) out.push([n[i], n[i + 1]]); return out; }
+  function tiles(str, grow) {
+    var p = pts(str), mx = 0, my = 0;
+    p.forEach(function (q) { mx += q[0]; my += q[1]; }); mx /= p.length; my /= p.length;
+    return p.map(function (q) { var gx = grow ? mx + (q[0] - mx) * grow : q[0], gy = grow ? my + (q[1] - my) * grow : q[1]; return [(gx - GEO.win[0]) * S, (gy - GEO.win[1]) * S]; });
+  }
+  function toTile(m) { return [Math.round((m[0] - GEO.win[0]) * S), Math.round((m[1] - GEO.win[1]) * S)]; }
+  function bbox(p) { var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 }; p.forEach(function (q) { b.x0 = Math.min(b.x0, q[0]); b.y0 = Math.min(b.y0, q[1]); b.x1 = Math.max(b.x1, q[0]); b.y1 = Math.max(b.y1, q[1]); }); return b; }
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
-  var VERSION = 5;
+  var VERSION = 6;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
             GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14, CHECK: 15 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
@@ -25,21 +46,16 @@
      in the bay, no bridge to it: you start there, and the only way across to
      the rest of the city is a boat. Noorborj is the city's northernmost point. */
   var DISTRICTS = [
-    { id: 'worldwood', name: 'WORLDWOOD', sub: 'district 1 // the neon heart', km: 132, at: [0, 0], style: 'grid', block: 5, seed: 11, wobble: 0.10 },
-    { id: 'yucayeque', name: 'YUCAYEQUE', sub: 'district 2 // markets and old songs', km: 222, at: [1, -0.3], style: 'village', block: 4, seed: 23, wobble: 0.16 },
-    { id: 'naturia', name: 'NATURIA', sub: 'district 3 // the glowing wild', km: 139, at: [-1, -0.3], style: 'wild', block: 6, seed: 37, wobble: 0.18 },
-    { id: 'haven', name: 'HAVEN', sub: 'district 4 // where the council sits', km: 88, at: [1, 1], style: 'civic', block: 7, seed: 41, wobble: 0.04 },
-    { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, at: [-1, 1], style: 'grid', block: 4, seed: 53, wobble: 0.12 },
-    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, at: [0, -1], style: 'alleys', block: 3, seed: 67, wobble: 0.14, gap: 46 }
+    { id: 'worldwood', name: 'WORLDWOOD', sub: 'district 1 // the neon heart', km: 132, seat: [0.5, 0.5], style: 'grid', block: 5, seed: 11 },
+    { id: 'yucayeque', name: 'YUCAYEQUE', sub: 'district 2 // markets and old songs', km: 222, seat: [0.72, 0.2], style: 'village', block: 4, seed: 23 },
+    { id: 'naturia', name: 'NATURIA', sub: 'district 3 // the glowing wild', km: 139, seat: [0.25, 0.22], style: 'wild', block: 6, seed: 37 },
+    { id: 'haven', name: 'HAVEN', sub: 'district 4 // where the council sits', km: 88, seat: [0.72, 0.82], style: 'civic', block: 7, seed: 41 },
+    { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, seat: [0.28, 0.8], style: 'grid', block: 4, seed: 53 },
+    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, style: 'alleys', block: 3, seed: 67 }
   ];
-  var CENTRE = [232, 185], GAP = 4, SCALE = 3.0;
-  /* the bay round the city was laid out at SCALE 2.45; K grows it with the city.
-     at(ox, oy) is a point that far from the centre, at the first layout's scale */
-  var K = SCALE / 2.45;
-  function atK(ox, oy) { return [Math.round(CENTRE[0] + ox * K), Math.round(CENTRE[1] + oy * K)]; }
   /* hand-placed offsets (landmarks, shops, people) were laid out at the
-     first draft's scale; F spreads them out to match */
-  var F = SCALE / 1.55;
+     first draft's scale; F spreads them out to the district sizes we keep */
+  var F = 3.0 / 1.55;
 
   /* deterministic noise: the same city every load, on every device */
   function hash(a, b) {
@@ -56,32 +72,70 @@
     function set(x, y, t, d) { if (!inside(x, y)) return; tile[at(x, y)] = t; if (d !== undefined) dist[at(x, y)] = d; }
     function get(x, y) { return inside(x, y) ? tile[at(x, y)] : T.DEEP; }
 
-    /* place: Worldwood in the middle, the rest one gap off its shore */
-    DISTRICTS.forEach(function (d, i) {
-      d.index = i; d.r = Math.sqrt(d.km) * SCALE;
-      if (!d.at[0] && !d.at[1]) { d.cx = CENTRE[0]; d.cy = CENTRE[1]; return; }
-      var len = Math.sqrt(d.at[0] * d.at[0] + d.at[1] * d.at[1]), w0 = DISTRICTS[0], rw = Math.sqrt(w0.km) * SCALE;
-      var far = rw + d.r + (d.gap || GAP);
-      d.cx = Math.round(CENTRE[0] + d.at[0] / len * far);
-      d.cy = Math.round(CENTRE[1] + d.at[1] / len * far);
-    });
-
-    /* vistadelsol: the coast round the nova sea, as the terranova map has
-       it (azgaar, Terranova_2036 in the vault). nova city sits in a bay:
-       land to the north-west, a peninsula to the south-west, the coast down
-       the east and along the south. the bay opens north, and a strait opens
-       west onto the jörmun ocean. dist -2 is vistadelsol: not a district */
-    function coast(x, y) {
-      var n = 4 * Math.sin(y / 7) + 3 * Math.sin(x / 5 + y / 11), rx = (x - CENTRE[0]) / K, ry = (y - CENTRE[1]) / K;
-      if (rx + n < -118 && ry + n < -38) return true;            /* the north-west land */
-      if (ry + n < -130 && rx < -15) return true;                /* its north shore */
-      if (rx + n < -120 && ry - n > 12) return true;             /* the south-west peninsula */
-      if (ry - n > 114) return true;                             /* the south coast */
-      if (rx - n > 130) return true;                             /* the east coast */
-      if (ry + n < -128 && rx > 65) return true;                 /* the north-east */
-      return false;
+    /* ── the land, from the terranova map (azgaar, Terranova_2036 in the
+       vault: the map is canon over the notes). GEO is in map units; S turns
+       them into tiles. vistadelsol is the mainland round the bay (dist -2).
+       nova city is its own island in the bay, drawn E times its real size so
+       the districts keep their streets, and cut into five islands with water
+       between them (weighted by each district's km²). redrum is the island
+       west of the peninsula, outside the bay, every tile of it redrum ── */
+    function fill(pts, each) {
+      var ys = pts.map(function (p) { return p[1]; }), lo = Math.max(0, Math.floor(Math.min.apply(null, ys))), hi = Math.min(H - 1, Math.ceil(Math.max.apply(null, ys)));
+      for (var y = lo; y <= hi; y++) {
+        var cy = y + 0.5, xs = [];
+        for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+          var a = pts[i], b = pts[j];
+          if ((a[1] > cy) !== (b[1] > cy)) xs.push(a[0] + (cy - a[1]) * (b[0] - a[0]) / (b[1] - a[1]));
+        }
+        xs.sort(function (p, q) { return p - q; });
+        for (var k = 0; k + 1 < xs.length; k += 2) for (var x = Math.max(0, Math.ceil(xs[k] - 0.5)); x <= Math.min(W - 1, Math.floor(xs[k + 1] - 0.5)); x++) each(x, y);
+      }
     }
-    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) if (coast(x, y)) set(x, y, T.MAINLAND, -2);
+    GEO.land.forEach(function (p) { fill(tiles(p), function (x, y) { set(x, y, T.MAINLAND, -2); }); });
+    /* redrum: the whole island */
+    var R0 = DISTRICTS[5], rTiles = [];
+    fill(tiles(GEO.redrum, E), function (x, y) { set(x, y, T.GROUND, 5); rTiles.push([x, y]); });
+    /* nova city: the island, then a district for every tile, then water
+       wherever two districts meet. each district grows from its seat, and
+       its pull is evened out until its share of the island is its share
+       of the vault's km² (a balanced power diagram) */
+    var nova = tiles(GEO.nova, E), nb = bbox(nova), cell = new Int8Array(W * H).fill(-1), novaTiles = [];
+    fill(nova, function (x, y) { novaTiles.push([x, y]); });
+    var seeds = DISTRICTS.slice(0, 5).map(function (d) { return { x: nb.x0 + d.seat[0] * (nb.x1 - nb.x0), y: nb.y0 + d.seat[1] * (nb.y1 - nb.y0), pull: 0, km: d.km } });
+    var kmAll = seeds.reduce(function (t, sd) { return t + sd.km; }, 0), owner = new Int8Array(novaTiles.length);
+    for (var round = 0; round < 60; round++) {
+      var count = [0, 0, 0, 0, 0];
+      novaTiles.forEach(function (p, n) {
+        var best = 0, bd = 1e12;
+        seeds.forEach(function (sd, i) { var dd = (p[0] - sd.x) * (p[0] - sd.x) + (p[1] - sd.y) * (p[1] - sd.y) - sd.pull; if (dd < bd) { bd = dd; best = i; } });
+        owner[n] = best; count[best]++;
+      });
+      seeds.forEach(function (sd, i) { sd.pull += 0.5 * (novaTiles.length * sd.km / kmAll - count[i]); });
+    }
+    novaTiles.forEach(function (p, n) { cell[at(p[0], p[1])] = owner[n]; });
+    novaTiles.forEach(function (p) {
+      var me = cell[at(p[0], p[1])], edge = false;
+      for (var oy = -CHANNEL; oy <= CHANNEL && !edge; oy++) for (var ox = -CHANNEL; ox <= CHANNEL; ox++) {
+        var c = inside(p[0] + ox, p[1] + oy) ? cell[at(p[0] + ox, p[1] + oy)] : -1;
+        if (c >= 0 && c !== me) { edge = true; break; }
+      }
+      if (!edge) set(p[0], p[1], T.GROUND, me);
+    });
+    /* each district's centre: the middle of its land, on its land */
+    DISTRICTS.forEach(function (d, i) {
+      d.index = i;
+      var sx = 0, sy = 0, n = 0, far = 0, k;
+      for (k = 0; k < W * H; k++) if (dist[k] === i) { sx += k % W; sy += (k / W) | 0; n++; }
+      var mx = sx / n, my = sy / n, best = 1e9;
+      for (k = 0; k < W * H; k++) if (dist[k] === i) {
+        var x = k % W, y = (k / W) | 0, dd = (x - mx) * (x - mx) + (y - my) * (y - my);
+        if (dd < best) { best = dd; d.cx = x; d.cy = y; }
+        far = Math.max(far, dd);
+      }
+      /* R in the street loops is r * 1.4: wide enough to reach every tile */
+      d.r = Math.sqrt(far) / 1.4 + 2;
+      d.land = n;
+    });
     /* beaches where it meets the water, shallows off them */
     for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
       if (get(x, y) !== T.MAINLAND) continue;
@@ -89,33 +143,10 @@
     }
     for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
       if (get(x, y) !== T.DEEP) continue;
-      for (var oy = -2; oy <= 2; oy++) for (var ox = -2; ox <= 2; ox++) { var c = get(x + ox, y + oy); if (inside(x + ox, y + oy) && (c === T.SAND || c === T.MAINLAND)) { set(x, y, T.SHALLOW); oy = ox = 3; } }
+      for (var oy = -2; oy <= 2; oy++) for (var ox = -2; ox <= 2; ox++) { var c = get(x + ox, y + oy); if (inside(x + ox, y + oy) && c !== T.DEEP && c !== T.SHALLOW) { set(x, y, T.SHALLOW); oy = ox = 3; } }
     }
-
-    /* land: a wobbly disc per island, sand where it meets the water */
-    function radiusAt(d, ang) {
-      return d.r * (1 + d.wobble * (Math.sin(ang * 3 + d.seed) * 0.6 + Math.sin(ang * 5 + d.seed * 2) * 0.4));
-    }
-    DISTRICTS.forEach(function (d) {
-      var R = Math.ceil(d.r * 1.4);
-      for (var y = d.cy - R; y <= d.cy + R; y++) for (var x = d.cx - R; x <= d.cx + R; x++) {
-        if (!inside(x, y)) continue;
-        var dx = x - d.cx, dy = y - d.cy, r = radiusAt(d, Math.atan2(dy, dx)), dd = Math.sqrt(dx * dx + dy * dy);
-        if (dd <= r) set(x, y, T.GROUND, d.index);
-        else if (dd <= r + 2.2 && get(x, y) === T.DEEP) set(x, y, T.SHALLOW);
-      }
-    });
-    /* vistadelsol's little islands in the bay: palms, fruit, nobody */
-    ISLETS.forEach(function (o) {
-      var R = o.r + 3;
-      for (var y = o.y - R; y <= o.y + R; y++) for (var x = o.x - R; x <= o.x + R; x++) {
-        var dd = Math.sqrt((x - o.x) * (x - o.x) + (y - o.y) * (y - o.y)), r = o.r * (1 + 0.18 * Math.sin(Math.atan2(y - o.y, x - o.x) * 3 + o.x));
-        if (dd <= r) set(x, y, hash(x, y + 7) < 0.16 ? T.TREE : T.GRASS, -2);
-        else if (dd <= r + 2.2 && get(x, y) === T.DEEP) set(x, y, T.SHALLOW);
-      }
-    });
     for (var i = 0; i < W * H; i++) {
-      if (tile[i] !== T.GROUND && !(tile[i] === T.GRASS && dist[i] === -2)) continue;
+      if (tile[i] !== T.GROUND) continue;
       var xx = i % W, yy = (i / W) | 0;
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(function (o) { var t = get(xx + o[0], yy + o[1]); return t === T.DEEP || t === T.SHALLOW; })) tile[i] = T.SAND;
     }
@@ -353,16 +384,16 @@
     npcs.push({ id: 'shipwright', x: yardDoor.x + 1, y: yardDoor.y, dir: 'down', look: 'shipwright', wright: 'yard', still: true });
     var pierEnd = { x: bx + 6, y: yardDoor.y };
 
-    /* the slip: redrum's south shore, facing the city across the water. a
+    /* the slip: redrum's east shore, facing the city across the strait. a
        scrapper there knocks skiffs together out of scrap (shops.js BOATS.slip),
        or sells you one outright. PLACEHOLDER lines */
     var sx0 = R0.cx, sy0 = R0.cy;
-    while (dist[at(sx0, sy0 + 1)] === R0.index) sy0++;
+    while (dist[at(sx0 + 1, sy0)] === R0.index) sx0++;
     carve(sx0, sy0, R0.cx, R0.cy, T.ROAD, { 9: 1 });
-    for (var py = sy0 + 1; py <= sy0 + 4; py++) { set(sx0, py, T.BRIDGE); set(sx0 + 1, py, T.BRIDGE); }
-    npcs.push({ id: 'scrapper', x: sx0 + 1, y: sy0 + 1, dir: 'left', look: 'merc', name: 'SCRAPPER', wright: 'slip', still: true });
-    if (get(sx0 - 1, sy0) !== T.LANDMARK) { set(sx0 - 1, sy0, T.ROAD); signs.push({ x: sx0 - 1, y: sy0, text: 'THE SLIP\nskiffs out of scrap. no refunds.\nthe city is that way. you\'ll need a boat.' }); }
-    var slipEnd = { x: sx0, y: sy0 + 4 };
+    for (var px2 = sx0 + 1; px2 <= sx0 + 4; px2++) { set(px2, sy0, T.BRIDGE); set(px2, sy0 + 1, T.BRIDGE); }
+    npcs.push({ id: 'scrapper', x: sx0 + 1, y: sy0 + 1, dir: 'up', look: 'merc', name: 'SCRAPPER', wright: 'slip', still: true });
+    if (get(sx0, sy0 - 1) !== T.LANDMARK) { set(sx0, sy0 - 1, T.ROAD); signs.push({ x: sx0, y: sy0 - 1, text: 'THE SLIP\nskiffs out of scrap. no refunds.\nthe city is east, past the strait. you\'ll need a boat.' }); }
+    var slipEnd = { x: sx0 + 4, y: sy0 };
 
     /* the landings round the coast, named for vistadelsol's towns on the
        terranova map. a pier, a beach, a grove, someone who lives there. the
@@ -370,6 +401,23 @@
     var landings2 = [];
     LANDINGS.forEach(function (l) {
       /* from out in the water, head for land until there is some */
+      /* the town's shore: the nearest beach to it on the map, approached from the water */
+      var bt = toTile(GEO.burgs[l.id]), shore = null;
+      for (var rr = 0; rr < 300 && !shore; rr++) for (var oy = -rr; oy <= rr && !shore; oy++) for (var ox = -rr; ox <= rr; ox++) {
+        if (Math.max(Math.abs(ox), Math.abs(oy)) !== rr) continue;
+        var lx = bt[0] + ox, ly = bt[1] + oy;
+        if (!inside(lx, ly) || dist[at(lx, ly)] !== -2 || (get(lx, ly) !== T.SAND && get(lx, ly) !== T.MAINLAND)) continue;
+        /* water on one side, and solid land straight inland for the cove */
+        var wd = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(function (o) {
+          var t2 = get(lx + o[0], ly + o[1]);
+          if (t2 !== T.SHALLOW && t2 !== T.DEEP) return false;
+          for (var kk = 1; kk <= 14; kk++) { var t3 = get(lx - o[0] * kk, ly - o[1] * kk); if (t3 !== T.MAINLAND && t3 !== T.SAND) return false; }
+          return true;
+        })[0];
+        if (wd) { shore = { from: [lx + wd[0], ly + wd[1]], dir: [-wd[0], -wd[1]] }; break; }
+      }
+      if (!shore) return;
+      l.from = shore.from; l.dir = shore.dir;
       var x = l.from[0], y = l.from[1], guard = 0;
       while (inside(x, y) && (get(x, y) === T.DEEP || get(x, y) === T.SHALLOW) && guard++ < 200) { x += l.dir[0]; y += l.dir[1]; }
       var sx = x, sy = y;
@@ -516,16 +564,16 @@
     return { W: W, H: H, tile: tile, dist: dist, marks: marks, signs: signs, npcs: npcs, spawn: spawn, hub: { x: W0.cx, y: W0.cy }, landings: landings2, pier: pierEnd, slip: slipEnd };
   }
 
-  /* vistadelsol, past the shore (placed in map tiles, not by district) */
-  var ISLETS = [[22, -106, 7], [-144, -12, 5], [110, 100, 7], [-50, 96, 6]].map(function (o) { var p = atK(o[0], o[1]); return { x: p[0], y: p[1], r: Math.round(o[2] * K) }; });
+  /* no islets of our own: the terranova map has none in the bay */
+  var ISLETS = [];
   var LANDINGS = [
-    { id: 'fort-freyja', name: 'Fort Freyja', from: atK(-100, -38), dir: [-1, 0], look: 'local',
+    { id: 'fort-freyja', name: 'Fort Freyja', look: 'local',
       sign: 'vistadelsol. the fort is up the hill.\nthe gate is shut tonight.', lines: ['the fort? old. older than the city.\nnobody goes up there after dark.', 'mangoes fall on your head here.\nit counts as lunch.'] },
-    { id: 'port-tropics', name: 'Port Tropics', from: atK(-104, 18), dir: [-1, 0], look: 'reveler',
+    { id: 'port-tropics', name: 'Port Tropics', look: 'reveler',
       sign: 'vistadelsol. the fair comes through in summer.\nthe town is up the beach. not open yet.', lines: ['the fair\'s gone till summer.\nthe carousel\'s still out there, under a sheet.', 'you sailed here? from the city?\nbrave. or bored.'] },
-    { id: 'folkvangr', name: 'Fólkvangr', from: atK(-60, -110), dir: [0, -1], look: 'local',
+    { id: 'folkvangr', name: 'Fólkvangr', look: 'local',
       sign: 'vistadelsol. fields, then more fields.\nthe road inland isn\'t open yet.', lines: ['the fields go on further than you\'d think.\nso does the quiet.', 'north of here it all turns to ash, they say.\nashenreach. i\'ve never been.'] },
-    { id: 'persepolis', name: 'Persepolis', from: atK(110, 0), dir: [1, 0], look: 'clerk',
+    { id: 'persepolis', name: 'Persepolis', look: 'clerk',
       sign: 'vistadelsol. the old road to persepolis.\nclosed for repairs. since forever.', lines: ['the city\'s up the road. was. is.\ndepends who you ask.', 'the crabs here are friendly.\ndon\'t test that.'] }
   ];
 

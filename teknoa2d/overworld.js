@@ -2393,6 +2393,31 @@
     var kept = window.MF.safeKeys(s).length;
     return ['a ' + l.name + ' went through your pockets before we found you.\n' + (l.took.joules ? MF.fmtJ(l.took.joules) : 'not a joule') + (n ? ' and ' + n + ' thing' + (n > 1 ? 's' : '') : '') + ' gone.' + (kept ? ' the safe slots held.' : '')];
   }
+  /* the first step of the shortest way round the walls to a tile next to
+     you, searched within CHASE tiles; null when there's no way */
+  var CHASE = 16;
+  function chaseStep(m) {
+    var span = CHASE * 2 + 1, ox = m.x - CHASE, oy = m.y - CHASE, from = new Int16Array(span * span).fill(-1);
+    var start = CHASE * span + CHASE, q = [start], head = 0;
+    from[start] = start;
+    while (head < q.length) {
+      var c = q[head++], cx = c % span, cy = (c / span) | 0, wx = cx + ox, wy = cy + oy;
+      if (Math.abs(wx - me.x) + Math.abs(wy - me.y) === 1) {
+        /* walk it back to the first step */
+        while (from[c] !== start) c = from[c];
+        if (c === start) return null;
+        return [(c % span) - CHASE, ((c / span) | 0) - CHASE];
+      }
+      for (var k in DIRS) {
+        var nx = cx + DIRS[k][0], ny = cy + DIRS[k][1];
+        if (nx < 0 || ny < 0 || nx >= span || ny >= span) continue;
+        var n = ny * span + nx;
+        if (from[n] >= 0 || occupied(nx + ox, ny + oy)) continue;
+        from[n] = c; q.push(n);
+      }
+    }
+    return null;
+  }
   function tickMobs(dt, now) {
     var zn = zoneNow();
     if (!zn) { mobs = []; return; }
@@ -2410,13 +2435,8 @@
       var dx = me.x - m.x, dy = me.y - m.y, d = Math.abs(dx) + Math.abs(dy);
       if (d > GIVE_UP) { m.gone = true; return; }
       if (d === 1) { m.dir = faceTo(dx, dy); if (m.cd <= 0) mobHit(m, now); return; }
-      var opts = Math.abs(dx) >= Math.abs(dy) ? [[Math.sign(dx), 0], [0, Math.sign(dy)]] : [[0, Math.sign(dy)], [Math.sign(dx), 0]];
-      for (var i = 0; i < opts.length; i++) {
-        var o = opts[i], nx = m.x + o[0], ny = m.y + o[1];
-        if ((!o[0] && !o[1]) || occupied(nx, ny)) continue;
-        m.fx = m.x; m.fy = m.y; m.x = nx; m.y = ny; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]);
-        break;
-      }
+      var o = chaseStep(m);
+      if (o) { m.fx = m.x; m.fy = m.y; m.x += o[0]; m.y += o[1]; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]); }
     });
     mobs = mobs.filter(function (m) { return !m.gone; });
   }

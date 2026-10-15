@@ -19,7 +19,7 @@
   var CHANCE = { city: [0.12, 0.22], wilds: [0.35, 0.6], deep: [0.5, 0.8] };   /* [day, night] */
   var MAX = { city: 1, wilds: 2, deep: 3 };
   var QUIET = { haven: 0.5 };                                                     /* the government district: half as often */
-  var DEEP_AT = 20;                                                               /* tiles from the nearest landing */
+  var DEEP_AT = 45;                                                               /* tiles from the nearest landing */
   var GANG_SHARE = 0.5;
 
   function zone(world, x, y, inside, sailing) {
