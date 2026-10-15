@@ -1498,11 +1498,21 @@
     $('wPhone').hidden = false; $('wPhone').classList.remove('lifted');
     drawPhone();
   }
+  /* the phone fills the screen for MAP and INV, and for any other app when
+     you ask it to (⤢ in the bar, or M); that choice sticks on this device */
+  var BIG_ALWAYS = { map: 1, inv: 1 };
+  function bigPref() { try { return localStorage.getItem('exiled.t2d.bigphone') === '1'; } catch (e) { return false; } }
+  function lift() { $('wPhone').classList.toggle('lifted', !!phone && phone.app !== 'home' && (BIG_ALWAYS[phone.app] || bigPref())); }
+  function toggleBig() {
+    if (!phone || phone.app === 'home' || BIG_ALWAYS[phone.app]) return;
+    try { localStorage.setItem('exiled.t2d.bigphone', bigPref() ? '0' : '1'); } catch (e) {}
+    lift(); drawPhone();
+  }
   function closePhone() { phone = null; $('wPhone').hidden = true; $('wPhone').classList.remove('lifted'); }
   function openApp(id) {
     if (id === 'sys') { closePhone(); if (window.MFUI) window.MFUI.openSys(); return; }
     phone.app = id; phone.msel = 0; phone.open = -1; phone.isel = 0; phone.act = -1; phone.imsg = '';
-    $('wPhone').classList.toggle('lifted', id === 'map' || id === 'inv');
+    lift();
     drawPhone();
   }
   function tickPhone(now) {
@@ -1552,6 +1562,12 @@
     $('wPhoneBar').textContent = '';
     var l = document.createElement('span'); l.textContent = c.text; var r = document.createElement('span'); r.textContent = tempNow() + '°C · ' + window.MF.fmtJ(window.MF.joules(s));
     $('wPhoneBar').appendChild(l); $('wPhoneBar').appendChild(r);
+    if (phone && phone.app !== 'home' && !BIG_ALWAYS[phone.app]) {
+      var big = bigPref(), b = document.createElement('button'); b.type = 'button'; b.className = 'pbig'; b.id = 'wPhoneBig';
+      b.textContent = big ? '⤡' : '⤢'; b.setAttribute('aria-label', big ? 'make the phone small' : 'make the phone big'); b.title = (big ? 'smaller' : 'bigger') + ' (M)';
+      b.addEventListener('click', function (e) { e.preventDefault(); toggleBig(); });
+      $('wPhoneBar').appendChild(b);
+    }
   }
   var drawnAs = '';
   function drawPhone() {
@@ -2726,6 +2742,7 @@
   function onKey(e, down) {
     if (!active) return;
     if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if ((e.key === 'm' || e.key === 'M') && phone) { if (down && !e.repeat) toggleBig(); e.preventDefault(); return; }
     if (e.key === 'z' || e.key === 'Z' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); held.a = down; if (down && !e.repeat) pressedA = true; return; }
     var k = KEYS[e.key];
     if (!k) return;
