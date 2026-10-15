@@ -1513,11 +1513,14 @@
       var n = APPS.length;
       if (lf) phone.sel = (phone.sel + n - 1) % n;
       if (rt) phone.sel = (phone.sel + 1) % n;
+      /* up and down a row of the grid */
+      if (up) phone.sel = phone.sel - HOME_COLS >= 0 ? phone.sel - HOME_COLS : phone.sel;
+      if (dn) phone.sel = Math.min(n - 1, phone.sel + HOME_COLS);
       if (up || dn || lf || rt) drawPhone();
       if (a) openApp(APPS[phone.sel][0]);
     } else if (phone.app === 'mail') {
       var box = (s.inbox || []).slice().reverse();
-      if (phone.open >= 0) { if (a) { phone.open = -1; drawPhone(); } }
+      if (phone.open >= 0) { scrollHeld(); if (a) { phone.open = -1; drawPhone(); } }
       else {
         if (up && box.length) { phone.msel = (phone.msel + box.length - 1) % box.length; drawPhone(); }
         if (dn && box.length) { phone.msel = (phone.msel + 1) % box.length; drawPhone(); }
@@ -1527,6 +1530,8 @@
       tickId(up, dn, lf, rt, a);
     } else if (phone.app === 'inv') {
       tickInv(up, dn, lf, rt, a);
+    } else if (phone.app === 'clock') {
+      scrollHeld();
     } else if (phone.app === 'map') {
       /* hold the arrows to pan; A zooms in */
       var px = (held.right ? 1 : 0) - (held.left ? 1 : 0), py = (held.down ? 1 : 0) - (held.up ? 1 : 0);
@@ -1536,16 +1541,29 @@
     }
     if (now - pDrawn > 1000 && phone.app !== 'map') { pDrawn = now; drawPhoneBar(); if (phone.app === 'clock' || (phone.app === 'id' && phone.tab === 'vitals')) drawPhone(); }
   }
+  /* holding ▲ ▼ scrolls a screen that has nothing to pick on it */
+  var HOME_COLS = 3;
+  function scrollHeld() {
+    var d = (held.down ? 1 : 0) - (held.up ? 1 : 0);
+    if (d) $('wPhoneScreen').scrollTop += d * 5;
+  }
   function drawPhoneBar() {
     var c = novaNow();
     $('wPhoneBar').textContent = '';
     var l = document.createElement('span'); l.textContent = c.text; var r = document.createElement('span'); r.textContent = tempNow() + '°C · ' + window.MF.fmtJ(window.MF.joules(s));
     $('wPhoneBar').appendChild(l); $('wPhoneBar').appendChild(r);
   }
+  var drawnAs = '';
   function drawPhone() {
-    var scr = $('wPhoneScreen'), hint = $('wPhoneHint');
+    var scr = $('wPhoneScreen'), hint = $('wPhoneHint'), as = phone.app + '/' + phone.tab + '/' + phone.open, keep = scr.scrollTop;
     drawPhoneBar();
     scr.innerHTML = '';
+    drawPhoneIn(scr, hint);
+    /* the same screen redrawn keeps its scroll, unless a pick moved it */
+    if (as === drawnAs && !scr.querySelector('.crow.sel, .icell.sel')) scr.scrollTop = keep;
+    drawnAs = as;
+  }
+  function drawPhoneIn(scr, hint) {
     if (phone.app === 'home') {
       var grid = document.createElement('div'); grid.className = 'papps';
       APPS.forEach(function (ap, i) {
@@ -1557,17 +1575,17 @@
         grid.appendChild(b);
       });
       scr.appendChild(grid);
-      hint.textContent = '◀ ▶ pick · A open · tap B: put it away';
+      hint.textContent = 'arrows pick · A open · tap B: put it away';
     } else if (phone.app === 'id') {
       drawId(scr);
-      hint.textContent = '◀ ▶ tab' + (idRows().length ? ' · ▲ ▼ pick · A choose' : '') + ' · tap B: back';
+      hint.textContent = '◀ ▶ tab' + (idRows().length ? ' · ▲ ▼ pick · A choose' : ' · ▲ ▼ scroll') + ' · tap B: back';
     } else if (phone.app === 'clock') {
       var c = novaNow(), box = document.createElement('div'); box.className = 'pclock';
       var fc = '';
       for (var h = 2; h <= 12; h += 2) { var fcl = window.MF.clock(Date.now(), (s.dev && s.dev.shift || 0) + h * 60); fc += '<span>' + ('0' + fcl.hour).slice(-2) + 'h<br>' + window.MF.temperature(fcl, whereNow()) + '°</span>'; }
       box.innerHTML = '<div class="big">' + c.text + '</div><div>nova city · day ' + c.day + ' · ' + c.phase + '</div><div>' + tempNow() + '°C ' + (inside ? 'indoors' : 'here') + '</div><div class="fc">' + fc + '</div>';
       scr.appendChild(box);
-      hint.textContent = 'next 12 hours · tap B: back';
+      hint.textContent = 'next 12 hours · ▲ ▼ scroll · tap B: back';
     } else if (phone.app === 'mail') {
       var mails = (s.inbox || []).slice().reverse(), list = document.createElement('div'); list.className = 'pmail';
       if (phone.open >= 0 && mails[phone.open]) {
@@ -1576,7 +1594,7 @@
         var tt = document.createElement('div'); tt.className = 'pt'; tt.textContent = m.title; art.appendChild(tt);
         var bd = document.createElement('pre'); bd.textContent = m.body; art.appendChild(bd);
         list.appendChild(art);
-        hint.textContent = 'A: back to the list · tap B: home';
+        hint.textContent = '▲ ▼ scroll · A: back to the list · tap B: home';
       } else {
         if (!mails.length) { var e0 = document.createElement('p'); e0.textContent = 'no mail yet.'; list.appendChild(e0); }
         mails.forEach(function (m, i) {
@@ -1747,6 +1765,7 @@
     var tabs = idTabs(), i = Math.max(0, tabs.indexOf(phone.tab)), rows = idRows();
     if (lf || rt) { phone.tab = tabs[(i + (rt ? 1 : tabs.length - 1)) % tabs.length]; phone.isel = 0; drawPhone(); return; }
     if ((up || dn) && rows.length) { phone.isel = (phone.isel + (dn ? 1 : rows.length - 1)) % rows.length; drawPhone(); }
+    if (!rows.length) scrollHeld();
     if (a && rows[phone.isel]) { rows[phone.isel][1](); phone.isel = Math.min(phone.isel, Math.max(0, idRows().length - 1)); drawPhone(); }
   }
   function drawId(scr) {
