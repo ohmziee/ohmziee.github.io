@@ -63,14 +63,24 @@
     if (t === T.DEEP || t === T.SHALLOW) {
       var deep = t === T.DEEP, crest = deep ? '#1d4378' : '#2f69a0';
       px(g, deep ? '#0a1834' : '#123563', 0, 0, TS, TS);
-      /* two crests in a fixed pattern, rocking a pixel with the tide */
-      var o = wave ? 1 : 0, c1x = 1 + (v & 3) * 2, c1y = 3 + ((v >> 1) & 3), c2x = 8 - (v & 1) * 3, c2y = 9 + ((v >> 2) & 1) * 3;
+      /* two crests, rocking with the tide over four frames (wave 0-3) */
+      var o = [0, 1, 2, 1][wave], c1x = 1 + (v & 3) * 2, c1y = 3 + ((v >> 1) & 3), c2x = 8 - (v & 1) * 3, c2y = 9 + ((v >> 2) & 1) * 3;
       px(g, crest, c1x + o, c1y + 1, 3, 1); px(g, crest, c1x + 3 + o, c1y, 2, 1);
       if (v & 1 || v === 6) { px(g, crest, c2x - o, c2y + 1, 3, 1); px(g, crest, c2x + 3 - o, c2y, 2, 1); }
-      /* foam where it meets land */
-      var foam = '#6fb4e0';
+      /* a glint that comes and goes */
+      if ((v + wave) % 4 === 0) px(g, deep ? '#3a6aa8' : '#7ab8e8', 3 + (v * 5) % 10, 2 + (v * 3) % 11, 1, 1);
+      /* foam where it meets land: a line, brighter bits running along it,
+         and a broken second row washing in and out */
+      var foam = '#6fb4e0', froth = '#d8f0ff', wash = deep ? '#2a5a90' : '#4a8cc4';
       if (N) px(g, foam, 0, 0, TS, 1); if (S) px(g, foam, 0, 15, TS, 1);
       if (E) px(g, foam, 15, 0, 1, TS); if (Wd) px(g, foam, 0, 0, 1, TS);
+      for (i = 0; i < TS; i++) {
+        var hi = (i + wave * 2 + v) % 8 < 2, in2 = (i + wave) % 4 < 2 && wave !== 3;
+        if (N) { if (hi) px(g, froth, i, 0); if (in2) px(g, wash, i, 1); }
+        if (S) { if (hi) px(g, froth, TS - 1 - i, 15); if (in2) px(g, wash, i, 14); }
+        if (E) { if (hi) px(g, froth, 15, i); if (in2) px(g, wash, 14, i); }
+        if (Wd) { if (hi) px(g, froth, 0, TS - 1 - i); if (in2) px(g, wash, 1, i); }
+      }
       return;
     }
     if (t === T.MAINLAND) {
@@ -2424,6 +2434,7 @@
   /* ── the loop ────────────────────────────────────────────── */
   var SPEED = 4.5;                                   /* tiles a second; B doubles it */
   var last = 0, npcTick = 0;
+  var wakes = [], wakeAt = 0;
   function update(now) {
     var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
@@ -2448,6 +2459,11 @@
     /* the others finish any step they're in, even while you talk */
     npcs.forEach(function (n) { if (n.moving) { n.t += dt * SPEED * 0.55; if (n.t >= 1) { n.moving = false; n.t = 0; } } });
     if (talkBox) return;
+    if (me.moving && me.sail && now - wakeAt > 70) {
+      wakeAt = now;
+      var wd = DIRS[me.dir];
+      wakes.push({ x: (me.fx + (me.x - me.fx) * me.t) * TS + 8 - wd[0] * 7, y: (me.fy + (me.y - me.fy) * me.t) * TS + 10 - wd[1] * 6, d: wd, t0: now });
+    }
     if (me.moving) {
       var heavy = !me.sail && window.MFShops.load(s) > 1;
       me.t += dt * SPEED * (me.sail ? 1.4 : heavy ? 0.25 : running() ? (window.MF.buff(s, 'fast feet') ? 2.5 : 2) : 1);
@@ -2763,6 +2779,20 @@
       gr.addColorStop(0, rgba(l.col, (l.ga * dk).toFixed(3))); gr.addColorStop(1, rgba(l.col, 0));
       ctx.fillStyle = gr; ctx.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
     });
+    /* lights by the water drop a wobbling streak down across it */
+    lights.forEach(function (l) {
+      if (!l.col || l.r < 11) return;
+      var wx = Math.floor((l.x + cx) / TS), wy = Math.floor((l.y + cy) / TS);
+      for (var j = 1; j <= 3; j++) {
+        if (!M.water(world, wx, wy + j)) continue;
+        var top = (wy + j) * TS - cy, fade = 1 - (j - 1) / 3;
+        for (var r = 0; r < TS; r += 2) {
+          var wob = Math.round(Math.sin(now / 420 + r * 0.6 + wx) * 1.5), wd = 2 + ((r + Math.floor(now / 300)) % 3);
+          ctx.fillStyle = rgba(l.col, (0.45 * dk * fade * (l.ga > 0.25 ? 1 : 0.7)).toFixed(3));
+          ctx.fillRect(Math.round(l.x) - (wd >> 1) + wob, top + r, wd, 1);
+        }
+      }
+    });
     if (torchLit) {
       var fd2 = DIRS[me.dir], tx2 = ppx - cx + 8, ty2 = ppy - cy + 8, a2 = Math.atan2(fd2[1], fd2[0]);
       var wg = ctx.createRadialGradient(tx2, ty2, 6, tx2, ty2, 104);
@@ -2805,7 +2835,10 @@
       for (var c = 0; c < 4; c++) {
         var C = CORNER[c], a = SIDE[C[2]], b = SIDE[C[3]];
         var ta = at(x + a[0], y + a[1]), tb = at(x + b[0], y + b[1]), td = at(x + C[0], y + C[1]);
-        if (wet(t)) {
+        if ((t === T.DEEP || t === T.SHALLOW) && ta === tb && ta === td && (ta === T.DEEP || ta === T.SHALLOW) && ta !== t) {
+          /* deep tucked into shallow or the other way: round that corner too */
+          wedge(sx, sy, c, CUT, seaOf(ta), null);
+        } else if (wet(t)) {
           /* water with land on both sides of this corner: fill it in */
           var lc = landBase(ta, world.dist[(y + a[1]) * world.W + x + a[0]]);
           if (!wet(ta) && !wet(tb) && !wet(td) && lc && landBase(tb, 0) && landBase(td, 0)) wedge(sx, sy, c, CUT, lc, FOAM);
@@ -2823,7 +2856,7 @@
   }
 
   function draw(now) {
-    var wave = Math.floor(now / 600) % 2;
+    var wave = Math.floor(now / 380) % 4;
     var ppx = (me.moving ? me.fx + (me.x - me.fx) * me.t : me.x) * TS, ppy = (me.moving ? me.fy + (me.y - me.fy) * me.t : me.y) * TS;
     /* a room smaller than the screen sits in the middle of it, in the dark */
     var cx = world.W <= VW ? -Math.floor((VW - world.W) * TS / 2) : Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, ppx - (VW * TS) / 2 + TS / 2)));
@@ -2883,6 +2916,14 @@
       px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1); px(ctx, '#8a6a48', sx + 4, sy + 7, 6, 1);
     });
     if (!inside) { drawLamps(cx, cy); drawLoose(cx, cy, now); drawPiles(cx, cy, now); }
+    /* the boat's wake: pairs of foam flecks spreading and fading */
+    wakes = wakes.filter(function (k) { return now - k.t0 < 1100; });
+    wakes.forEach(function (k) {
+      var a = (now - k.t0) / 1100, sp = 1 + a * 6, ox = k.d[1] * sp, oy = k.d[0] * sp;
+      ctx.fillStyle = 'rgba(216,240,255,' + (0.7 * (1 - a)).toFixed(3) + ')';
+      ctx.fillRect(Math.round(k.x - cx + ox), Math.round(k.y - cy + oy), 2, 1);
+      ctx.fillRect(Math.round(k.x - cx - ox) - 1, Math.round(k.y - cy - oy), 2, 1);
+    });
     /* people, back to front */
     var who = npcs.map(function (n) {
       var nx = (n.moving ? n.fx + (n.x - n.fx) * n.t : n.x) * TS, ny = (n.moving ? n.fy + (n.y - n.fy) * n.t : n.y) * TS;
