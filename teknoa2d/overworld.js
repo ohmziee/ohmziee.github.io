@@ -1121,6 +1121,8 @@
                    "don't go knocking on the lighthouse, $handle. trust me on that one."];
   function interact() {
     var d = DIRS[me.dir], tx = me.x + d[0], ty = me.y + d[1], i;
+    var fallen = !inside && (bodyAt(tx, ty) || bodyAt(me.x, me.y));
+    if (fallen) return searchBody(fallen);
     for (i = 0; i < npcs.length; i++) {
       var n = npcs[i];
       if (n.x !== tx || n.y !== ty) continue;
@@ -2588,6 +2590,7 @@
       var dir = held.up ? 'up' : held.down ? 'down' : held.left ? 'left' : held.right ? 'right' : '';
       if (dir) tryMove(dir);
     }
+    tickTalk(now);
     tickMobs(dt, now);
     /* the others wander a little, near where they stand */
     if (now - npcTick > 900) {
@@ -2676,7 +2679,7 @@
   /* A with a foe beside you: a double tap swings, a single one just squares up */
   function attackTap(now) {
     var m = mobNear();
-    if (!m) return false;
+    if (!m) return civTap(now);
     me.dir = faceTo(m.x - me.x, m.y - me.y);
     if (now - lastA < DOUBLE_TAP) { lastA = 0; swingAt(m, now); } else lastA = now;
     return true;
@@ -2693,14 +2696,15 @@
     var hd = DIRS[me.dir];
     burst(me.x * TS + 8 + hd[0] * 10, me.y * TS + 7 + hd[1] * 10, r.crit ? 9 : 5, r.crit ? ['#ffe97c', '#fff3b0', '#ffffff'] : ['#ffffff', '#dce3ff'], r.crit ? 70 : 50);
     float(m.x * TS + 3, m.y * TS - 6, (r.crit ? 'CRIT ' : '') + r.dmg, r.crit ? '#ffe97c' : '#fff');
-    if (m.f.hp <= 0) return beaten(m);
+    if (m.f.hp <= 0) return beaten(m, w.key);
     /* knocked back a tile, if there's room */
     var kx = m.x + Math.sign(m.x - me.x), ky = m.y + Math.sign(m.y - me.y);
     if ((kx !== m.x) !== (ky !== m.y) && !occupied(kx, ky)) { m.fx = m.x; m.fy = m.y; m.x = kx; m.y = ky; m.moving = true; m.t = 0.5; }
   }
-  function beaten(m) {
+  function beaten(m, weapon) {
     var MF = window.MF;
     mobs = mobs.filter(function (o) { return o !== m; });
+    if (m.civ) return civFalls(m, weapon);
     downs.push({ x: m.x * TS, y: m.y * TS, img: sprite(m.look, m.dir, 0), t0: performance.now() });
     freezeUntil = performance.now() + 120; jolt(180, 1);
     if (m.f.joules > 0) { MF.earn(s, m.f.joules); wallet('+' + MF.fmtJ(m.f.joules)); }
@@ -2721,8 +2725,8 @@
   }
   function lose(m, now) {
     var took = m.f.robs ? window.MFCombat.rob(s, window.MF) : null;
-    lostTo = { name: m.f.name, took: took };
-    mobs = []; floats = [];
+    lostTo = { name: m.f.name, took: took, civ: !!m.civ };
+    dropMobs(); floats = [];
     wallet();
     faint(now, true);
   }
@@ -2730,6 +2734,7 @@
   function lostLines() {
     var l = lostTo, MF = window.MF; lostTo = null;
     if (!l) return [];
+    if (l.civ) return ['you picked the wrong fight.\nsomeone called it in before it got worse.'];
     if (!l.took) return ['a ' + l.name + ' left you for dead out there.\nwe got to you before anything else did.'];
     var n = 0; ['items', 'res'].forEach(function (b) { Object.keys(l.took[b]).forEach(function (k) { n += l.took[b][k]; }); });
     var kept = window.MF.safeKeys(s).length;
@@ -2762,7 +2767,8 @@
   }
   function tickMobs(dt, now) {
     var zn = zoneNow();
-    if (!zn) { mobs = []; return; }
+    tickBodies(now);
+    if (!zn) { dropMobs(); return; }
     if (!(s.dev && s.dev.peace) && window.MFStreets) {
       spawnClock += dt;
       if (spawnClock >= window.MFStreets.CHECK[zn]) {
@@ -2780,7 +2786,103 @@
       var o = chaseStep(m);
       if (o) { m.fx = m.x; m.fy = m.y; m.x += o[0]; m.y += o[1]; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]); }
     });
+    mobs.forEach(function (m) { if (m.gone && m.civ) backToCrowd(m); });
     mobs = mobs.filter(function (m) { return !m.gone; });
+  }
+  /* ── the crowd, when it comes to blows (law.js). double-tap A at a
+     passer-by and they hit back. beaten, they lie there: knocked out, or
+     dead if what you used could kill. A over them goes through their
+     pockets. the knocked out get up; the dead are taken away, and in time
+     someone new moves into the spot. a single A still just talks (it
+     waits a beat for the second tap) ── */
+  var bodies = [], gone = [], pendingTalk = null;
+  function civTap(now) {
+    var LAW = window.MFLaw, d = DIRS[me.dir], x = me.x + d[0], y = me.y + d[1];
+    if (!LAW || inside || me.sail) return false;
+    var n = npcs.filter(function (o) { return o.x === x && o.y === y; })[0];
+    if (!n || !LAW.attackable(n)) return false;
+    if (pendingTalk && pendingTalk.n === n && now - pendingTalk.at < DOUBLE_TAP) { pendingTalk = null; swingAt(provoke(n), now); return true; }
+    pendingTalk = { n: n, at: now, x: me.x, y: me.y, dir: me.dir };
+    return true;
+  }
+  /* no second tap: it was a hello after all */
+  function tickTalk(now) {
+    if (!pendingTalk || now - pendingTalk.at < DOUBLE_TAP) return;
+    var p = pendingTalk; pendingTalk = null;
+    if (!talkBox && !me.moving && me.x === p.x && me.y === p.y && me.dir === p.dir && npcs.indexOf(p.n) >= 0) interact();
+  }
+  /* a passer-by squares up: out of the crowd, into the fight */
+  function provoke(n) {
+    var LV = window.MFLevel, cap = Math.min(window.MFFoes.DANGER.city[1], (LV ? LV.level(s) : 1) + 1);
+    cityNpcs.splice(cityNpcs.indexOf(n), 1);
+    var f = window.MFLaw.civ(n, 1 + Math.floor(Math.random() * cap), Math.random);
+    var m = { f: f, civ: n, x: n.x, y: n.y, fx: n.x, fy: n.y, t: 0, moving: false, dir: n.dir, step: 0, cd: 0.9, hurt: 0, lunge: 0,
+              speed: 2.2 + Math.min(2.5, f.ref * 0.12), look: n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local };
+    mobs.push(m);
+    return m;
+  }
+  /* they gave up, or you went somewhere they can't follow: back in the crowd where they stand */
+  function backToCrowd(m) { var n = m.civ; n.x = m.x; n.y = m.y; n.fx = m.x; n.fy = m.y; n.moving = false; n.t = 0; n.dir = m.dir; cityNpcs.push(n); }
+  function dropMobs() { mobs.forEach(function (m) { if (m.civ) backToCrowd(m); }); mobs = []; }
+  function civFalls(m, weapon) {
+    var LAW = window.MFLaw, how = LAW.fall(weapon, Math.random), now = performance.now();
+    bodies.push({ n: m.civ, x: m.x, y: m.y, dead: how === 'dead', at: now, pockets: LAW.pockets(m.civ, Math.random), look: m.look, dir: m.dir });
+    freezeUntil = now + 120; jolt(180, 1);
+    exp('combat', { xp: m.f.xp });
+    float(m.x * TS, m.y * TS - 8, m.f.name + (how === 'dead' ? ' killed' : ' knocked out'), how === 'dead' ? '#ff4f5e' : '#ffb02e');
+    if (api.save) api.save();
+  }
+  function bodyAt(x, y) { for (var i = bodies.length - 1; i >= 0; i--) if (bodies[i].x === x && bodies[i].y === y) return bodies[i]; return null; }
+  function searchBody(b) {
+    var LAW = window.MFLaw, MF = window.MF, SH = window.MFShops, p = b.pockets, what = [];
+    var state = b.dead ? 'they\'re not breathing.' : 'they\'re out cold.';
+    if (LAW.empty(p)) return say([state + '\nnothing in their pockets. not any more.']);
+    if (p.joules) what.push(MF.fmtJ(p.joules));
+    Object.keys(p.items).forEach(function (k) { var g = SH.FOODS[k] || SH.MEDS[k]; what.push(g ? g.name : k); });
+    ask([state + '\nin their pockets: ' + what.join(', ') + '.', 'take it?'], function () {
+      var r = LAW.loot(s, MF, p);
+      if (!r.ok) return;
+      if (r.got.joules) wallet('+' + MF.fmtJ(r.got.joules));
+      if (api.save) api.save();
+    });
+  }
+  function tickBodies(now) {
+    var LAW = window.MFLaw;
+    if (!LAW) return;
+    bodies = bodies.filter(function (b) {
+      if (b.dead) { if (now - b.at < LAW.BODY_SECS * 1000) return true; gone.push({ n: b.n, at: b.at }); return false; }
+      if (now - b.at < LAW.DOWN_SECS * 1000 || (!inside && me.x === b.x && me.y === b.y)) return true;
+      /* back on their feet, a little unsteady */
+      var n = b.n; n.x = b.x; n.y = b.y; n.moving = false; n.t = 0; n.dir = 'down'; cityNpcs.push(n);
+      return false;
+    });
+    /* someone new moves into the spot, once you're not looking */
+    if (inside) return;
+    gone = gone.filter(function (g) {
+      var n = g.n;
+      if (now - g.at < LAW.RESPAWN_SECS * 1000 || (Math.abs(n.hx - me.x) <= VW && Math.abs(n.hy - me.y) <= VH) || occupied(n.hx, n.hy)) return true;
+      var c = {}; for (var k in n) c[k] = n[k];
+      c.seed = (n.seed * 31 + 7919) >>> 0; c.x = c.fx = n.hx; c.y = c.fy = n.hy; c.moving = false; c.t = 0; c.dir = 'down';
+      cityNpcs.push(c);
+      return false;
+    });
+  }
+  /* the fallen lie across their tile: out cold, or in a spreading pool */
+  function drawBodies(cx, cy, now) {
+    bodies.forEach(function (b) {
+      var x = Math.round(b.x * TS - cx), y = Math.round(b.y * TS - cy);
+      if (x < -TS || y < -TS || x > VW * TS || y > VH * TS) return;
+      if (b.dead) {
+        var r = Math.round(Math.min(1, (now - b.at) / 4000) * 2);
+        ctx.fillStyle = 'rgba(120,10,24,.8)';
+        ctx.fillRect(x + 3 - r, y + 9, 10 + 2 * r, 4); ctx.fillRect(x + 4 - r, y + 8, 8 + 2 * r, 6);
+      }
+      ctx.save(); ctx.translate(x + 8, y + 10); ctx.rotate(b.dead ? Math.PI / 2 : -Math.PI / 2);
+      ctx.drawImage(sprite(b.look, 'down', 0), -8, -8);
+      ctx.restore();
+      /* out cold: a little star going round */
+      if (!b.dead) { var a = now / 300; px(ctx, '#ffe97c', x + 8 + Math.round(Math.cos(a) * 4), y + 2 + Math.round(Math.sin(a) * 1.5), 1, 1); }
+    });
   }
   /* bars over heads, numbers that float up, the swing, the sting of a hit */
   function drawFight(cx, cy, now, ppx, ppy) {
@@ -3302,6 +3404,7 @@
       ctx.fillRect(Math.round(k.x - cx + ox), Math.round(k.y - cy + oy), 2, 1);
       ctx.fillRect(Math.round(k.x - cx - ox) - 1, Math.round(k.y - cy - oy), 2, 1);
     });
+    if (!inside) drawBodies(cx, cy, now);
     /* people, back to front */
     var who = npcs.map(function (n) {
       var nx = (n.moving ? n.fx + (n.x - n.fx) * n.t : n.x) * TS, ny = (n.moving ? n.fy + (n.y - n.fy) * n.t : n.y) * TS;

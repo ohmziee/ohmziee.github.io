@@ -19,15 +19,16 @@
 
   /* ── weapons: wear like rods (s.wear), one use a swing. fists never wear.
      moves: what a duel offers with it. pow scales the hit, acc adds to the
-     chance to land it, crit to the crit chance; stun skips their next turn ── */
+     chance to land it, crit to the crit chance; stun skips their next turn.
+     lethal: the chance a knockout on the street is a killing (law.js fall) ── */
   var WEAPONS = {
     fists: { name: 'your fists', what: 'always on you. not much, but never nothing.', dmg: 5, dur: 0, price: 0,
              moves: [{ id: 'jab', name: 'jab', pow: 0.8, acc: 0.1 }, { id: 'haymaker', name: 'haymaker', pow: 1.5, acc: -0.2 }] },
-    pipe:  { name: 'a lead pipe', what: 'heavy, honest, rusts in the rain.', dmg: 9, dur: 40, price: 60,
+    pipe:  { name: 'a lead pipe', what: 'heavy, honest, rusts in the rain.', dmg: 9, dur: 40, price: 60, lethal: 0.2,
              moves: [{ id: 'swing', name: 'swing', pow: 1 }, { id: 'overhead', name: 'overhead', pow: 1.6, acc: -0.2 }] },
-    knife: { name: 'a switchblade', what: 'quick, quiet, finds the soft parts.', dmg: 8, dur: 50, price: 90, crit: 0.08,
+    knife: { name: 'a switchblade', what: 'quick, quiet, finds the soft parts.', dmg: 8, dur: 50, price: 90, crit: 0.08, lethal: 0.45,
              moves: [{ id: 'slash', name: 'slash', pow: 1, acc: 0.05 }, { id: 'stab', name: 'stab', pow: 1.4, acc: -0.1, crit: 0.15 }] },
-    bat:   { name: 'a nail bat', what: 'slow. very convincing.', dmg: 11, dur: 35, price: 120,
+    bat:   { name: 'a nail bat', what: 'slow. very convincing.', dmg: 11, dur: 35, price: 120, lethal: 0.3,
              moves: [{ id: 'swing', name: 'swing', pow: 1 }, { id: 'homerun', name: 'home run', pow: 1.9, acc: -0.3 }] },
     baton: { name: 'a stun baton', what: 'ncpd surplus. the battery hums.', dmg: 7, dur: 60, price: 180,
              moves: [{ id: 'jab', name: 'jab', pow: 0.9, acc: 0.1 }, { id: 'shock', name: 'shock', pow: 0.7, stun: 0.35 }] }
