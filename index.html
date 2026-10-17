@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-uxSCUcytycoPIJOwjpZ+SNmCl+9MU6dOG97LvWeMEmU=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0LnKWo9PXybMd0slhx7wx79vi6gcnMS99OyWFc8t1Vc=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -537,9 +537,6 @@ body.page-open{overflow:hidden}
   /* an iframe will not stretch between left and right on its own (it
      falls back to 300px), so its width is spelled out */
   #pageFrame{left:calc(max(380px,clamp(300px,24vw,420px)) + 2.5rem);right:auto;width:calc(100% - 2 * (max(380px,clamp(300px,24vw,420px)) + 2.5rem))}
-  /* the rain button normally sits right of the radio, which is where the
-     framed page starts: it hops on top of the radio instead */
-  body.page-open #radio #ambTab{left:auto;right:0;bottom:calc(100% + .4rem)}
 }
 #ghostie.away{visibility:hidden}
 body.bytes-open{overflow:hidden}
@@ -723,23 +720,28 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 #radio .r-back{display:block;width:100%;text-align:left;padding:.5rem .75rem;font-size:.7rem;letter-spacing:.12em;color:#7CFFB2;border-top:1px solid rgba(42,29,94,.7)}
 #radio .r-back[hidden]{display:none}
 #term.open ~ #radio{z-index:39}
-body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #radio #ambTab{border-color:var(--storm-accent)}
-/* rain sounds: a speaker beside the radio tab, same height, off until pressed */
-#radio #ambTab{position:absolute;left:calc(100% + .4rem);bottom:0;display:flex;align-items:center;gap:.5rem;cursor:pointer;font:700 .82rem/1 var(--font-display);letter-spacing:.2em;
-  height:calc(2.02rem + 2px);padding:0 .65rem;border:1px solid var(--violet);background:rgba(11,13,26,.86);color:var(--rain);
-  transition:border-color .2s,background .2s,color .2s}
-#radio #ambTab:hover,#radio #ambTab:focus-visible{border-color:var(--lavender);background:rgba(42,29,94,.5);color:var(--ice)}
-#radio #ambTab svg{width:1.05rem;height:1.05rem;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#radio #ambTab .a-wave{display:none}
-#radio #ambTab{overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
-#radio #ambTab .a-fill{position:absolute;left:0;top:0;bottom:0;width:50%;pointer-events:none;
-  background:rgba(159,140,255,.14);border-right:1px solid rgba(159,140,255,.45);transition:width .12s,background .2s}
-#radio #ambTab.on .a-fill{background:rgba(124,255,178,.16);border-right-color:rgba(124,255,178,.55)}
-#radio #ambTab.dragging .a-fill{transition:none}
-#radio #ambTab svg,#radio #ambTab .a-label{position:relative}
-#radio #ambTab.on{color:#7CFFB2}
-#radio #ambTab.on .a-wave{display:inline}
-#radio #ambTab.on .a-x{display:none}
+body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accent)}
+/* ambience: a small mixer under the radio controls, one row until opened */
+#radio .r-amb{border-top:1px solid rgba(42,29,94,.7)}
+#radio .a-head{display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem}
+#radio #ambHead{display:flex;align-items:baseline;gap:.6rem;flex:1 1 auto;min-width:0;text-align:left;padding:.15rem 0;
+  font-size:.66rem;letter-spacing:.2em;color:var(--ice)}
+#radio #ambHead::after{content:'\25BE';margin-left:auto;font-size:.85rem;line-height:1;color:var(--rain);transition:transform .2s}
+#radio #ambHead[aria-expanded="true"]::after{transform:rotate(180deg)}
+#radio #ambHead:hover,#radio #ambHead:focus-visible{color:var(--lavender)}
+#radio .a-sum{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.62rem;letter-spacing:.08em;color:var(--rain)}
+#radio .r-amb.on .a-sum{color:#7CFFB2}
+#radio #ambAll{padding:.15rem .4rem;border:1px solid rgba(74,80,104,.7);font-size:.66rem;letter-spacing:.1em;color:var(--rain)}
+#radio #ambAll[aria-pressed="true"]{color:#7CFFB2;border-color:rgba(124,255,178,.5)}
+#radio #ambAll:hover,#radio #ambAll:focus-visible{border-color:var(--lavender)}
+#radio .a-body{display:grid;grid-template-columns:6.4rem 1fr;gap:.35rem .7rem;align-items:center;padding:.1rem .75rem .7rem}
+#radio .a-body[hidden]{display:none}
+#radio .a-all{font-size:.64rem;letter-spacing:.2em;color:var(--ice);padding:.3rem .45rem}
+#radio .a-body button{text-align:left;padding:.3rem .45rem;border:1px solid var(--violet);font-size:.64rem;letter-spacing:.16em;color:var(--rain);transition:color .2s,border-color .2s,background .2s}
+#radio .a-body button:hover,#radio .a-body button:focus-visible{border-color:var(--lavender);color:var(--ice)}
+#radio .a-body button.on{color:#7CFFB2;border-color:rgba(124,255,178,.45);background:rgba(124,255,178,.06)}
+#radio .a-body input{width:100%;min-width:0;accent-color:var(--lavender)}
+#radio .a-body button.on + input{accent-color:#7CFFB2}
 /* first visit only: the tab breathes until someone opens it */
 @keyframes tabcall{0%,100%{border-color:var(--violet);box-shadow:none}50%{border-color:#7CFFB2;box-shadow:0 0 18px -4px rgba(124,255,178,.6)}}
 #radio.fresh #radioTab{animation:tabcall 2.6s ease-in-out infinite}
@@ -765,16 +767,6 @@ body.stormmax #radioPanel,body.stormmax #radioTab,body.stormmax #radio #ambTab{b
   #radioTab .r-tabnow:empty{display:block}
   #radioTab .r-tabnow:empty::before{content:'tap to tune in';color:var(--rain)}
   #radio.fresh #radioTab{animation:none;color:#7CFFB2}
-  /* the speaker takes the right end of the bar; the open sheet covers it */
-  #radioTab{padding-right:3.6rem}
-  #radio #ambTab{left:auto;right:0;height:var(--bar-h);padding:0 1rem env(safe-area-inset-bottom,0px);
-    border:0;border-top:1px solid var(--violet);border-left:1px solid rgba(42,29,94,.7);background:#0B0D1A}
-  /* the open sheet covers the bar, so the rain rides just above it instead,
-     on the left: ghostie floats on the right */
-  #radio.open #ambTab{bottom:calc(100% + var(--chat-over,0px) + .5rem);left:.6rem;right:auto;height:2.6rem;padding:0 .9rem;border:1px solid var(--violet);
-    background:rgba(11,13,26,.94)}
-  #radio #ambTab .a-label{display:none}
-  #radio.open #ambTab .a-label{display:inline}
   #radioPanel,#radio.mini #radioPanel{width:100%;border-left:0;border-right:0;border-bottom:0;
     max-height:calc(88dvh - env(safe-area-inset-top,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
   #radio .r-tracks{max-height:22vh}
@@ -1212,7 +1204,6 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      youtube playlist (RADIO_LIST); edit that one on youtube. -->
 <div id="radio" class="src-juke">
   <button type="button" id="radioTab" aria-expanded="false" aria-controls="radioPanel"><span class="r-dot" aria-hidden="true"></span>RADIO<span class="r-tabnow" id="radioTabNow"></span></button>
-  <button type="button" id="ambTab" aria-pressed="false" aria-label="rain sounds" title="rain sounds: off"><span class="a-fill" id="ambFill" aria-hidden="true"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="a-wave" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/><path class="a-x" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg><span class="a-label">RAIN</span></button>
   <div id="radioPanel" role="region" aria-label="EXiLED radio" hidden>
     <div class="r-bar">
       <span class="r-dot" aria-hidden="true"></span><span class="r-title">EXiLED RADIO</span>
@@ -1234,6 +1225,20 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       <button type="button" id="radioNext" aria-label="next track">&raquo;</button>
       <button type="button" id="jukeOne" class="r-juke" aria-pressed="false" title="repeat this track" aria-label="repeat this track">&#x27F2;1</button>
       <input type="range" id="radioVol" min="0" max="100" value="70" aria-label="volume">
+    </div>
+    <div class="r-amb" id="ambBox">
+      <div class="a-head">
+        <button type="button" id="ambHead" aria-expanded="false" aria-controls="ambBody">AMBIENCE<span class="a-sum" id="ambSum">off</span></button>
+        <button type="button" id="ambAll" aria-pressed="false">off</button>
+      </div>
+      <div class="a-body" id="ambBody" hidden>
+        <span class="a-all">ALL</span><input type="range" id="ambMaster" min="0" max="100" value="50" aria-label="ambience volume">
+        <button type="button" id="ambOn-rain" aria-pressed="false" title="rain, as heavy as the sky above the page: no rain, no sound">RAIN</button><input type="range" id="ambVol-rain" min="0" max="100" value="50" aria-label="rain volume">
+        <button type="button" id="ambOn-crickets" aria-pressed="false">CRICKETS</button><input type="range" id="ambVol-crickets" min="0" max="100" value="50" aria-label="crickets volume">
+        <button type="button" id="ambOn-waves" aria-pressed="false">WAVES</button><input type="range" id="ambVol-waves" min="0" max="100" value="50" aria-label="waves volume">
+        <button type="button" id="ambOn-loons" aria-pressed="false">LOONS</button><input type="range" id="ambVol-loons" min="0" max="100" value="50" aria-label="loons volume">
+        <button type="button" id="ambOn-frogs" aria-pressed="false">FROGS</button><input type="range" id="ambVol-frogs" min="0" max="100" value="50" aria-label="frogs volume">
+      </div>
     </div>
     <p class="j-note r-juke" id="jukeNote"></p>
     <ol class="r-tracks j-tracks r-juke" id="jukeTracks"></ol>
@@ -2052,23 +2057,55 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   setInterval(function(){ if(intensity >= 100) stormEvent(); }, 5000);
   setInterval(function(){ if(intensity >= 100 && Math.random() < .45) strike(); }, 1900);
 
-  /* ── the storm, heard ───────────────────────────────────────
-     On by default, but browsers hold sound back until the visitor's first
-     tap or key, so it starts then. Nothing is downloaded: the rain is
-     filtered noise and the thunder a low rumble, both made here, so there
-     are no files and nothing to license.
-     How hard it storms follows the rain level exactly (the slider, or
-     `rain N` in the terminal): 0 is silence, low numbers a soft drizzle with
-     the odd far-off roll, 100 a downpour with thunder close and often. Each
-     lightning strike is answered a beat late, nearer strikes sooner.
-     The speaker by the radio is also its volume bar: click to mute, drag
-     across it (or scroll, or arrow keys) to set the level. 50% to start,
-     remembered after that. It sits lower while the radio plays and keeps
-     going in a background tab. */
-  var amb = { ac: null, on: false, vol: .5, master: null, out: null, body: null, bodyF: null, hiss: null, hissF: null,
-              thunder: null, rumble: null, white: null, lastBoom: 0 };
-  var ambBtn = document.getElementById('ambTab'), ambFill = document.getElementById('ambFill'), ambOffT;
+  /* ── the night, heard ───────────────────────────────────────
+     AMBIENCE, at the foot of the radio, is a small mixer: rain, crickets,
+     waves, loons and frogs, each with a switch and a level, under an ALL
+     row (one switch, one master level). Nothing is downloaded: every sound
+     is made here with Web Audio, so there are no files and nothing to
+     license.
+     Rain is on by default and follows the rain level exactly (the slider,
+     or `rain N` in the terminal): 0 is silence, low numbers a soft drizzle
+     with the odd far-off roll, 100 a downpour with thunder close and often.
+     Each lightning strike is answered a beat late, nearer strikes sooner.
+     The other four start off.
+     So that all five at once still sound like one night and not a zoo:
+     - each keeps to its own part of the spectrum: waves low, frogs and
+       loons in the middle, crickets high, rain a wash over the top
+     - they share one bus: the more that are on, the further each is pulled
+       back, and a soft compressor glues the sum
+     - crickets, frogs and loons share one reverb, as if heard across the
+       same lake, the loons furthest off
+     - a loon's call is the only solo: the frogs and crickets hush a little
+       under it, and the frogs take turns instead of croaking over each other
+     Browsers hold sound back until the visitor's first tap or key, so it
+     starts then. It sits lower while the radio plays and keeps going in a
+     background tab. Remembered: exiled.ambience (ALL on/off), exiled.ambVol
+     (the master level) and exiled.ambMix (each layer's switch and level). */
+  var ambKinds = ['rain', 'crickets', 'waves', 'loons', 'frogs'];
+  /* base: the gain that puts a layer at its half-way level on a par with
+     the rest. room: how much of the mix it takes when on, so a busy layer
+     pulls the others back more than a sparse one. send: how much goes to
+     the shared reverb. duck: hushed under a loon */
+  var ambSpec = {
+    rain:     { base: 1,    room: 1,   send: 0,   on: true },
+    crickets: { base: .1,   room: .6,  send: .3,  duck: true },
+    waves:    { base: .5,   room: 1,   send: .08 },
+    loons:    { base: .25,  room: .35, send: .9 },
+    frogs:    { base: .72,  room: .7,  send: .35, duck: true }
+  };
+  var amb = { ac: null, on: false, vol: .5, master: null, out: null, mix: null, verb: null, body: null, bodyF: null, hiss: null, hissF: null,
+              thunder: null, rumble: null, white: null, lastBoom: 0, layer: {} };
+  ambKinds.forEach(function(k){ amb.layer[k] = { on: !!ambSpec[k].on, vol: .5, g: null, duck: null, next: -1 }; });
   try { var vs = localStorage.getItem('exiled.ambVol'); if(vs !== null && vs !== '' && !isNaN(+vs)) amb.vol = Math.max(0, Math.min(1, +vs)); } catch(e){}
+  try {
+    var mixSaved = JSON.parse(localStorage.getItem('exiled.ambMix') || 'null');
+    if(mixSaved) ambKinds.forEach(function(k){
+      var m = mixSaved[k];
+      if(!m) return;
+      amb.layer[k].on = !!m.on;
+      if(typeof m.vol === 'number' && !isNaN(m.vol)) amb.layer[k].vol = Math.max(0, Math.min(1, m.vol));
+    });
+  } catch(e){}
   function ambNoise(ac, secs, brown){
     var len = Math.floor(ac.sampleRate * secs), buf = ac.createBuffer(2, len, ac.sampleRate);
     for(var ch = 0; ch < 2; ch++){
@@ -2080,9 +2117,28 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     return buf;
   }
-  /* the volume bar is linear to the eye, so the gain under it is curved:
-     half the bar is the old fixed level, the full bar about 2.6x that */
-  function ambGain(){ return amb.vol <= 0 ? 0 : .38 * Math.pow(2 * amb.vol, 1.4); }
+  /* a room for the night: two seconds and a half of decaying noise, each
+     side its own, darker as it dies away */
+  function ambRoom(ac){
+    var len = Math.floor(ac.sampleRate * 2.6), buf = ac.createBuffer(2, len, ac.sampleRate);
+    for(var ch = 0; ch < 2; ch++){
+      var d = buf.getChannelData(ch), lp = 0;
+      for(var i = 0; i < len; i++){
+        var f = i / len, a = .35 + .6 * (1 - f);
+        lp += a * ((Math.random() * 2 - 1) - lp);
+        d[i] = lp * Math.pow(1 - f, 2.4) * (i < ac.sampleRate * .012 ? i / (ac.sampleRate * .012) : 1);
+      }
+    }
+    return buf;
+  }
+  /* the bars are linear to the eye, so the gain under them is curved:
+     half a bar is the layer's own level, a full bar about 2.6x that */
+  function ambCurve(v){ return v <= 0 ? 0 : Math.pow(2 * v, 1.4); }
+  function ambGain(){ return .38 * ambCurve(amb.vol); }
+  function ambPan(ac, p){
+    if(ac.createStereoPanner){ var n = ac.createStereoPanner(); n.pan.value = p; return n; }
+    return ac.createGain();
+  }
   function ambBuild(ac){
     amb.ac = ac;
     /* white noise loops seamlessly (it has no shape to break); the rumble
@@ -2091,28 +2147,234 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     amb.rumble = ambNoise(ac, 12, true);
     amb.master = ac.createGain(); amb.master.gain.value = 0;
     amb.out = ac.createGain(); amb.out.gain.value = ambGain();
-    amb.master.connect(amb.out); amb.out.connect(ac.destination);
+    amb.mix = ac.createGain();
+    var glue = ac.createDynamicsCompressor();
+    glue.threshold.value = -20; glue.knee.value = 14; glue.ratio.value = 2.5; glue.attack.value = .04; glue.release.value = .5;
+    amb.mix.connect(glue); glue.connect(amb.master); amb.master.connect(amb.out); amb.out.connect(ac.destination);
+    amb.verb = ac.createConvolver(); amb.verb.buffer = ambRoom(ac);
+    var wet = ac.createGain(); wet.gain.value = .5;
+    amb.verb.connect(wet); wet.connect(amb.mix);
+    ambKinds.forEach(function(k){
+      var L = amb.layer[k];
+      L.g = ac.createGain(); L.g.gain.value = 0; L.g.connect(amb.mix);
+      L.duck = ac.createGain(); L.duck.connect(L.g);
+      if(ambSpec[k].send){ var s = ac.createGain(); s.gain.value = ambSpec[k].send; L.g.connect(s); s.connect(amb.verb); }
+    });
+    var R = amb.layer.rain.duck;
     /* body: the wash of rain on everything, darker when it's light */
     var s1 = ac.createBufferSource(); s1.buffer = amb.white; s1.loop = true;
     amb.bodyF = ac.createBiquadFilter(); amb.bodyF.type = 'lowpass'; amb.bodyF.frequency.value = 950; amb.bodyF.Q.value = .3;
     amb.body = ac.createGain(); amb.body.gain.value = 0;
-    s1.connect(amb.bodyF); amb.bodyF.connect(amb.body); amb.body.connect(amb.master);
+    s1.connect(amb.bodyF); amb.bodyF.connect(amb.body); amb.body.connect(R);
     /* hiss: the close patter, brighter as the rain gets heavier */
     var s2 = ac.createBufferSource(); s2.buffer = amb.white; s2.loop = true;
     var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400;
     amb.hissF = ac.createBiquadFilter(); amb.hissF.type = 'lowpass'; amb.hissF.frequency.value = 5000;
     amb.hiss = ac.createGain(); amb.hiss.gain.value = 0;
-    s2.connect(hp); hp.connect(amb.hissF); amb.hissF.connect(amb.hiss); amb.hiss.connect(amb.master);
-    amb.thunder = ac.createGain(); amb.thunder.gain.value = 1.3; amb.thunder.connect(amb.master);
+    s2.connect(hp); hp.connect(amb.hissF); amb.hissF.connect(amb.hiss); amb.hiss.connect(R);
+    amb.thunder = ac.createGain(); amb.thunder.gain.value = 1.3; amb.thunder.connect(R);
     s1.start(0); s2.start(0, 1.7);
+    ambCrickets(ac); ambWaves(ac);
   }
-  /* levels, with gusting so the rain never sits still; heavier rain gusts harder */
+  /* crickets: three close ones, each a pure high tone chirped in short
+     pulses at its own pace, over a far trilling chorus */
+  function ambCrickets(ac){
+    var L = amb.layer.crickets;
+    L.voices = [[4380, .62, -.55], [4710, .55, .15], [5020, .7, .6]].map(function(c){
+      var o = ac.createOscillator(); o.frequency.value = c[0];
+      var e = ac.createGain(); e.gain.value = 0;
+      var p = ambPan(ac, c[2]);
+      o.connect(e); e.connect(p); p.connect(L.duck); o.start(0);
+      return { o: o, e: e, f: c[0], period: c[1], pulses: 3 + (c[0] > 4600 ? 1 : 0), next: -1 };
+    });
+    L.far = ac.createGain(); L.far.gain.value = .25; L.far.connect(L.duck);
+    [[5480, 46, -.3], [5810, 53, .35]].forEach(function(c){
+      var o = ac.createOscillator(); o.frequency.value = c[0];
+      var am = ac.createGain(); am.gain.value = .5;
+      var lfo = ac.createOscillator(); lfo.type = 'square'; lfo.frequency.value = c[1];
+      var depth = ac.createGain(); depth.gain.value = .5;
+      lfo.connect(depth); depth.connect(am.gain);
+      var p = ambPan(ac, c[2]);
+      o.connect(am); am.connect(p); p.connect(L.far); o.start(0); lfo.start(0);
+    });
+  }
+  function ambPlanCrickets(L, now, until){
+    L.voices.forEach(function(v){
+      if(v.next < now) v.next = now + Math.random() * .6;
+      while(v.next < until){
+        var s = v.next, a = .9 + Math.random() * .1;
+        v.o.frequency.setValueAtTime(v.f * (1 + (Math.random() - .5) * .012), s);
+        for(var p = 0; p < v.pulses; p++){
+          var t = s + p * .034;
+          v.e.gain.setValueAtTime(0, t);
+          v.e.gain.linearRampToValueAtTime(a, t + .005);
+          v.e.gain.linearRampToValueAtTime(a * .7, t + .017);
+          v.e.gain.linearRampToValueAtTime(0, t + .023);
+        }
+        /* now and then one stops to listen */
+        v.next = s + v.period * (.96 + Math.random() * .08) + (Math.random() < .035 ? 2 + Math.random() * 5 : 0);
+      }
+    });
+    /* the far chorus drifts nearer and further */
+    L.far.gain.setTargetAtTime(.12 + Math.random() * .22, now, 2.5);
+  }
+  /* waves: a breaker every 7 to 13 seconds, the wash swelling in and
+     brightening as it rises, a spray of foam where it breaks, and a low
+     undertow under it all */
+  function ambWaves(ac){
+    var L = amb.layer.waves;
+    var s1 = ac.createBufferSource(); s1.buffer = amb.white; s1.loop = true;
+    L.lp = ac.createBiquadFilter(); L.lp.type = 'lowpass'; L.lp.frequency.value = 350; L.lp.Q.value = .4;
+    L.swell = ac.createGain(); L.swell.gain.value = .1;
+    s1.connect(L.lp); L.lp.connect(L.swell); L.swell.connect(L.duck);
+    var s2 = ac.createBufferSource(); s2.buffer = amb.white; s2.loop = true;
+    var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6500;
+    L.foam = ac.createGain(); L.foam.gain.value = 0;
+    s2.connect(hp); hp.connect(lp); lp.connect(L.foam); L.foam.connect(L.duck);
+    var s3 = ac.createBufferSource(); s3.buffer = amb.white; s3.loop = true;
+    var low = ac.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 160;
+    var under = ac.createGain(); under.gain.value = .5;
+    s3.connect(low); low.connect(under); under.connect(L.duck);
+    s1.start(0, .4); s2.start(0, 2.2); s3.start(0, 3.1);
+  }
+  function ambPlanWaves(L, now, until){
+    if(L.next < now) L.next = now + .3;
+    while(L.next < until){
+      var s = L.next, rise = 2.6 + Math.random() * 2, period = 7 + Math.random() * 6, peak = .55 + Math.random() * .45;
+      L.swell.gain.setTargetAtTime(peak, s, rise / 3);
+      L.lp.frequency.setTargetAtTime(700 + peak * 900, s, rise / 3);
+      L.foam.gain.setTargetAtTime(peak * .32, s + rise - .4, .25);
+      L.foam.gain.setTargetAtTime(0, s + rise + .4, 1 + Math.random() * .6);
+      L.swell.gain.setTargetAtTime(.1, s + rise, period * .2);
+      L.lp.frequency.setTargetAtTime(320, s + rise, period * .25);
+      L.next = s + period;
+    }
+  }
+  /* loons: the wail (two or three long notes, each higher) or the tremolo
+     (a quick warble), far across the water. Sometimes another answers from
+     the other side. The frogs and crickets hush a little under a call */
+  function ambLoon(ac, s, pan){
+    var L = amb.layer.loons, ws = Math.random() < .62, f = (ws ? 610 : 880) * (1 + Math.random() * .09), d;
+    var o = ac.createOscillator();
+    o.setPeriodicWave(ac.createPeriodicWave(new Float32Array([0, 1, .2, .07, .02]), new Float32Array(5)));
+    var vib = ac.createOscillator(); vib.frequency.value = 5 + Math.random();
+    var vibG = ac.createGain(); vibG.gain.value = f * .007;
+    vib.connect(vibG); vibG.connect(o.frequency);
+    var e = ac.createGain(); e.gain.value = 0;
+    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+    var p = ambPan(ac, pan);
+    o.connect(e); e.connect(lp); lp.connect(p); p.connect(L.duck);
+    var F = o.frequency, G = e.gain;
+    if(ws){
+      var notes = Math.random() < .5 ? 3 : 2;
+      F.setValueAtTime(f * .86, s); F.setTargetAtTime(f, s, .09);
+      F.setTargetAtTime(f * 1.5, s + 1.15, .12);
+      if(notes > 2) F.setTargetAtTime(f * 1.68, s + 2.35, .1);
+      d = notes > 2 ? 3.6 : 2.6;
+      F.setTargetAtTime(f * 1.3, s + d - .3, .14);
+      G.setTargetAtTime(.8, s, .14); G.setTargetAtTime(1, s + 1.15, .3); G.setTargetAtTime(0, s + d - .2, .22);
+    } else {
+      d = 1.8 + Math.random() * .8;
+      var trem = ac.createOscillator(); trem.frequency.value = 8 + Math.random() * 2.5;
+      var tremG = ac.createGain(); tremG.gain.value = .45;
+      var am = ac.createGain(); am.gain.value = .55;
+      trem.connect(tremG); tremG.connect(am.gain);
+      e.disconnect(); e.connect(am); am.connect(lp);
+      F.setValueAtTime(f, s); F.setTargetAtTime(f * 1.08, s + .3, .25); F.setTargetAtTime(f * .95, s + d * .7, .3);
+      G.setTargetAtTime(.75, s, .08); G.setTargetAtTime(0, s + d - .15, .14);
+      trem.start(s); trem.stop(s + d + 1.5);
+    }
+    o.start(s); vib.start(s); o.stop(s + d + 1.5); vib.stop(s + d + 1.5);
+    [amb.layer.crickets, amb.layer.frogs].forEach(function(H){
+      if(!H.duck) return;
+      H.duck.gain.setTargetAtTime(.55, s, .5);
+      H.duck.gain.setTargetAtTime(1, s + d, 1.4);
+    });
+    return d;
+  }
+  function ambPlanLoons(L, now, until){
+    /* the first call comes soon, so switching them on is answered */
+    if(L.next < now) L.next = now + 3 + Math.random() * 5;
+    while(L.next < until){
+      var s = L.next, pan = (Math.random() < .5 ? -1 : 1) * (.35 + Math.random() * .5);
+      var d = ambLoon(amb.ac, s, pan);
+      if(Math.random() < .4) d += 2 + Math.random() * 3 + ambLoon(amb.ac, s + d + 2 + Math.random() * 3, -pan * .8);
+      L.next = s + d + 22 + Math.random() * 38;
+    }
+  }
+  /* frogs: four tree frogs with their own pitch and rasp, taking turns at
+     "rib-bit" with the odd lull, and now and then a bullfrog low under them */
+  var ambFrogs = [[1050, 52, -.6, 2], [1320, 64, .45, 2], [880, 44, .1, 1], [1520, 71, -.2, 2]];
+  function ambCroak(ac, s, fr){
+    var L = amb.layer.frogs, o = ac.createOscillator(); o.type = 'square'; o.frequency.value = fr[1];
+    var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fr[0] * (1 + (Math.random() - .5) * .06); bp.Q.value = 5;
+    var e = ac.createGain(); e.gain.value = 0;
+    var p = ambPan(ac, fr[2]);
+    o.connect(bp); bp.connect(e); e.connect(p); p.connect(L.duck);
+    var bursts = fr[3] === 2 ? [[0, .1], [.15, .12]] : [[0, .19]], end = 0;
+    bursts.forEach(function(b){
+      var t = s + b[0];
+      e.gain.setTargetAtTime(1, t, .008);
+      e.gain.setTargetAtTime(0, t + b[1], .016);
+      o.frequency.setValueAtTime(fr[1], t);
+      o.frequency.linearRampToValueAtTime(fr[1] * 1.14, t + b[1]);
+      end = b[0] + b[1];
+    });
+    o.start(s); o.stop(s + end + .25);
+    return end;
+  }
+  function ambBull(ac, s){
+    var L = amb.layer.frogs, o = ac.createOscillator(); o.type = 'sawtooth';
+    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = 3;
+    var e = ac.createGain(); e.gain.value = 0;
+    var p = ambPan(ac, (Math.random() - .5) * .8);
+    o.connect(lp); lp.connect(e); e.connect(p); p.connect(L.duck);
+    var f = 86 + Math.random() * 18, n = 2 + Math.floor(Math.random() * 2), t = s;
+    for(var i = 0; i < n; i++){
+      o.frequency.setValueAtTime(f * 1.1, t); o.frequency.linearRampToValueAtTime(f * .9, t + .45);
+      e.gain.setTargetAtTime(.5, t, .04); e.gain.setTargetAtTime(0, t + .38, .06);
+      t += .7;
+    }
+    o.start(s); o.stop(t + .4);
+  }
+  function ambPlanFrogs(L, now, until){
+    if(L.next < now){ L.next = now + .2; L.bull = now + 6 + Math.random() * 10; }
+    while(L.next < until){
+      var d = ambCroak(amb.ac, L.next, ambFrogs[Math.floor(Math.random() * ambFrogs.length)]);
+      L.next += d + .12 + Math.random() * .55 + (Math.random() < .07 ? 1.5 + Math.random() * 3 : 0);
+    }
+    while(L.bull < until){ ambBull(amb.ac, L.bull); L.bull += 14 + Math.random() * 20; }
+  }
+  var ambPlans = { crickets: ambPlanCrickets, waves: ambPlanWaves, loons: ambPlanLoons, frogs: ambPlanFrogs };
+  /* events are written three seconds ahead, so a background tab's slow
+     timers never leave a gap */
+  function ambPlan(){
+    if(!amb.ac || !amb.on) return;
+    var now = amb.ac.currentTime;
+    ambKinds.forEach(function(k){
+      var L = amb.layer[k];
+      if(ambPlans[k] && L.on && L.vol > 0) ambPlans[k](L, now, now + 3);
+    });
+  }
+  setInterval(ambPlan, 1000);
+  /* levels: each layer's own, pulled back by how full the mix is; and the
+     rain gusting so it never sits still, heavier rain gusting harder */
   function ambTick(){
     if(!amb || !amb.ac) return;
     var t = amb.ac.currentTime, k = intensity / 100, gust = 1 + (Math.random() - .5) * (.15 + k * .35);
-    var radioOn = !!document.querySelector('#radio.on');
+    var radioOn = !!document.querySelector('#radio.on'), room = 0;
     amb.master.gain.setTargetAtTime(amb.on ? (radioOn ? .5 : 1) : 0, t, amb.on ? .9 : .35);
     amb.out.gain.setTargetAtTime(ambGain(), t, .05);
+    ambKinds.forEach(function(n){
+      var L = amb.layer[n];
+      if(L.on && L.vol > 0 && (n !== 'rain' || k)) room += ambSpec[n].room * (n === 'rain' ? .4 + k * .6 : 1);
+    });
+    var pull = Math.pow(Math.max(1, room), -.4);
+    ambKinds.forEach(function(n){
+      var L = amb.layer[n];
+      L.g.gain.setTargetAtTime(L.on ? ambSpec[n].base * ambCurve(L.vol) * pull : 0, t, .4);
+    });
     amb.body.gain.setTargetAtTime(k ? (.06 + k * .62) * gust : 0, t, 1.4);
     amb.bodyF.frequency.setTargetAtTime(500 + k * 900, t, 2);
     amb.hiss.gain.setTargetAtTime(k ? (.008 + k * k * .2) * gust : 0, t, 1.1);
@@ -2122,7 +2384,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   setInterval(function(){ if(amb.on) ambTick(); }, 1800);
   /* power 0..1: 0 is far over the river, 1 is right overhead */
   function ambThunder(power, delay){
-    if(!amb || !amb.on || !amb.ac || !intensity) return;
+    if(!amb || !amb.on || !amb.ac || !intensity || !amb.layer.rain.on) return;
     var ac = amb.ac, now = ac.currentTime;
     if(now - amb.lastBoom < 1.1) return;
     amb.lastBoom = now;
@@ -2163,77 +2425,79 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       far();
     }, (70 - k * 55) * (.6 + Math.random() * .8) * 1000);
   })();
+  /* ── ambience: the mixer box ── */
+  var ambBox = document.getElementById('ambBox'), ambHead = document.getElementById('ambHead'), ambSum = document.getElementById('ambSum');
+  var ambAll = document.getElementById('ambAll'), ambMaster = document.getElementById('ambMaster'), ambOffT;
+  var ambOpen = false;
+  try { ambOpen = localStorage.getItem('exiled.ambOpen') === '1'; } catch(e){}
+  function ambSave(){
+    var m = {};
+    ambKinds.forEach(function(k){ m[k] = { on: amb.layer[k].on, vol: amb.layer[k].vol }; });
+    try { localStorage.setItem('exiled.ambMix', JSON.stringify(m)); } catch(e){}
+  }
   function ambPaint(){
-    var pct = Math.round(amb.vol * 100), on = ambBtn.getAttribute('aria-pressed') === 'true';
-    ambFill.style.width = pct + '%';
-    ambBtn.setAttribute('aria-label', 'rain sounds ' + (on ? 'on' : 'off') + ', volume ' + pct + ' percent');
-    ambBtn.title = 'rain sounds: ' + (on ? 'on' : 'off') + ' · ' + pct + '%  (click to mute, drag or scroll for volume)';
+    var on = ambAll.getAttribute('aria-pressed') === 'true', names = [];
+    ambMaster.value = Math.round(amb.vol * 100);
+    ambKinds.forEach(function(k){
+      var L = amb.layer[k], b = document.getElementById('ambOn-' + k), r = document.getElementById('ambVol-' + k);
+      b.setAttribute('aria-pressed', String(L.on)); b.classList.toggle('on', L.on);
+      r.value = Math.round(L.vol * 100);
+      if(L.on && L.vol > 0) names.push(k);
+    });
+    ambBox.classList.toggle('on', on && names.length > 0);
+    ambSum.textContent = !on ? 'off' : names.length ? names.join(' · ') : 'silent';
+    ambAll.title = on ? 'all ambience off' : 'all ambience on';
+    ambAll.textContent = on ? 'on' : 'off';
+    ambHead.setAttribute('aria-expanded', String(ambOpen));
+    document.getElementById('ambBody').hidden = !ambOpen;
   }
   function ambSet(on, save){
     if(on && !amb.ac){
       /* iPhones mute generated sound with the ring/silent switch, unlike a
          music player. Saying this page plays audio (iOS 16.4+) makes the
-         rain follow the volume buttons like the radio does */
+         ambience follow the volume buttons like the radio does */
       try { if(navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
       var Ctx = window.AudioContext || window.webkitAudioContext;
-      if(!Ctx){ ambBtn.hidden = true; return; }
-      try { ambBuild(new Ctx()); } catch(e){ ambBtn.hidden = true; return; }
+      if(!Ctx){ ambBox.hidden = true; return; }
+      try { ambBuild(new Ctx()); } catch(e){ ambBox.hidden = true; return; }
     }
     amb.on = on;
-    ambBtn.classList.toggle('on', on); ambBtn.setAttribute('aria-pressed', String(on));
+    ambAll.setAttribute('aria-pressed', String(on));
     ambPaint();
     clearTimeout(ambOffT);
     if(amb.ac){
       if(on && amb.ac.state === 'suspended') amb.ac.resume();
-      ambTick();
+      ambTick(); ambPlan();
       /* faded out: let the audio thread rest */
       if(!on) ambOffT = setTimeout(function(){ if(!amb.on) amb.ac.suspend(); }, 2000);
     }
     if(save){ try { localStorage.setItem('exiled.ambience', on ? '1' : '0'); } catch(e){} }
   }
-  function ambVol(v, save){
-    amb.vol = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
-    if(amb.vol < .02) amb.vol = 0;
-    /* reaching for the volume means wanting to hear it */
-    if(amb.vol > 0 && !amb.on) ambSet(true, true);
-    else { ambPaint(); ambTick(); }
-    if(save){ try { localStorage.setItem('exiled.ambVol', String(amb.vol)); } catch(e){} }
-  }
-  /* a tap mutes; a drag of more than a few pixels sets the volume instead */
-  var ambDrag = null, ambDragged = false;
-  function ambAt(e){ var r = ambBtn.getBoundingClientRect(); return (e.clientX - r.left) / r.width; }
-  ambBtn.addEventListener('pointerdown', function(e){
-    if(e.button !== 0) return;
-    ambDrag = { x: e.clientX, moved: false };
-    try { ambBtn.setPointerCapture(e.pointerId); } catch(err){}
+  /* reaching for a layer or a level means wanting to hear it */
+  function ambWake(){ if(!amb.on) ambSet(true, true); else { ambPaint(); ambTick(); ambPlan(); } }
+  ambHead.addEventListener('click', function(){
+    ambOpen = !ambOpen; ambPaint();
+    try { localStorage.setItem('exiled.ambOpen', ambOpen ? '1' : ''); } catch(e){}
   });
-  ambBtn.addEventListener('pointermove', function(e){
-    if(!ambDrag) return;
-    if(!ambDrag.moved && Math.abs(e.clientX - ambDrag.x) < 5) return;
-    ambDrag.moved = true;
-    ambBtn.classList.add('dragging');
-    ambVol(ambAt(e), false);
+  ambAll.addEventListener('click', function(){ ambSet(ambAll.getAttribute('aria-pressed') !== 'true', true); });
+  ambMaster.addEventListener('input', function(){
+    amb.vol = +ambMaster.value / 100;
+    if(amb.vol > 0) ambWake(); else { ambPaint(); ambTick(); }
   });
-  function ambDragEnd(){
-    if(!ambDrag) return;
-    if(ambDrag.moved){ ambDragged = true; ambVol(amb.vol, true); }
-    ambDrag = null; ambBtn.classList.remove('dragging');
-  }
-  ambBtn.addEventListener('pointerup', ambDragEnd);
-  ambBtn.addEventListener('pointercancel', ambDragEnd);
-  ambBtn.addEventListener('click', function(){
-    if(ambDragged){ ambDragged = false; return; }
-    ambSet(ambBtn.getAttribute('aria-pressed') !== 'true', true);
-  });
-  ambBtn.addEventListener('wheel', function(e){
-    e.preventDefault();
-    ambVol(amb.vol + (e.deltaY < 0 ? .05 : -.05), true);
-  }, { passive: false });
-  ambBtn.addEventListener('keydown', function(e){
-    var d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? .05 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -.05 : 0;
-    if(!d) return;
-    e.preventDefault();
-    ambVol(amb.vol + d, true);
+  ambMaster.addEventListener('change', function(){ try { localStorage.setItem('exiled.ambVol', String(amb.vol)); } catch(e){} });
+  ambKinds.forEach(function(k){
+    var L = amb.layer[k];
+    document.getElementById('ambOn-' + k).addEventListener('click', function(){
+      L.on = !L.on; ambSave();
+      if(L.on) ambWake(); else { ambPaint(); ambTick(); }
+    });
+    var r = document.getElementById('ambVol-' + k);
+    r.addEventListener('input', function(){
+      L.vol = +r.value / 100;
+      if(L.vol > 0 && !L.on) L.on = true;
+      if(L.vol > 0) ambWake(); else { ambPaint(); ambTick(); }
+    });
+    r.addEventListener('change', ambSave);
   });
   ambPaint();
   try {
@@ -2241,8 +2505,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var ambPref = localStorage.getItem('exiled.ambience');
     if(ambPref === null || ambPref === '1'){
       /* shown as on straight away; the sound itself starts at the first tap
-         that isn't on the speaker (that one would only switch it off again) */
-      ambBtn.classList.add('on'); ambBtn.setAttribute('aria-pressed', 'true'); ambPaint();
+         that isn't in the ambience box (that one does its own thing) */
+      ambAll.setAttribute('aria-pressed', 'true'); ambPaint();
       /* a touch's pointerdown doesn't count as permission to play sound on
          phones (its pointerup/touchend/click does), so listen for all of them
          and keep listening until the browser actually lets the sound run */
@@ -2251,8 +2515,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         ambGestures.forEach(function(g){ document.removeEventListener(g, ambArm, true); });
       };
       var ambArm = function(e){
-        if(ambBtn.contains(e.target)) return;
-        if(ambBtn.getAttribute('aria-pressed') !== 'true') return ambDisarm();
+        if(ambBox.contains(e.target)) return;
+        if(ambAll.getAttribute('aria-pressed') !== 'true') return ambDisarm();
         if(amb.ac && amb.ac.state === 'running') return ambDisarm();
         ambSet(true);
         if(amb.ac && amb.ac.state === 'running') ambDisarm();
