@@ -2962,12 +2962,32 @@
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  /* ── the camera: it follows you with a little give instead of being
+     nailed to you, and leans the way you're going (further when you run
+     or sail) so you see what's coming. a jump (a door, a faint, a new
+     map) cuts straight there. the picture is still drawn on whole pixels ── */
+  var cam = { x: 0, y: 0, lx: 0, ly: 0, at: 0, world: null };
+  function camera(now, ppx, ppy) {
+    var dt = Math.min(0.05, (now - (cam.at || now)) / 1000), d = DIRS[me.dir];
+    var ahead = me.moving ? (me.sail ? 2.5 : running() ? 2 : 1.2) * TS : 0, lean = 1 - Math.exp(-dt * 2.5);
+    cam.at = now;
+    cam.lx += (d[0] * ahead - cam.lx) * lean; cam.ly += (d[1] * ahead - cam.ly) * lean;
+    var tx = ppx + cam.lx, ty = ppy + cam.ly;
+    if (cam.world !== world || Math.abs(tx - cam.x) > 6 * TS || Math.abs(ty - cam.y) > 6 * TS) {
+      cam.world = world; cam.lx = cam.ly = 0; cam.x = ppx; cam.y = ppy;
+      return;
+    }
+    var k = 1 - Math.exp(-dt * 9);
+    cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
+  }
+
   function draw(now) {
     var wave = Math.floor(now / 380) % 4;
     var ppx = (me.moving ? me.fx + (me.x - me.fx) * me.t : me.x) * TS, ppy = (me.moving ? me.fy + (me.y - me.fy) * me.t : me.y) * TS;
     /* a room smaller than the screen sits in the middle of it, in the dark */
-    var cx = world.W <= VW ? -Math.floor((VW - world.W) * TS / 2) : Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, ppx - (VW * TS) / 2 + TS / 2)));
-    var cy = world.H <= VH ? -Math.floor((VH - world.H) * TS / 2) : Math.round(Math.max(0, Math.min(world.H * TS - VH * TS, ppy - (VH * TS) / 2 + TS / 2)));
+    camera(now, ppx, ppy);
+    var cx = world.W <= VW ? -Math.floor((VW - world.W) * TS / 2) : Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, cam.x - (VW * TS) / 2 + TS / 2)));
+    var cy = world.H <= VH ? -Math.floor((VH - world.H) * TS / 2) : Math.round(Math.max(0, Math.min(world.H * TS - VH * TS, cam.y - (VH * TS) / 2 + TS / 2)));
     if (inside) { ctx.fillStyle = '#05060b'; ctx.fillRect(0, 0, VW * TS, VH * TS); }
     var x0 = Math.max(0, Math.floor(cx / TS)), y0 = Math.max(0, Math.floor(cy / TS)), x, y;
     function at(xx, yy) { return xx < 0 || yy < 0 || xx >= world.W || yy >= world.H ? T.DEEP : world.tile[yy * world.W + xx]; }
