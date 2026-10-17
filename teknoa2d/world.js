@@ -5,8 +5,9 @@
    The land is the terranova map's (azgaar, GEO below): vistadelsol's coast
    round the nova sea, nova city's island in the bay cut into five district
    islands (bridged, each its share of the vault's km²), and redrum's island
-   out west past the strait. The islands are drawn E times their real size so
-   the streets fit; everything else is to scale. Streets, buildings and
+   out west past the strait. The islands are drawn bigger than they are so
+   the streets fit (redrum E times, nova city EN: as big as it goes and still
+   keeps open water to the mainland); everything else is to scale. Streets, buildings and
    people are laid by rule on top of that, so nothing is hand-painted.
 
    Tiles:  0 deep water  1 shallow  2 sand  3 ground  4 road  5 building
@@ -23,7 +24,7 @@
     redrum: '954.3,750.3,953.5,750.7,952.8,751.1,952.1,751.6,951.5,752.2,950.9,753.0,950.5,753.8,950.1,754.8,949.8,755.9,949.6,757.0,949.6,758.2,949.6,759.4,949.7,760.5,949.9,761.5,950.2,762.5,950.7,763.3,951.3,764.1,952.0,764.7,952.8,765.2,953.8,765.5,954.9,765.7,956.0,765.8,957.1,765.8,958.3,765.6,959.3,765.3,960.2,764.9,961.1,764.5,961.9,763.9,962.5,763.2,963.0,762.5,963.5,761.7,963.9,760.8,964.1,759.9,964.3,758.9,964.4,757.9,964.3,756.9,964.0,755.8,963.6,754.7,963.0,753.7,962.4,752.6,961.6,751.7,960.7,750.9,959.8,750.3,958.9,749.9,958.0,749.7,957.0,749.7,956.1,749.8,955.2,750.0,954.3,750.3',
     /* the vistadelsol towns (burgs) */
     burgs: { 'fort-freyja': [992.2, 719.8], 'port-tropics': [1000.7, 726.6], folkvangr: [987.1, 681.5], persepolis: [927.5, 652.8] } };
-  var S = 5.5, E = 1.3, CHANNEL = 3;            /* tiles per map unit; islands drawn E times their size; half a channel's width */
+  var S = 5.5, E = 1.3, EN = 1.8, CHANNEL = 3;  /* tiles per map unit; redrum and nova drawn E / EN times their size; half a channel's width */
   var W = Math.round((GEO.win[2] - GEO.win[0]) * S), H = Math.round((GEO.win[3] - GEO.win[1]) * S);
   /* map units to tiles, an island grown E times about its middle */
   function pts(str) { var n = str.split(',').map(Number), out = []; for (var i = 0; i + 1 < n.length; i += 2) out.push([n[i], n[i + 1]]); return out; }
@@ -58,6 +59,8 @@
   /* hand-placed offsets (landmarks, shops, people) were laid out at the
      first draft's scale; F spreads them out to the district sizes we keep */
   var F = 3.0 / 1.55;
+  /* and nova city's further still, as it's drawn bigger than redrum */
+  function fOf(d) { return d.style === 'island' ? F : F * EN / E; }
 
   /* deterministic noise: the same city every load, on every device */
   function hash(a, b) {
@@ -77,7 +80,7 @@
     /* ── the land, from the terranova map (azgaar, Terranova_2036 in the
        vault: the map is canon over the notes). GEO is in map units; S turns
        them into tiles. vistadelsol is the mainland round the bay (dist -2).
-       nova city is its own island in the bay, drawn E times its real size so
+       nova city is its own island in the bay, drawn EN times its real size so
        the districts keep their streets, and cut into five islands with water
        between them (weighted by each district's km²). redrum is the island
        west of the peninsula, outside the bay, every tile of it redrum ── */
@@ -101,7 +104,7 @@
        wherever two districts meet. each district grows from its seat, and
        its pull is evened out until its share of the island is its share
        of the vault's km² (a balanced power diagram) */
-    var nova = tiles(GEO.nova, E), nb = bbox(nova), cell = new Int8Array(W * H).fill(-1), novaTiles = [];
+    var nova = tiles(GEO.nova, EN), nb = bbox(nova), cell = new Int8Array(W * H).fill(-1), novaTiles = [];
     fill(nova, function (x, y) { novaTiles.push([x, y]); });
     var seeds = DISTRICTS.slice(0, 5).map(function (d) { return { x: nb.x0 + d.seat[0] * (nb.x1 - nb.x0), y: nb.y0 + d.seat[1] * (nb.y1 - nb.y0), pull: 0, km: d.km } });
     var kmAll = seeds.reduce(function (t, sd) { return t + sd.km; }, 0), owner = new Int8Array(novaTiles.length);
@@ -169,7 +172,7 @@
        way. core is a block's width inside its pavement ── */
     function cityStreets(d) {
       var di = d.index, R = Math.ceil(d.r * 1.4), rs = 0, o = LANE >> 1, x, y;
-      var core = d.style === 'civic' ? d.block + 1 : d.style === 'village' ? d.block + 3 : d.block + 2, P = LANE + 2 + core;
+      var core = d.style === 'civic' ? d.block + 4 : d.block + 6, P = LANE + 2 + core;
       if (d.style !== 'wild') d.P = P;
       function mine(x, y) { return inside(x, y) && dist[at(x, y)] === di; }
       function rnd() { return hash(d.seed * 131 + rs++, 977); }
@@ -219,8 +222,13 @@
         if (d.style === 'civic') {
           /* a lawn with a path across and trees in rows, or a civic building on its square */
           var mx = (r[0] + r[2]) >> 1, my = (r[1] + r[3]) >> 1;
-          if (bk < 0.5) each(r, function (xx, yy) { set(xx, yy, xx === mx || yy === my ? T.GROUND : (xx - r[0]) % 3 === 1 && (yy - r[1]) % 3 === 1 ? T.TREE : T.GRASS); });
-          else { fill(r, T.GROUND); fill([r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1], T.BUILDING); }
+          if (bk < 0.35) each(r, function (xx, yy) { set(xx, yy, xx === mx || yy === my ? T.GROUND : (xx - r[0]) % 3 === 1 && (yy - r[1]) % 3 === 1 ? T.TREE : T.GRASS); });
+          else {
+            /* one hall, or two facing across a court */
+            fill(r, T.GROUND);
+            if (bk < 0.7) fill([r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1], T.BUILDING);
+            else { fill([r[0] + 1, r[1] + 1, r[2] - 1, my - 2], T.BUILDING); fill([r[0] + 1, my + 2, r[2] - 1, r[3] - 1], T.BUILDING); }
+          }
           continue;
         }
         var out = []; lots(r, out);
@@ -458,7 +466,7 @@
     function lotFor(d, w, h, dx0, dy0) {
       for (var r = 0; r < 30; r++) for (var oy = -r; oy <= r; oy++) for (var ox = -r; ox <= r; ox++) {
         if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
-        var x0 = d.cx + Math.round(dx0 * F) + ox, y0 = d.cy + Math.round(dy0 * F) + oy, ok = true;
+        var x0 = d.cx + Math.round(dx0 * fOf(d)) + ox, y0 = d.cy + Math.round(dy0 * fOf(d)) + oy, ok = true;
         if (get(x0 - 1, y0) === T.BUILDING) continue;
         for (var y = y0 - 1; y <= y0 + h && ok; y++) for (var x = x0 - 1; x <= x0 + w && ok; x++) {
           var t = get(x, y), foot = y >= y0 && y < y0 + h && x >= x0 && x < x0 + w;
@@ -572,7 +580,7 @@
 
     /* landmarks: a block the size of the thing, a road to its door */
     function landmark(d, id, name, dx, dy, w, h, text, exact) {
-      if (!exact) { dx = Math.round(dx * F); dy = Math.round(dy * F); }
+      if (!exact) { dx = Math.round(dx * fOf(d)); dy = Math.round(dy * fOf(d)); }
       var x0 = d.cx + dx, y0 = d.cy + dy, x, y;
       /* in the city, the nearest spot inside a block: never across a road */
       if (d.style !== 'island') {
@@ -657,7 +665,7 @@
       if (d.style === 'island') return lotFor(d, w, h, dx0, dy0);
       for (var r = 0; r < 14; r++) for (var oy = -r; oy <= r; oy++) for (var ox = -r; ox <= r; ox++) {
         if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
-        var x0 = d.cx + Math.round(dx0 * F) + ox, y0 = d.cy + Math.round(dy0 * F) + oy, ok = true;
+        var x0 = d.cx + Math.round(dx0 * fOf(d)) + ox, y0 = d.cy + Math.round(dy0 * fOf(d)) + oy, ok = true;
         for (var y = y0 - 2; y <= y0 + h + 1 && ok; y++) for (var x = x0 - 2; x <= x0 + w + 1 && ok; x++) {
           var t = get(x, y);
           var near = y >= y0 - 1 && y <= y0 + h && x >= x0 - 1 && x <= x0 + w;
@@ -709,7 +717,7 @@
     function standIn(d, dx, dy) {
       for (var rr = 0; rr < 10; rr++) for (var oy = -rr; oy <= rr; oy++) for (var ox = -rr; ox <= rr; ox++) {
         if (Math.max(Math.abs(ox), Math.abs(oy)) !== rr) continue;
-        var x = d.cx + Math.round(dx * F) + ox, y = d.cy + Math.round(dy * F) + oy, t = get(x, y);
+        var x = d.cx + Math.round(dx * fOf(d)) + ox, y = d.cy + Math.round(dy * fOf(d)) + oy, t = get(x, y);
         if (dist[at(x, y)] !== d.index || (t !== T.ROAD && t !== T.GROUND)) continue;
         if (npcs.some(function (n) { return Math.abs(n.x - x) + Math.abs(n.y - y) < 2; })) continue;
         if (marks.some(function (m) { return x >= m.x && x < m.x + m.w && y === m.y + m.h; })) continue;
@@ -809,7 +817,7 @@
 
     /* yucayeque's market: stalls round the hall */
     for (var s = 0; s < 8; s++) {
-      var sx = Y0.cx + Math.round((-6 + (s % 4) * 4) * F), sy = Y0.cy + Math.round((2 + Math.floor(s / 4) * 3) * F);
+      var sx = Y0.cx + Math.round((-6 + (s % 4) * 4) * fOf(Y0)), sy = Y0.cy + Math.round((2 + Math.floor(s / 4) * 3) * fOf(Y0));
       if (dist[at(sx, sy)] === Y0.index && get(sx, sy) !== T.LANDMARK && get(sx, sy) !== T.ROAD) { set(sx, sy, T.STALL); if (get(sx, sy + 1) !== T.ROAD) set(sx, sy + 1, T.GROUND); }
     }
 
@@ -850,8 +858,8 @@
     npcs.push({ id: 'hex', x: arcadeDoor.x, y: arcadeDoor.y, dir: 'down', look: 'hex', scene: 'hex', still: true });
     shopKeepers.forEach(function (k) { npcs.push(k); });
     function person(d, dx, dy, look, lines) {
-      var x = d.cx + Math.round(dx * F), y = d.cy + Math.round(dy * F);
-      if (SOLID[get(x, y)] && (d.style === 'island' || !toStreet(x, y))) carve(x, y, d.cx, d.cy, paveOf(d), KEEP_ROAD);
+      var x = d.cx + Math.round(dx * fOf(d)), y = d.cy + Math.round(dy * fOf(d));
+      if (d.style === 'island' ? SOLID[get(x, y)] : !toStreet(x, y)) carve(x, y, d.cx, d.cy, paveOf(d), KEEP_ROAD);
       npcs.push({ id: d.id + npcs.length, x: x, y: y, dir: 'down', look: look, lines: lines, roam: 3 });
     }
     person(W0, 2, 6, 'reveler', ['the replica tower? they tuned it to a song.\nnobody agrees which one.', 'worldwood never sleeps. i tried once.']);
