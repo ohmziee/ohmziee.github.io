@@ -2503,6 +2503,7 @@
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
     body(dt, now);
     if (wiping(now)) { pressedA = false; return; }
+    if (now < freezeUntil) return;
     if (fainting) return;
     if (phone) { tickPhone(now); return; }
     if (mini) { tickMini(dt, now); return; }
@@ -2568,6 +2569,23 @@
      whoever's next to you (it turns you to face them first). lose to a
      robber and you wake up with empty pockets, all but the safe slots ── */
   var mobs = [], spawnClock = -45, lastA = 0, swingFx = 0, hurtUntil = 0, floats = [], lostTo = null;
+  /* the feel of a hit: a beat of freeze, a shake, sparks; a KO blinks out in a puff */
+  var freezeUntil = 0, shake = { until: 0, amp: 0 }, sparks = [], downs = [];
+  function jolt(ms, amp) { var t = performance.now(); if (t + ms > shake.until) { shake.until = t + ms; shake.amp = amp; } }
+  var whites = new WeakMap();
+  function whiteOf(img) {
+    var c = whites.get(img);
+    if (c) return c;
+    c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    var g = c.getContext('2d'); g.drawImage(img, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height);
+    whites.set(img, c);
+    return c;
+  }
+  function burst(x, y, n, cols, speed) {
+    var t = performance.now();
+    for (var i = 0; i < n; i++) { var a = Math.random() * Math.PI * 2, v = speed * (0.6 + Math.random() * 0.6); sparks.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t0: t, col: cols[i % cols.length] }); }
+    if (sparks.length > 60) sparks.splice(0, sparks.length - 60);
+  }
   var DOUBLE_TAP = 380, SWING_CD = 330, GIVE_UP = 14;
   var MOB_LOOK = {
     bandit:   { H: '#2a2a2a', S: '#b07a5a', C: '#5a4a3a', c: '#3a3020', P: '#2a2420', k: '#111', acc: 'glasses', A: '#14121c' },
@@ -2629,7 +2647,11 @@
     swingFx = now;
     if (w.broke) float(me.x * TS + 2, me.y * TS - 12, C.WEAPONS[w.key].name.replace(/^an? /, '') + ' breaks!', '#ffb02e');
     if (!r.hit) { float(m.x * TS + 2, m.y * TS - 6, 'miss', '#9aa0b8'); return; }
-    m.f.hp -= r.dmg; m.hurt = now + 220; m.cd = Math.max(m.cd, 0.35);
+    m.f.hp -= r.dmg; m.hurt = now + 220; m.cd = Math.max(m.cd, 0.35); m.flash = now + 70;
+    freezeUntil = now + (r.crit ? 95 : 55);
+    if (r.crit) jolt(140, 1);
+    var hd = DIRS[me.dir];
+    burst(me.x * TS + 8 + hd[0] * 10, me.y * TS + 7 + hd[1] * 10, r.crit ? 9 : 5, r.crit ? ['#ffe97c', '#fff3b0', '#ffffff'] : ['#ffffff', '#dce3ff'], r.crit ? 70 : 50);
     float(m.x * TS + 3, m.y * TS - 6, (r.crit ? 'CRIT ' : '') + r.dmg, r.crit ? '#ffe97c' : '#fff');
     if (m.f.hp <= 0) return beaten(m);
     /* knocked back a tile, if there's room */
@@ -2639,6 +2661,8 @@
   function beaten(m) {
     var MF = window.MF;
     mobs = mobs.filter(function (o) { return o !== m; });
+    downs.push({ x: m.x * TS, y: m.y * TS, img: sprite(m.look, m.dir, 0), t0: performance.now() });
+    freezeUntil = performance.now() + 120; jolt(180, 1);
     if (m.f.joules > 0) { MF.earn(s, m.f.joules); wallet('+' + MF.fmtJ(m.f.joules)); }
     exp('combat', { xp: m.f.xp });
     float(m.x * TS, m.y * TS - 8, m.f.name + ' down', '#7cffb2');
@@ -2648,7 +2672,8 @@
     var C = window.MFCombat, MF = window.MF, P = C.player(s, window.MFLevel), r = C.strike(m.f, { def: P.def, ref: P.ref, soak: P.soak });
     m.cd = 1.5 - Math.min(0.7, m.f.ref * 0.03); m.lunge = now + 150;
     if (!r.hit) { float(me.x * TS + 2, me.y * TS - 6, 'dodge', '#7cf5ff'); return; }
-    MF.hurt(s, r.dmg); hurtUntil = now + 260;
+    MF.hurt(s, r.dmg); hurtUntil = now + 260; jolt(220, 2); freezeUntil = now + 45;
+    burst(me.x * TS + 8, me.y * TS + 8, 4, ['#ff4f5e', '#ffb0b8'], 40);
     if (m.f.drain) m.f.hp = Math.min(m.f.max, m.f.hp + Math.round(r.dmg * m.f.drain));
     float(me.x * TS + 3, me.y * TS - 6, '-' + r.dmg, '#ff4f5e');
     drawBody();
@@ -2729,11 +2754,35 @@
       px(ctx, OUT, hx + 1, hy - 6, 14, 4); px(ctx, '#123a22', hx + 2, hy - 5, 12, 2);
       px(ctx, '#7cffb2', hx + 2, hy - 5, Math.max(0, Math.round(12 * MF.vital(s, 'hp') / MF.maxOf(s, 'hp'))), 2);
     }
-    if (now < swingFx + 140) {
-      var d = DIRS[me.dir], sx = Math.round(ppx - cx) + 8 + d[0] * 10, sy = Math.round(ppy - cy) + 7 + d[1] * 10;
-      ctx.strokeStyle = '#f4f6ff'; ctx.lineWidth = 1; ctx.beginPath();
-      ctx.arc(sx, sy, 5, Math.atan2(d[1], d[0]) - 1.2, Math.atan2(d[1], d[0]) + 1.2); ctx.stroke();
+    if (now < swingFx + 150) {
+      /* the swing in two frames: half an arc, then the whole sweep with a
+         fainter smear outside it */
+      var d = DIRS[me.dir], sx = Math.round(ppx - cx) + 8 + d[0] * 10, sy = Math.round(ppy - cy) + 7 + d[1] * 10, base = Math.atan2(d[1], d[0]);
+      ctx.lineWidth = 1;
+      if (now < swingFx + 70) { ctx.strokeStyle = '#f4f6ff'; ctx.beginPath(); ctx.arc(sx, sy, 5, base - 1.3, base); ctx.stroke(); }
+      else {
+        ctx.strokeStyle = 'rgba(244,246,255,.45)'; ctx.beginPath(); ctx.arc(sx, sy, 7, base - 1.1, base + 1.3); ctx.stroke();
+        ctx.strokeStyle = '#f4f6ff'; ctx.beginPath(); ctx.arc(sx, sy, 5, base - 1.3, base + 1.3); ctx.stroke();
+      }
     }
+    sparks = sparks.filter(function (q) { return now - q.t0 < 260; });
+    sparks.forEach(function (q) {
+      var a = (now - q.t0) / 1000;
+      px(ctx, q.col, Math.round(q.x + q.vx * a - cx), Math.round(q.y + q.vy * a + 60 * a * a - cy), 1, 1);
+    });
+    /* a KO: blinks a few times, then goes up in a puff */
+    downs = downs.filter(function (k) { return now - k.t0 < 700; });
+    downs.forEach(function (k) {
+      var e = now - k.t0, x = Math.round(k.x - cx), y = Math.round(k.y - cy);
+      if (e < 380) { if (Math.floor(e / 60) % 2 === 0) ctx.drawImage(k.img, x, y - 2); return; }
+      var f = (e - 380) / 320, r = 2 + Math.round(f * 5);
+      ctx.fillStyle = 'rgba(200,204,216,' + (0.7 * (1 - f)).toFixed(3) + ')';
+      [[4, 9], [11, 8], [8, 4], [6, 12], [10, 12]].forEach(function (o, i) {
+        /* each puff a little plus of two rects, so it reads round */
+        var bx = x + o[0] + (i % 2 ? 1 : -1) * Math.round(f * 3), by = y + o[1] - Math.round(f * 6);
+        ctx.fillRect(bx - r, by - r + 1, r * 2, r * 2 - 2); ctx.fillRect(bx - r + 1, by - r, r * 2 - 2, r * 2);
+      });
+    });
     ctx.font = 'bold 7px monospace'; ctx.textBaseline = 'bottom';
     floats = floats.filter(function (f) { return now - f.t0 < 900; });
     floats.forEach(function (f) {
@@ -3130,6 +3179,7 @@
     camera(now, ppx, ppy);
     var cx = world.W <= VW ? -Math.floor((VW - world.W) * TS / 2) : Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, cam.x - (VW * TS) / 2 + TS / 2)));
     var cy = world.H <= VH ? -Math.floor((VH - world.H) * TS / 2) : Math.round(Math.max(0, Math.min(world.H * TS - VH * TS, cam.y - (VH * TS) / 2 + TS / 2)));
+    if (now < shake.until) { cx += Math.round((Math.random() * 2 - 1) * shake.amp); cy += Math.round((Math.random() * 2 - 1) * shake.amp); }
     lastCam = [cx, cy];
     if (inside) { ctx.fillStyle = '#05060b'; ctx.fillRect(0, 0, VW * TS, VH * TS); }
     var x0 = Math.max(0, Math.floor(cx / TS)), y0 = Math.max(0, Math.floor(cy / TS)), x, y;
@@ -3227,6 +3277,7 @@
         var fx = Math.round(p.x - cx), fy = Math.round(p.y - cy);
         ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(fx + 5, fy + 13, 6, 1); ctx.fillRect(fx + 4, fy + 14, 8, 1); ctx.fillRect(fx + 5, fy + 15, 6, 1);
       }
+      if (p.mob && now < p.mob.flash) { ctx.drawImage(whiteOf(p.img), Math.round(p.x - cx), Math.round(p.y - cy) - 2); return; }
       if (p.mob && now < p.mob.hurt && Math.floor(now / 60) % 2) ctx.globalAlpha = 0.35;
       ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2 - (p.boat ? 3 : 0) + bob);
       ctx.globalAlpha = 1;
