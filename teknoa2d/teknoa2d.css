@@ -418,3 +418,18 @@ a{color:var(--lavender)}
 .shop .go:disabled{opacity:.45;cursor:not-allowed;background:transparent}
 .shop .leave{width:100%;margin-top:.5rem;padding:.6rem;letter-spacing:.2em}
 @media (max-width:640px){.shop .chip-face{flex-direction:row;flex-wrap:wrap;justify-content:center}.shop .chip-face .avatar{max-width:6.5rem}.shop .walkers canvas{width:2.4rem;height:2.4rem}.shop .chip-title{font-size:clamp(1.6rem,7vw,2.4rem)}}
+
+/* SYS on the phone: settings rows, and SAVE (the backup screen ui.js owns) */
+.psys{display:flex;flex-direction:column;gap:.3rem;max-width:34rem;margin:0 auto}
+.psys .crow{display:flex;flex-wrap:wrap;width:100%;text-align:left}
+.psys .crow span{color:#7cffb2}
+.psys .crow small{flex:1 1 100%;color:#b9a8ff;font-size:.85em;margin-top:.15rem;line-height:1.5}
+.psys .crow.danger{color:#ff8a6b}
+.psave h2{font:inherit;color:#ff9de2;letter-spacing:.15em;margin:.8rem 0 .4rem}
+.psave h2:first-child{margin-top:0}
+.psave .dim{color:#b9a8ff;margin:0 0 .5rem}
+.psave textarea{width:100%;box-sizing:border-box;background:#0b0d1a;color:#dce3ff;border:2px solid #3a3150;font:inherit;font-size:.9em;padding:.4rem;resize:vertical;word-break:break-all}
+.psave button{font:inherit;margin:.4rem .4rem 0 0;background:#0b0d1a;border:2px solid #3a3150;border-radius:3px;padding:.3rem .6rem;color:#7cffb2;cursor:pointer}
+.psave button:hover,.psave button:focus-visible{border-color:#dce3ff;color:#fff}
+.psave .msg{min-height:1.2em;margin:.5rem 0 0;color:#7cffb2}
+.psave .msg.err{color:#ff8a6b}

@@ -1759,6 +1759,7 @@
   function phoneTap() {
     if (!phone) { if (talkBox || mini || counter || table || fainting) return; openPhone(); return; }
     if (phone.app === 'inv' && phone.act >= 0) { phone.act = -1; drawPhone(); return; }
+    if (phone.app === 'sys' && phone.sub) { phone.sub = ''; drawPhone(); return; }
     if (phone.app !== 'home') { phone.app = 'home'; $('wPhone').classList.remove('lifted'); drawPhone(); return; }
     closePhone();
   }
@@ -1771,7 +1772,7 @@
   }
   /* the phone fills the screen for MAP and INV, and for any other app when
      you ask it to (⤢ in the bar, or M); that choice sticks on this device */
-  var BIG_ALWAYS = { map: 1, inv: 1 };
+  var BIG_ALWAYS = { map: 1, inv: 1, sys: 1 };
   function bigPref() { try { return localStorage.getItem('exiled.t2d.bigphone') === '1'; } catch (e) { return false; } }
   function lift() { $('wPhone').classList.toggle('lifted', !!phone && phone.app !== 'home' && (BIG_ALWAYS[phone.app] || bigPref())); }
   function toggleBig() {
@@ -1779,10 +1780,9 @@
     try { localStorage.setItem('exiled.t2d.bigphone', bigPref() ? '0' : '1'); } catch (e) {}
     lift(); drawPhone();
   }
-  function closePhone() { phone = null; $('wPhone').hidden = true; $('wPhone').classList.remove('lifted'); }
+  function closePhone() { shelveSave(); phone = null; $('wPhone').hidden = true; $('wPhone').classList.remove('lifted'); }
   function openApp(id) {
-    if (id === 'sys') { closePhone(); if (window.MFUI) window.MFUI.openSys(); return; }
-    phone.app = id; phone.msel = 0; phone.open = -1; phone.isel = 0; phone.act = -1; phone.imsg = '';
+    phone.app = id; phone.sub = ''; phone.ssel = 0; phone.wipeAt = 0; phone.msel = 0; phone.open = -1; phone.isel = 0; phone.act = -1; phone.imsg = '';
     lift();
     drawPhone();
   }
@@ -1813,6 +1813,8 @@
       tickInv(up, dn, lf, rt, a);
     } else if (phone.app === 'clock') {
       scrollHeld();
+    } else if (phone.app === 'sys') {
+      tickSys(up, dn, a);
     } else if (phone.app === 'map') {
       /* hold the arrows to pan; A zooms in */
       var px = (held.right ? 1 : 0) - (held.left ? 1 : 0), py = (held.down ? 1 : 0) - (held.up ? 1 : 0);
@@ -1844,6 +1846,7 @@
   function drawPhone() {
     var scr = $('wPhoneScreen'), hint = $('wPhoneHint'), as = phone.app + '/' + phone.tab + '/' + phone.open, keep = scr.scrollTop;
     drawPhoneBar();
+    shelveSave();
     scr.innerHTML = '';
     drawPhoneIn(scr, hint);
     /* the same screen redrawn keeps its scroll, unless a pick moved it */
@@ -1896,7 +1899,61 @@
     } else if (phone.app === 'inv') {
       drawInv(scr);
       hint.textContent = phone.act >= 0 ? '◀ ▶ pick · A do it · tap B: back' : 'arrows pick · A use · tap B: home';
+    } else if (phone.app === 'sys') {
+      drawSys(scr);
+      hint.textContent = phone.sub ? 'tap B: back to SYS' : '▲ ▼ pick · A choose · tap B: home';
     } else if (phone.app === 'map') drawMap();
+  }
+  /* ── SYS: the phone's settings. SAVE is the backup screen ui.js owns: it
+     is lent to the phone while open and put back on its shelf after, so
+     ui.js can always find its parts. LOOK AHEAD and STREETS are this
+     device's choices; WIPE asks twice ── */
+  function lookPref() { try { return localStorage.getItem('exiled.t2d.lookahead') !== '0'; } catch (e) { return true; } }
+  var lookAhead = lookPref();
+  function sysRows() {
+    var armed = Date.now() - (phone.wipeAt || 0) < 4000;
+    return [
+      { id: 'save', label: 'SAVE', note: 'back up your run, or bring one back' },
+      { id: 'look', label: 'LOOK AHEAD', val: lookAhead ? 'ON' : 'OFF', note: 'the view leans the way you walk, so you see what is coming' },
+      { id: 'online', label: 'STREETS', val: offline() ? 'OFFLINE' : 'ONLINE', note: offline() ? 'nobody sees you, you see nobody' : 'players walking nova city see you and you see them: handle, look, where you stand. nothing else leaves this browser' },
+      { id: 'wipe', label: armed ? 'PRESS A AGAIN TO WIPE' : 'WIPE THIS RUN', note: 'gone for good, unless you backed it up', danger: true }
+    ];
+  }
+  function sysDo(id) {
+    if (id === 'save') { phone.sub = 'save'; drawPhone(); if (window.MFUI) window.MFUI.fillSave(); return; }
+    if (id === 'look') { lookAhead = !lookAhead; try { localStorage.setItem('exiled.t2d.lookahead', lookAhead ? '1' : '0'); } catch (e) {} }
+    else if (id === 'online') setOffline(!offline());
+    else if (id === 'wipe') {
+      if (Date.now() - (phone.wipeAt || 0) > 4000) phone.wipeAt = Date.now();
+      else { closePhone(); if (window.MFUI) window.MFUI.wipe(); return; }
+    }
+    drawPhone();
+  }
+  function tickSys(up, dn, a) {
+    if (phone.sub) { scrollHeld(); return; }
+    var n = sysRows().length;
+    if (up) { phone.ssel = (phone.ssel + n - 1) % n; drawPhone(); }
+    if (dn) { phone.ssel = (phone.ssel + 1) % n; drawPhone(); }
+    if (a) sysDo(sysRows()[phone.ssel].id);
+    /* an armed wipe cools off on its own */
+    if (phone.wipeAt && Date.now() - phone.wipeAt > 4000) { phone.wipeAt = 0; drawPhone(); }
+  }
+  function shelveSave() {
+    var sv = $('sysSave');
+    if (sv && sv.parentNode !== $('sysShelf')) $('sysShelf').appendChild(sv);
+  }
+  function drawSys(scr) {
+    var box = document.createElement('div'); box.className = 'psys';
+    if (phone.sub === 'save') { box.appendChild($('sysSave')); scr.appendChild(box); return; }
+    sysRows().forEach(function (row, i) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'crow' + (i === phone.ssel ? ' sel' : '') + (row.danger ? ' danger' : '');
+      b.textContent = row.label;
+      if (row.val) { var v = document.createElement('span'); v.textContent = row.val; b.appendChild(v); }
+      var sm = document.createElement('small'); sm.textContent = row.note; b.appendChild(sm);
+      b.addEventListener('click', function (e) { e.preventDefault(); phone.ssel = i; sysDo(row.id); });
+      box.appendChild(b);
+    });
+    scr.appendChild(box);
   }
   /* ── the INV app: what you carry, as icons. the safe slots up top (a
      mugging leaves those alone: MF.toggleSafe), then everything else, then
@@ -3646,12 +3703,12 @@
 
   /* ── the camera: it follows you with a little give instead of being
      nailed to you, and leans the way you're going (further when you run
-     or sail) so you see what's coming. a jump (a door, a faint, a new
+     or sail) so you see what's coming, unless LOOK AHEAD is off in SYS. a jump (a door, a faint, a new
      map) cuts straight there. the picture is still drawn on whole pixels ── */
   var cam = { x: 0, y: 0, lx: 0, ly: 0, at: 0, world: null };
   function camera(now, ppx, ppy) {
     var dt = Math.min(0.05, (now - (cam.at || now)) / 1000), d = DIRS[me.dir];
-    var ahead = me.moving ? (me.sail ? 2.5 : running() ? 2 : 1.2) * TS : 0, lean = 1 - Math.exp(-dt * 2.5);
+    var ahead = me.moving && lookAhead ? (me.sail ? 2.5 : running() ? 2 : 1.2) * TS : 0, lean = 1 - Math.exp(-dt * 2.5);
     cam.at = now;
     cam.lx += (d[0] * ahead - cam.lx) * lean; cam.ly += (d[1] * ahead - cam.ly) * lean;
     var tx = ppx + cam.lx, ty = ppy + cam.ly;
@@ -4031,7 +4088,7 @@
     nudged = true;
     setTimeout(function () {
       if (!active || talkBox) return;
-      say(['your run only lives in this browser. clear the site data and it is gone.\nback it up: SYS, top right.']);
+      say(['your run only lives in this browser. clear the site data and it is gone.\nback it up: phone, SYS, SAVE.']);
     }, 3200);
   }
   /* ── the shared streets (lobby.js) ───────────────────────── */

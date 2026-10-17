@@ -409,7 +409,6 @@
     if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
     if (e.key === 'Escape') { if (!$('shop').hidden) return leaveShop(); return closePanels(); }
     if ($('stage').hidden) return;               /* out in the street, the keys are the world's */
-    if (!$('sys').hidden) return;
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); return; }
     if (current && current.kind === 'choose' && /^[1-9]$/.test(e.key)) {
       var c = current.choices[+e.key - 1];
@@ -419,7 +418,7 @@
 
   /* ── panels ─────────────────────────────────────────────── */
   function closePanels() {
-    ['sys', 'dev'].forEach(function (p) { $(p).hidden = true; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
+    ['dev'].forEach(function (p) { $(p).hidden = true; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
   }
   function toggle(p, fillIt) {
     var was = !$(p).hidden;
@@ -429,7 +428,7 @@
   }
   /* the backup: the whole site's progress (backup.js), not just this run.
      Old game-only MF1 codes still load. */
-  var wipeArmed = 0, B = window.EXBackup;
+  var B = window.EXBackup;
   function msg(t, bad) { $('sysMsg').textContent = t; $('sysMsg').classList.toggle('err', !!bad); }
   function code() { if (store) MF.save(s, store); return B && store ? B.pack(store) : MF.exportCode(s); }
   function backedUp() { try { store.setItem('exiled.backupAt', String(Date.now())); } catch (e) {} }
@@ -522,21 +521,11 @@
     toggle('dev', function () { devPlaces(); devMsg(''); $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON'); $('devPeace').textContent = 'FOES: ' + (s.dev && s.dev.peace ? 'OFF' : 'ON'); });
   });
 
-  /* SYS lives in the phone now (overworld.js calls this) */
-  function openSys() {
-    toggle('sys', function () { $('code').value = code(); $('paste').value = ''; msg(''); wipeArmed = 0; $('wipeBtn').textContent = 'WIPE THIS RUN'; onlineLabel(); });
-  }
-  /* SYS opens from the phone, so BACK goes back to the phone */
-  $('sysBack').addEventListener('click', function () { closePanels(); if (window.MFWorld && window.MFWorld.active) window.MFWorld.openPhone(); });
-  window.MFUI = { openSys: openSys };
-  /* the shared streets: on unless they say otherwise */
-  function onlineLabel() { $('onlineBtn').textContent = window.MFWorld && window.MFWorld.offline ? 'GO ONLINE' : 'GO OFFLINE'; }
-  $('onlineBtn').addEventListener('click', function () {
-    if (!window.MFWorld) return;
-    window.MFWorld.setOffline(!window.MFWorld.offline);
-    onlineLabel();
-    msg(window.MFWorld.offline ? 'offline. nobody sees you, you see nobody.' : 'online. say hi to the strangers.');
-  });
+  /* SYS is a phone app (overworld.js): its SAVE screen is filled fresh each
+     time it opens, and WIPE asks the phone twice before it calls wipe() */
+  function fillSave() { $('code').value = code(); $('paste').value = ''; msg(''); }
+  function wipe() { if (store) MF.wipe(store); s = MF.newState(); showChip(); }
+  window.MFUI = { fillSave: fillSave, wipe: wipe };
   $('copyBtn').addEventListener('click', function () {
     var t = $('code').value;
     function fallback() { $('code').select(); try { document.execCommand('copy'); backedUp(); msg('copied.'); } catch (e) { msg('select it and copy by hand.', true); } }
@@ -583,12 +572,6 @@
       $('fileIn').value = '';
     });
   }
-  /* two presses, no dialog: the first arms it, the second wipes */
-  $('wipeBtn').addEventListener('click', function () {
-    if (Date.now() - wipeArmed > 4000) { wipeArmed = Date.now(); $('wipeBtn').textContent = 'PRESS AGAIN TO WIPE'; return; }
-    if (store) MF.wipe(store);
-    s = MF.newState(); showChip();
-  });
 
   /* mid-conversation: back to it. otherwise: back to the street */
   if (!MF.chippedIn(s) || s.flags['origin-repick'] || unsided()) showChip();

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0LnKWo9PXybMd0slhx7wx79vi6gcnMS99OyWFc8t1Vc=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ps7nI9H/Uri0znjcuJoXC3pVSRs+4QB1Zr3ldKNnleE=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -268,6 +268,15 @@ main{position:relative;z-index:3}
 .chat-say .cols .auto:hover{background:none}
 .chat-say .note{flex:1 1 100%;order:6;font-size:.66rem;color:#FF8A6B;letter-spacing:.03em}
 .chat-say .note[hidden]{display:none}
+/* the chat rules: shown in place the first time someone reaches for the
+   name or message box, never on landing */
+.chat-say .rules{flex:1 1 100%;order:-1;padding:.6rem .7rem .7rem;border:1px solid rgba(159,140,255,.45);background:rgba(42,29,94,.35);
+  font-size:.7rem;line-height:1.5;color:var(--ice)}
+.chat-say .rules[hidden]{display:none}
+.chat-say .rules b{display:block;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--lavender);margin-bottom:.35rem}
+.chat-say .rules ul{margin:0 0 .6rem;padding-left:1rem}
+.chat-say .rules li{margin:.15rem 0}
+.chat-say .rules li:last-child{color:var(--rain);font-style:italic}
 @media (max-width:640px){
   .chat-say{flex-wrap:wrap}
   .chat-say .h{flex:1 1 40%}
@@ -735,7 +744,7 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
 #radio #ambAll[aria-pressed="true"]{color:#7CFFB2;border-color:rgba(124,255,178,.5)}
 #radio #ambAll:hover,#radio #ambAll:focus-visible{border-color:var(--lavender)}
 #radio .a-body{display:grid;grid-template-columns:6.4rem 1fr;gap:.35rem .7rem;align-items:center;padding:.1rem .75rem .7rem}
-#radio .a-body[hidden]{display:none}
+#radio .a-body[hidden],#radio .a-body [hidden]{display:none}
 #radio .a-all{font-size:.64rem;letter-spacing:.2em;color:var(--ice);padding:.3rem .45rem}
 #radio .a-body button{text-align:left;padding:.3rem .45rem;border:1px solid var(--violet);font-size:.64rem;letter-spacing:.16em;color:var(--rain);transition:color .2s,border-color .2s,background .2s}
 #radio .a-body button:hover,#radio .a-body button:focus-visible{border-color:var(--lavender);color:var(--ice)}
@@ -1010,6 +1019,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         <button type="submit">SEND</button>
         <div class="cols" id="chatCols" role="group" aria-label="pick a name colour" hidden></div>
         <div class="note" id="chatNote" role="status" hidden></div>
+        <div class="rules" id="chatRules" role="dialog" aria-labelledby="chatRulesT" hidden>
+          <b id="chatRulesT">before you speak</b>
+          <ul>
+            <li>everything you post is public, and it's kept.</li>
+            <li>no real names, addresses, numbers or socials. yours or anyone else's.</li>
+            <li>be decent. hate, threats and harassment get wiped.</li>
+            <li>you're responsible for your own words. anything can be removed, anytime.</li>
+            <li>13 and up only.</li>
+            <li>this feed is part of the EXiLED story. not everyone here is who they seem.</li>
+          </ul>
+          <button type="button" id="chatRulesOk">got it</button>
+        </div>
       </form>
     </div>
   </section>
@@ -2085,13 +2106,14 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   /* base: the gain that puts a layer at its half-way level on a par with
      the rest. room: how much of the mix it takes when on, so a busy layer
      pulls the others back more than a sparse one. send: how much goes to
-     the shared reverb. duck: hushed under a loon */
+     the shared reverb. duck: hushed under a loon. soon: built but not offered
+     yet (until it sounds real): its row is hidden and it stays off */
   var ambSpec = {
     rain:     { base: 1,    room: 1,   send: 0,   on: true },
-    crickets: { base: .1,   room: .6,  send: .3,  duck: true },
-    waves:    { base: .5,   room: 1,   send: .08 },
-    loons:    { base: .25,  room: .35, send: .9 },
-    frogs:    { base: .72,  room: .7,  send: .35, duck: true }
+    crickets: { base: .1,   room: .6,  send: .3,  duck: true, soon: true },
+    waves:    { base: .5,   room: 1,   send: .08, soon: true },
+    loons:    { base: .25,  room: .35, send: .9, soon: true },
+    frogs:    { base: .72,  room: .7,  send: .35, duck: true, soon: true }
   };
   var amb = { ac: null, on: false, vol: .5, master: null, out: null, mix: null, verb: null, body: null, bodyF: null, hiss: null, hissF: null,
               thunder: null, rumble: null, white: null, lastBoom: 0, layer: {} };
@@ -2102,7 +2124,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(mixSaved) ambKinds.forEach(function(k){
       var m = mixSaved[k];
       if(!m) return;
-      amb.layer[k].on = !!m.on;
+      amb.layer[k].on = !!m.on && !ambSpec[k].soon;
       if(typeof m.vol === 'number' && !isNaN(m.vol)) amb.layer[k].vol = Math.max(0, Math.min(1, m.vol));
     });
   } catch(e){}
@@ -2174,7 +2196,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     s2.connect(hp); hp.connect(amb.hissF); amb.hissF.connect(amb.hiss); amb.hiss.connect(R);
     amb.thunder = ac.createGain(); amb.thunder.gain.value = 1.3; amb.thunder.connect(R);
     s1.start(0); s2.start(0, 1.7);
-    ambCrickets(ac); ambWaves(ac);
+    /* the always-running layers are only built once they are offered */
+    if(!ambSpec.crickets.soon) ambCrickets(ac);
+    if(!ambSpec.waves.soon) ambWaves(ac);
   }
   /* crickets: three close ones, each a pure high tone chirped in short
      pulses at its own pace, over a far trilling chorus */
@@ -2487,6 +2511,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   ambMaster.addEventListener('change', function(){ try { localStorage.setItem('exiled.ambVol', String(amb.vol)); } catch(e){} });
   ambKinds.forEach(function(k){
     var L = amb.layer[k];
+    if(ambSpec[k].soon){ document.getElementById('ambOn-' + k).hidden = true; document.getElementById('ambVol-' + k).hidden = true; }
     document.getElementById('ambOn-' + k).addEventListener('click', function(){
       L.on = !L.on; ambSave();
       if(L.on) ambWake(); else { ambPaint(); ambTick(); }
@@ -3287,6 +3312,28 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
     try{ var saved = localStorage.getItem('exiled.handle'); if(saved) hEl.value = saved; }catch(e){}
 
+    /* the rules: shown the first time someone reaches for the name or
+       message box (never on landing), remembered once agreed to. Until
+       then nothing sends. The box they tapped gets the focus back */
+    var rules = document.getElementById('chatRules'), rulesOkBtn = document.getElementById('chatRulesOk');
+    var rulesOk = false, rulesFrom = null;
+    try{ rulesOk = localStorage.getItem('exiled.chatRules') === '1'; }catch(e){}
+    function showRules(from){
+      rulesFrom = from || null;
+      rules.hidden = false;
+      if(from) from.blur();
+      rulesOkBtn.focus();
+    }
+    say.addEventListener('focusin', function(e){
+      if(rulesOk || (e.target !== hEl && e.target !== inEl)) return;
+      showRules(e.target);
+    });
+    rulesOkBtn.addEventListener('click', function(){
+      rulesOk = true; rules.hidden = true;
+      try{ localStorage.setItem('exiled.chatRules', '1'); }catch(e){}
+      if(rulesFrom) rulesFrom.focus();
+    });
+
     /* the sender's own pick, an index into CHAT_COLS. -1 is "whatever my
        name hashes to", which is also what everyone saw before picking */
     var cBtn = document.getElementById('chatCol'), cTray = document.getElementById('chatCols');
@@ -3515,6 +3562,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
     function send(ev){
       ev.preventDefault();
+      if(!rulesOk){ showRules(); return; }
       var h = hEl.value.trim(), b = inEl.value.trim();
       var cut = h.indexOf('#');
       if(cut >= 0){

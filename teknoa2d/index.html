@@ -159,8 +159,10 @@
     <p class="msg" id="devMsg" role="status"></p>
   </aside>
 
-  <aside class="panel" id="sys" hidden aria-label="system">
-    <button type="button" id="sysBack" class="pback">&#9664; BACK</button>
+  <!-- SYS is a phone app (overworld.js). This hidden shelf holds its SAVE
+       screen while it is not on the phone, so ui.js can always reach it -->
+  <div id="sysShelf" hidden>
+  <div class="psave" id="sysSave">
     <h2>BACKUP</h2>
     <p class="dim">your run, your wiki keys and the doors you opened live in this browser only. clearing site data erases them. keep a copy somewhere.</p>
     <textarea id="code" rows="4" readonly spellcheck="false" aria-label="your backup code"></textarea>
@@ -172,11 +174,7 @@
     <button type="button" id="fileBtn">LOAD A FILE</button>
     <input type="file" id="fileIn" accept=".save,.txt,text/plain" hidden>
     <p class="msg" id="sysMsg" role="status"></p>
-    <h2>STREETS</h2>
-    <p class="dim">other players walking nova city right now show up around you, and you show up for them: your handle, your look, where you stand. nothing else leaves this browser.</p>
-    <button type="button" id="onlineBtn">GO OFFLINE</button>
-    <h2>WIPE</h2>
-    <button type="button" id="wipeBtn" class="danger">WIPE THIS RUN</button>
-  </aside>
+  </div>
+  </div>
 </body>
 </html>
