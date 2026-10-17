@@ -1332,9 +1332,43 @@
   /* public rooms have their own street channel; apartments are private */
   function lobbyRoom() { return inside ? (inside.place ? 'in-' + inside.id : '') : district >= 0 ? D[district].id : district === -2 ? 'vistadelsol' : ''; }
   function here() { return { x: me.x, y: me.y, d: me.dir, v: M.V, in: inside ? inside.id : undefined, sail: me.sail ? 1 : undefined }; }
+  /* ── the iris: going through a door, the old place closes down to a
+     circle on you, then the new one opens out from where you stand. the
+     swap itself happens at once (so saves and the lobby never lag); this
+     only covers it, from a snapshot of the last frame. no walking meanwhile ── */
+  var WIPE_MS = 420, wipe = null, lastCam = [0, 0];
+  function startWipe() {
+    if (!canvas || !canvas.width) return;
+    var snap = document.createElement('canvas'); snap.width = canvas.width; snap.height = canvas.height;
+    snap.getContext('2d').drawImage(canvas, 0, 0);
+    wipe = { t0: performance.now(), snap: snap, ox: me.x * TS - lastCam[0] + 8, oy: me.y * TS - lastCam[1] + 8 };
+  }
+  function iris(x0, y0, r) {
+    var W = VW * TS, Hh = VH * TS;
+    ctx.fillStyle = '#05060b';
+    for (var y = 0; y < Hh; y++) {
+      var dy = y + 0.5 - y0, hw = r * r - dy * dy;
+      if (hw <= 0) { ctx.fillRect(0, y, W, 1); continue; }
+      hw = Math.round(Math.sqrt(hw));
+      ctx.fillRect(0, y, Math.max(0, Math.round(x0) - hw), 1);
+      ctx.fillRect(Math.round(x0) + hw, y, W, 1);
+    }
+  }
+  function drawWipe(now) {
+    if (!wipe) return;
+    var e = now - wipe.t0, half = WIPE_MS / 2, R = Math.hypot(VW * TS, VH * TS);
+    if (e >= WIPE_MS) { wipe = null; return; }
+    if (e < half) {
+      ctx.drawImage(wipe.snap, 0, 0);
+      iris(wipe.ox, wipe.oy, R * Math.pow(1 - e / half, 1.6));
+    } else iris(me.x * TS - lastCam[0] + 8, me.y * TS - lastCam[1] + 8, R * Math.pow((e - half) / half, 1.6));
+  }
+  function wiping(now) { return wipe && now - wipe.t0 < WIPE_MS; }
+
   function goIn(id, at) {
     var r = M.room(id);
     if (!r) return;
+    startWipe();
     inside = { id: id, place: !!r.place };
     world = r; deco = decorate(r);
     npcs = r.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; c.step = 0; return c; });
@@ -1347,6 +1381,7 @@
     if (charging() && s.body.food < 95 && !talkBox) say(['you find a socket and plug in.\ncharging. stay a minute.']);
   }
   function goOut() {
+    startWipe();
     var d = doorOf(inside.id);
     inside = null;
     world = city; deco = cityDeco; npcs = cityNpcs;
@@ -2467,6 +2502,7 @@
     var dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     if (card.until && now > card.until) { $('wCard').classList.add('out'); card.until = 0; }
     body(dt, now);
+    if (wiping(now)) { pressedA = false; return; }
     if (fainting) return;
     if (phone) { tickPhone(now); return; }
     if (mini) { tickMini(dt, now); return; }
@@ -3094,6 +3130,7 @@
     camera(now, ppx, ppy);
     var cx = world.W <= VW ? -Math.floor((VW - world.W) * TS / 2) : Math.round(Math.max(0, Math.min(world.W * TS - VW * TS, cam.x - (VW * TS) / 2 + TS / 2)));
     var cy = world.H <= VH ? -Math.floor((VH - world.H) * TS / 2) : Math.round(Math.max(0, Math.min(world.H * TS - VH * TS, cam.y - (VH * TS) / 2 + TS / 2)));
+    lastCam = [cx, cy];
     if (inside) { ctx.fillStyle = '#05060b'; ctx.fillRect(0, 0, VW * TS, VH * TS); }
     var x0 = Math.max(0, Math.floor(cx / TS)), y0 = Math.max(0, Math.floor(cy / TS)), x, y;
     function at(xx, yy) { return xx < 0 || yy < 0 || xx >= world.W || yy >= world.H ? T.DEEP : world.tile[yy * world.W + xx]; }
@@ -3222,7 +3259,7 @@
 
   function loop(now) {
     if (!active) return;
-    update(now); draw(now);
+    update(now); draw(now); drawWipe(now);
     frame++;
     if (frame % 120 === 0 && api && api.save) api.save();
     raf = requestAnimationFrame(loop);
