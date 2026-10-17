@@ -12,6 +12,12 @@
              shrinks for good: each district keeps the number it started with
    fighters: at most MAX_FIGHTERS on the street at once (the chase is the
              costly part, not the crowd)
+   preys:    which passers-by a hostile goes for: gangs by their targets and
+             never (gangs.js), foes by never (foes.js); a passer-by counts as
+             what they look like (an ape a simian, an android AI, the rest
+             novan). bystanders: false means they're only after you
+   brave:    those who hit back when a hostile goes for them; the rest run,
+             anyone within FLEE tiles of a hostile that would go for them
    PLACEHOLDER numbers, all of them. */
 (function (root) {
   'use strict';
@@ -26,6 +32,7 @@
   /* what else might be in a pocket: [item, chance] (shops.js FOODS / MEDS) */
   var POCKET = [['water', 0.18], ['bar', 0.12], ['bandage', 0.08], ['electro', 0.06]];
   var DOWN_SECS = 45, BODY_SECS = 180, RESPAWN_SECS = 600, MAX_FIGHTERS = 8;
+  var SEEN = { ape: 'simian', android: 'ai' }, BRAVE = { ape: 1, tweaker: 1, hashshashin: 1 }, FLEE = 5;
 
   /* a passer-by, ready to fight back. level: the district's, never more than one past yours */
   function civ(n, level, rng) {
@@ -37,11 +44,22 @@
              pow: st('atk'), def: st('def'), ref: st('ref'), crit: 0, xp: Math.max(1, Math.round(b.xp * (1 + 0.25 * (lv - 1)))),
              joules: 0, robs: false, drain: 0, gang: '', colour: '', civ: true };
   }
-  /* knocked out, or killed: the weapon's lethal share */
-  function fall(weapon, rng) {
-    var C = root.MFCombat, w = C && C.WEAPONS[weapon];
-    return (rng || Math.random)() < ((w && w.lethal) || 0) ? 'dead' : 'down';
+  /* knocked out, or killed: the weapon's lethal share (or a foe's, foes.js lethal) */
+  function dies(lethal, rng) { return (rng || Math.random)() < (lethal || 0) ? 'dead' : 'down'; }
+  function fall(weapon, rng) { var C = root.MFCombat, w = C && C.WEAPONS[weapon]; return dies(w && w.lethal, rng); }
+  /* does this hostile (a combat.js foe) go for this passer-by? */
+  function preys(f, n) {
+    if (!f || f.civ || !n) return false;
+    var seen = SEEN[n.kind] || 'novan', G = root.MFGangs || {}, FO = root.MFFoes;
+    if (f.gang) {
+      var g = G[f.gang];
+      if (!g || g.violent === false || g.bystanders === false || (g.never || []).indexOf(seen) >= 0) return false;
+      return g.targets === 'all' || (g.targets || []).indexOf(seen) >= 0;
+    }
+    var b = FO && FO.FOES[f.id];
+    return !!b && b.bystanders !== false && (b.never || []).indexOf(seen) < 0;
   }
+  function brave(n) { return !!(n && BRAVE[n.kind]); }
   function pockets(n, rng) {
     rng = rng || Math.random;
     var b = CIV[n.kind] || CIV.novan, out = { joules: Math.round(b.joules[0] + rng() * (b.joules[1] - b.joules[0])), items: {} };
@@ -62,6 +80,6 @@
   /* who could step in as an attacker: only the crowd, never shopkeepers, guards or named people */
   function attackable(n) { return !!(n && n.pool && n.kind && !n.still && !n.store && !n.shop && !n.vend && !n.scene && !n.name); }
 
-  root.MFLaw = { CIV: CIV, POCKET: POCKET, DOWN_SECS: DOWN_SECS, BODY_SECS: BODY_SECS, RESPAWN_SECS: RESPAWN_SECS, MAX_FIGHTERS: MAX_FIGHTERS,
-                 civ: civ, fall: fall, pockets: pockets, empty: empty, loot: loot, attackable: attackable };
+  root.MFLaw = { CIV: CIV, POCKET: POCKET, DOWN_SECS: DOWN_SECS, BODY_SECS: BODY_SECS, RESPAWN_SECS: RESPAWN_SECS, MAX_FIGHTERS: MAX_FIGHTERS, SEEN: SEEN, BRAVE: BRAVE, FLEE: FLEE,
+                 civ: civ, dies: dies, fall: fall, preys: preys, brave: brave, pockets: pockets, empty: empty, loot: loot, attackable: attackable };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -15,6 +15,7 @@
      never      origins they leave alone, whatever else is true
      robs       on a win they take your joules and everything not in a safe slot
      violent    false: they never start a fight (they work the system instead)
+     bystanders false: they leave passers-by alone, it's only ever you (law.js preys)
      calm       conditions that keep them off you, any one is enough (engine.js
                 test: flag:x, met:x, origin:x, aff:hex>=3 ... ! negates)
      angry      conditions that set them on you even when calm says otherwise
@@ -81,7 +82,7 @@
       turf: ['redrum'], threat: 'low',
       allies: ['hex'], rivals: [],
       /* hex's people: they leave you be until you've crossed her */
-      targets: 'all', calm: ['!flag:hex-closed'], robs: true, violent: true
+      targets: 'all', calm: ['!flag:hex-closed'], robs: true, violent: true, bystanders: false
     }
   };
   root.MFGangs = GANGS;

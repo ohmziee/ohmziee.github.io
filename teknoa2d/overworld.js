@@ -2564,7 +2564,7 @@
     }
     if (L) { L.step(dt, SPEED); online(now); }
     /* the others finish any step they're in, even while you talk */
-    npcs.forEach(function (n) { if (n.moving) { n.t += dt * SPEED * 0.55; if (n.t >= 1) { n.moving = false; n.t = 0; } } });
+    npcs.forEach(function (n) { if (n.moving) { n.t += dt * SPEED * (n.run ? 1.3 : 0.55); if (n.t >= 1) { n.moving = false; n.t = 0; n.run = false; } } });
     if (talkBox) return;
     if (me.moving && me.sail && now - wakeAt > 70) {
       wakeAt = now;
@@ -2592,6 +2592,7 @@
     }
     tickTalk(now);
     tickMobs(dt, now);
+    tickScatter(now);
     /* the others wander a little, near where they stand */
     if (now - npcTick > 900) {
       npcTick = now;
@@ -2600,7 +2601,9 @@
         var ks = Object.keys(DIRS), k = ks[Math.floor(Math.random() * 4)], d = DIRS[k];
         var nx = n.x + d[0], ny = n.y + d[1];
         n.dir = k;
-        if (Math.abs(nx - n.hx) > n.roam || Math.abs(ny - n.hy) > n.roam || occupied(nx, ny)) return;
+        /* never further than roam from home, except on the way back (after running off) */
+        var far = Math.max(Math.abs(nx - n.hx), Math.abs(ny - n.hy));
+        if ((far > n.roam && far >= Math.max(Math.abs(n.x - n.hx), Math.abs(n.y - n.hy))) || occupied(nx, ny)) return;
         n.fx = n.x; n.fy = n.y; n.x = nx; n.y = ny; n.moving = true; n.t = 0; n.step ^= 1;
       });
     }
@@ -2629,7 +2632,7 @@
     for (var i = 0; i < n; i++) { var a = Math.random() * Math.PI * 2, v = speed * (0.6 + Math.random() * 0.6); sparks.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t0: t, col: cols[i % cols.length] }); }
     if (sparks.length > 60) sparks.splice(0, sparks.length - 60);
   }
-  var DOUBLE_TAP = 380, SWING_CD = 330, GIVE_UP = 14;
+  var DOUBLE_TAP = 380, SWING_CD = 330, GIVE_UP = 14, SIDE_SWING = 0.35, wonAt = 0;
   var MOB_LOOK = {
     bandit:   { H: '#2a2a2a', S: '#b07a5a', C: '#5a4a3a', c: '#3a3020', P: '#2a2420', k: '#111', acc: 'glasses', A: '#14121c' },
     zombie:   { H: '#3a3a2a', S: '#7fa36a', C: '#4a4a3a', c: '#33332a', P: '#3a3020', k: '#111', E: '#ffe97c', m: '#5a2a2a' },
@@ -2678,6 +2681,8 @@
   function faceTo(dx, dy) { return Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); }
   /* A with a foe beside you: a double tap swings, a single one just squares up */
   function attackTap(now) {
+    /* the second tap of the swing that won it doesn't go through their pockets */
+    if (now - wonAt < DOUBLE_TAP) return true;
     var m = mobNear();
     if (!m) return civTap(now);
     me.dir = faceTo(m.x - me.x, m.y - me.y);
@@ -2688,6 +2693,8 @@
     if (now < swingFx + SWING_CD) return;
     var C = window.MFCombat, LV = window.MFLevel, MF = window.MF, P = C.player(s, LV), r = C.strike(P, m.f), w = C.swing(s);
     swingFx = now;
+    /* hit a passer-by who was busy with someone else: now it's you */
+    m.foe = null;
     if (w.broke) float(me.x * TS + 2, me.y * TS - 12, C.WEAPONS[w.key].name.replace(/^an? /, '') + ' breaks!', '#ffb02e');
     if (!r.hit) { float(m.x * TS + 2, m.y * TS - 6, 'miss', '#9aa0b8'); return; }
     m.f.hp -= r.dmg; m.hurt = now + 220; m.cd = Math.max(m.cd, 0.35); m.flash = now + 70;
@@ -2703,6 +2710,7 @@
   }
   function beaten(m, weapon) {
     var MF = window.MF;
+    wonAt = performance.now();
     mobs = mobs.filter(function (o) { return o !== m; });
     if (m.civ) return civFalls(m, weapon);
     downs.push({ x: m.x * TS, y: m.y * TS, img: sprite(m.look, m.dir, 0), t0: performance.now() });
@@ -2741,15 +2749,16 @@
     return ['a ' + l.name + ' went through your pockets before we found you.\n' + (l.took.joules ? MF.fmtJ(l.took.joules) : 'not a joule') + (n ? ' and ' + n + ' thing' + (n > 1 ? 's' : '') : '') + ' gone.' + (kept ? ' the safe slots held.' : '')];
   }
   /* the first step of the shortest way round the walls to a tile next to
-     you, searched within CHASE tiles; null when there's no way */
+     you (or gx, gy), searched within CHASE tiles; null when there's no way */
   var CHASE = 16;
-  function chaseStep(m) {
+  function chaseStep(m, gx, gy) {
+    if (gx === undefined) { gx = me.x; gy = me.y; }
     var span = CHASE * 2 + 1, ox = m.x - CHASE, oy = m.y - CHASE, from = new Int16Array(span * span).fill(-1);
     var start = CHASE * span + CHASE, q = [start], head = 0;
     from[start] = start;
     while (head < q.length) {
       var c = q[head++], cx = c % span, cy = (c / span) | 0, wx = cx + ox, wy = cy + oy;
-      if (Math.abs(wx - me.x) + Math.abs(wy - me.y) === 1) {
+      if (Math.abs(wx - gx) + Math.abs(wy - gy) === 1) {
         /* walk it back to the first step */
         while (from[c] !== start) c = from[c];
         if (c === start) return null;
@@ -2780,10 +2789,18 @@
     mobs.forEach(function (m) {
       m.cd -= dt;
       if (m.moving) { m.t += dt * m.speed; if (m.t >= 1) { m.moving = false; m.t = 0; } return; }
-      var dx = me.x - m.x, dy = me.y - m.y, d = Math.abs(dx) + Math.abs(dy);
+      if (m.dead) return;
+      /* a passer-by squaring up to a hostile: once it's gone, so are they */
+      var foe = m.foe;
+      if (foe && (foe.dead || mobs.indexOf(foe) < 0)) { m.gone = true; return; }
+      var gx = foe ? foe.x : me.x, gy = foe ? foe.y : me.y, dx = gx - m.x, dy = gy - m.y, d = Math.abs(dx) + Math.abs(dy);
       if (d > GIVE_UP) { m.gone = true; return; }
-      if (d === 1) { m.dir = faceTo(dx, dy); if (m.cd <= 0) mobHit(m, now); return; }
-      var o = chaseStep(m);
+      /* a hostile goes for whoever it passes that it would: always on the way
+         to you, now and then even with you right there (SIDE_SWING) */
+      var v = !foe && !m.civ && m.cd <= 0 ? victimNear(m) : null;
+      if (v && (d !== 1 || Math.random() < SIDE_SWING)) { m.dir = faceTo(v.x - m.x, v.y - m.y); return mobOn(m, v, now); }
+      if (d === 1) { m.dir = faceTo(dx, dy); if (m.cd <= 0) { if (foe) brawl(m, foe, now); else mobHit(m, now); } return; }
+      var o = chaseStep(m, gx, gy);
       if (o) { m.fx = m.x; m.fy = m.y; m.x += o[0]; m.y += o[1]; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]); }
     });
     mobs.forEach(function (m) { if (m.gone && m.civ) backToCrowd(m); });
@@ -2815,21 +2832,95 @@
   function provoke(n) {
     var LV = window.MFLevel, cap = Math.min(window.MFFoes.DANGER.city[1], (LV ? LV.level(s) : 1) + 1);
     cityNpcs.splice(cityNpcs.indexOf(n), 1);
-    var f = window.MFLaw.civ(n, 1 + Math.floor(Math.random() * cap), Math.random);
+    var f = n.f || window.MFLaw.civ(n, 1 + Math.floor(Math.random() * cap), Math.random);
     var m = { f: f, civ: n, x: n.x, y: n.y, fx: n.x, fy: n.y, t: 0, moving: false, dir: n.dir, step: 0, cd: 0.9, hurt: 0, lunge: 0,
               speed: 2.2 + Math.min(2.5, f.ref * 0.12), look: n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local };
     mobs.push(m);
     return m;
   }
+  /* ── a hostile and the street (law.js preys / brave): it hits the
+     passers-by it would on its way to you. the brave hit back (a passer-by
+     with a foe of their own), the rest run from it; if a passer-by goes
+     down it's for good as often as the hostile kills (foes.js lethal) ── */
+  function victimNear(m) {
+    var LAW = window.MFLaw;
+    for (var k in DIRS) {
+      var x = m.x + DIRS[k][0], y = m.y + DIRS[k][1], c = mobAt(x, y);
+      if (c && c.foe === m) return c;
+      if (inside) continue;
+      for (var i = 0; i < npcs.length; i++) { var n = npcs[i]; if (n.x === x && n.y === y && !n.moving && LAW.attackable(n) && LAW.preys(m.f, n)) return n; }
+    }
+    return null;
+  }
+  function civLevel() { var LV = window.MFLevel; return 1 + Math.floor(Math.random() * Math.min(window.MFFoes.DANGER.city[1], (LV ? LV.level(s) : 1) + 1)); }
+  /* a hostile's blow at a passer-by: v is a crowd npc, or one already fighting it */
+  function mobOn(m, v, now) {
+    if (v.f && v.civ) return brawl(m, v, now);
+    var LAW = window.MFLaw, C = window.MFCombat;
+    if (!v.f) v.f = LAW.civ(v, civLevel(), Math.random);
+    var r = C.strike(m.f, v.f);
+    m.cd = 1.5 - Math.min(0.7, m.f.ref * 0.03); m.lunge = now + 150;
+    if (!r.hit) { float(v.x * TS + 2, v.y * TS - 6, 'dodge', '#9aa0b8'); }
+    else {
+      v.f.hp -= r.dmg;
+      burst(v.x * TS + 8, v.y * TS + 8, 4, ['#ff4f5e', '#ffb0b8'], 40);
+      float(v.x * TS + 3, v.y * TS - 6, '-' + r.dmg, '#ffb0b8');
+      if (v.f.hp <= 0) { cityNpcs.splice(cityNpcs.indexOf(v), 1); layBody(v, v.x, v.y, v.look === 'gen' ? crowdLook(v) : LOOKS[v.look] || LOOKS.local, LAW.dies(m.f.lethal, Math.random) === 'dead'); return; }
+    }
+    /* the brave square up; everyone else runs */
+    if (LAW.brave(v)) { var c = provoke(v); c.foe = m; c.cd = 0.5; }
+  }
+  /* two fighters on the street that aren't you: a passer-by and a hostile */
+  function brawl(a, b, now) {
+    var LAW = window.MFLaw, C = window.MFCombat, r = C.strike(a.f, b.f);
+    a.cd = 1.5 - Math.min(0.7, a.f.ref * 0.03); a.lunge = now + 150;
+    if (!r.hit) { float(b.x * TS + 2, b.y * TS - 6, 'dodge', '#9aa0b8'); return; }
+    b.f.hp -= r.dmg; b.hurt = now + 220; b.flash = now + 70;
+    burst(b.x * TS + 8, b.y * TS + 8, 4, ['#ffffff', '#dce3ff'], 40);
+    float(b.x * TS + 3, b.y * TS - 6, '-' + r.dmg, '#dce3ff');
+    if (b.f.hp > 0) return;
+    b.dead = true;
+    mobs = mobs.filter(function (o) { return o !== b; });
+    if (b.civ) { layBody(b.civ, b.x, b.y, b.look, LAW.dies(a.f.lethal, Math.random) === 'dead'); return; }
+    /* a passer-by beat a hostile: it goes up in a puff, nobody's exp */
+    downs.push({ x: b.x * TS, y: b.y * TS, img: sprite(b.look, b.dir, 0), t0: now });
+    float(b.x * TS, b.y * TS - 8, b.f.name + ' down', '#7cffb2');
+  }
+  /* the ones a hostile would go for run from it; the brave hold their ground */
+  var scatterAt = 0;
+  function tickScatter(now) {
+    var LAW = window.MFLaw;
+    if (inside || !LAW || now - scatterAt < 260) return;
+    scatterAt = now;
+    var hostiles = mobs.filter(function (m) { return !m.civ && !m.dead; });
+    if (!hostiles.length) return;
+    npcs.forEach(function (n) {
+      if (n.moving || LAW.brave(n) || !LAW.attackable(n)) return;
+      var near = null, nd = 99;
+      hostiles.forEach(function (m) { var d = Math.abs(m.x - n.x) + Math.abs(m.y - n.y); if (d < nd && LAW.preys(m.f, n)) { nd = d; near = m; } });
+      if (!near || nd > LAW.FLEE) return;
+      var best = null, bd = nd;
+      for (var k in DIRS) {
+        var nx = n.x + DIRS[k][0], ny = n.y + DIRS[k][1], d = Math.abs(near.x - nx) + Math.abs(near.y - ny);
+        if (d > bd && !occupied(nx, ny)) { bd = d; best = k; }
+      }
+      if (!best) return;
+      n.dir = best; n.fx = n.x; n.fy = n.y; n.x += DIRS[best][0]; n.y += DIRS[best][1]; n.moving = true; n.t = 0; n.step ^= 1; n.run = true;
+    });
+  }
+  function layBody(n, x, y, look, dead) {
+    var LAW = window.MFLaw;
+    bodies.push({ n: n, x: x, y: y, dead: dead, at: performance.now(), pockets: LAW.pockets(n, Math.random), look: look });
+    float(x * TS, y * TS - 8, (LAW.CIV[n.kind] || LAW.CIV.novan).name + (dead ? ' killed' : ' knocked out'), dead ? '#ff4f5e' : '#ffb02e');
+  }
   /* they gave up, or you went somewhere they can't follow: back in the crowd where they stand */
-  function backToCrowd(m) { var n = m.civ; n.x = m.x; n.y = m.y; n.fx = m.x; n.fy = m.y; n.moving = false; n.t = 0; n.dir = m.dir; cityNpcs.push(n); }
+  function backToCrowd(m) { var n = m.civ; n.f = m.f; n.x = m.x; n.y = m.y; n.fx = m.x; n.fy = m.y; n.moving = false; n.t = 0; n.dir = m.dir; cityNpcs.push(n); }
   function dropMobs() { mobs.forEach(function (m) { if (m.civ) backToCrowd(m); }); mobs = []; }
   function civFalls(m, weapon) {
-    var LAW = window.MFLaw, how = LAW.fall(weapon, Math.random), now = performance.now();
-    bodies.push({ n: m.civ, x: m.x, y: m.y, dead: how === 'dead', at: now, pockets: LAW.pockets(m.civ, Math.random), look: m.look, dir: m.dir });
+    var LAW = window.MFLaw, now = performance.now();
+    layBody(m.civ, m.x, m.y, m.look, LAW.fall(weapon, Math.random) === 'dead');
     freezeUntil = now + 120; jolt(180, 1);
     exp('combat', { xp: m.f.xp });
-    float(m.x * TS, m.y * TS - 8, m.f.name + (how === 'dead' ? ' killed' : ' knocked out'), how === 'dead' ? '#ff4f5e' : '#ffb02e');
     if (api.save) api.save();
   }
   function bodyAt(x, y) { for (var i = bodies.length - 1; i >= 0; i--) if (bodies[i].x === x && bodies[i].y === y) return bodies[i]; return null; }
@@ -2853,7 +2944,7 @@
       if (b.dead) { if (now - b.at < LAW.BODY_SECS * 1000) return true; gone.push({ n: b.n, at: b.at }); return false; }
       if (now - b.at < LAW.DOWN_SECS * 1000 || (!inside && me.x === b.x && me.y === b.y)) return true;
       /* back on their feet, a little unsteady */
-      var n = b.n; n.x = b.x; n.y = b.y; n.moving = false; n.t = 0; n.dir = 'down'; cityNpcs.push(n);
+      var n = b.n; n.x = b.x; n.y = b.y; n.moving = false; n.t = 0; n.dir = 'down'; delete n.f; cityNpcs.push(n);
       return false;
     });
     /* someone new moves into the spot, once you're not looking */
@@ -2862,7 +2953,7 @@
       var n = g.n;
       if (now - g.at < LAW.RESPAWN_SECS * 1000 || (Math.abs(n.hx - me.x) <= VW && Math.abs(n.hy - me.y) <= VH) || occupied(n.hx, n.hy)) return true;
       var c = {}; for (var k in n) c[k] = n[k];
-      c.seed = (n.seed * 31 + 7919) >>> 0; c.x = c.fx = n.hx; c.y = c.fy = n.hy; c.moving = false; c.t = 0; c.dir = 'down';
+      delete c.f; c.seed = (n.seed * 31 + 7919) >>> 0; c.x = c.fx = n.hx; c.y = c.fy = n.hy; c.moving = false; c.t = 0; c.dir = 'down';
       cityNpcs.push(c);
       return false;
     });
@@ -2889,7 +2980,8 @@
     mobs.forEach(function (m) {
       var mx = Math.round((m.moving ? m.fx + (m.x - m.fx) * m.t : m.x) * TS - cx), my = Math.round((m.moving ? m.fy + (m.y - m.fy) * m.t : m.y) * TS - cy);
       px(ctx, OUT, mx + 1, my - 6, 14, 4); px(ctx, '#3a1218', mx + 2, my - 5, 12, 2);
-      px(ctx, m.f.tier === 'unnamed' && m.f.level > (window.MFLevel ? window.MFLevel.level(s) + 3 : 99) ? '#ff4fd8' : '#ff4f5e', mx + 2, my - 5, Math.max(1, Math.round(12 * m.f.hp / m.f.max)), 2);
+      /* pink: far past your level. amber: a passer-by fighting someone else, not you */
+      px(ctx, m.foe ? '#ffb02e' : m.f.tier === 'unnamed' && m.f.level > (window.MFLevel ? window.MFLevel.level(s) + 3 : 99) ? '#ff4fd8' : '#ff4f5e', mx + 2, my - 5, Math.max(1, Math.round(12 * m.f.hp / m.f.max)), 2);
     });
     if (mobs.length || now < hurtUntil + 1500) {
       var hx = Math.round(ppx - cx), hy = Math.round(ppy - cy), MF = window.MF;
@@ -3635,5 +3727,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y }; }); }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe }; }); }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
 })();

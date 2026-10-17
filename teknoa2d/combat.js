@@ -15,7 +15,7 @@
   'use strict';
   var HIT_BASE = 0.8, HIT_STEP = 0.03, HIT_MIN = 0.25, HIT_MAX = 0.97;
   var CRIT_BASE = 0.04, CRIT_REF = 0.005, CRIT_MULT = 1.6, DEF_SOAK = 0.8, SPREAD = 0.15;
-  var GROW = 0.18, XP_GROW = 0.25;
+  var GROW = 0.18, XP_GROW = 0.25, LETHAL = 0.25;
 
   /* ── weapons: wear like rods (s.wear), one use a swing. fists never wear.
      moves: what a duel offers with it. pow scales the hit, acc adds to the
@@ -94,7 +94,8 @@
              pow: st('atk'), def: st('def'), ref: st('ref'), crit: 0,
              xp: Math.max(1, Math.round(((base.xp || 0) + (d.xp || 0)) * (1 + XP_GROW * (lv - 1)))),
              joules: Math.round((j[0] + rng() * (j[1] - j[0])) * (gang ? mult : 1)),
-             robs: gang ? !!gang.robs : !!base.robs, drain: base.drain || 0, gang: gang ? id.slice(5) : '', colour: gang ? gang.colour : '' };
+             robs: gang ? !!gang.robs : !!base.robs, drain: base.drain || 0, gang: gang ? id.slice(5) : '', colour: gang ? gang.colour : '',
+             lethal: (gang ? gang.lethal : base.lethal) || LETHAL };
   }
 
   /* ── one blow. a: who swings, b: who takes it, mv: the move (optional) ── */
@@ -155,7 +156,7 @@
     return { joules: f.joules, xp: x };
   }
 
-  root.MFCombat = { WEAPONS: WEAPONS, HIT_BASE: HIT_BASE, HIT_MIN: HIT_MIN, HIT_MAX: HIT_MAX, CRIT_MULT: CRIT_MULT, DEF_SOAK: DEF_SOAK, GROW: GROW,
+  root.MFCombat = { WEAPONS: WEAPONS, HIT_BASE: HIT_BASE, HIT_MIN: HIT_MIN, HIT_MAX: HIT_MAX, CRIT_MULT: CRIT_MULT, DEF_SOAK: DEF_SOAK, GROW: GROW, LETHAL: LETHAL,
                     isWeapon: isWeapon, usesLeft: usesLeft, wielded: wielded, equip: equip, swing: swing,
                     player: player, foe: foe, chance: chance, strike: strike, first: first, hostile: hostile, seenAs: seenAs, rob: rob, reward: reward };
 })(typeof window !== 'undefined' ? window : globalThis);
