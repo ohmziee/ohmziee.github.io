@@ -161,16 +161,9 @@
       return;
     }
     if (t === T.TREE) {
+      /* just the ground: the tree itself is a sprite (treeCanvas), sorted
+         in with the people so its canopy can hang over the tile above */
       px(g, p.grass, 0, 0, TS, TS);
-      /* a round canopy: outline, lit from the top left, a trunk under it */
-      var lit = shade(p.tree, 1.45), dark = shade(p.tree, 0.7);
-      px(g, OUT, 6, 11, 4, 5); px(g, '#5a3a22', 7, 11, 2, 4);
-      for (var yy = 0; yy < 13; yy++) for (var xx = 0; xx < TS; xx++) {
-        var dx = xx - 7.5, dy = yy - 6.2, d = Math.sqrt(dx * dx + dy * dy);
-        if (d > 7.2) continue;
-        px(g, d > 6.2 ? OUT : dx + dy < -4 ? lit : dx + dy > 3 ? dark : p.tree, xx, yy);
-      }
-      px(g, p.leaf, 4, 3, 2, 1); px(g, p.leaf, 3, 4, 1, 1); px(g, p.leaf, 9, 7, 1, 1);
       return;
     }
     if (t === T.BRIDGE) {
@@ -250,6 +243,55 @@
       return;
     }
     px(g, p.ground, 0, 0, TS, TS);
+  }
+
+  /* ── trees: five shapes, each a blob lit from the top left with a dark
+     outline, on a trunk, over its own shadow. the canvas is wider than a
+     tile and taller, so a canopy spills a little sideways and up ── */
+  var TREE_W = TS + 4, TREE_H = TS + 9;
+  var TREE_SHAPES = [
+    /* round */   [[10, 10, 7.2, 7.2]],
+    /* tall */    [[10, 9, 5.8, 8.6]],
+    /* bushy */   [[6, 13, 4.8, 4.6], [14, 13, 4.8, 4.6], [10, 8, 5.4, 5.2]],
+    /* small */   [[10, 13, 5.4, 5.2]],
+    /* pine */    'pine'
+  ];
+  var treeCache = {};
+  function treeCanvas(di, v) {
+    var key = di + '.' + v;
+    if (treeCache[key]) return treeCache[key];
+    var c = document.createElement('canvas'); c.width = TREE_W; c.height = TREE_H;
+    var g = c.getContext('2d'), p = pal(di), shape = TREE_SHAPES[v % 5], x, y;
+    var lit = shade(p.tree, 1.45), dark = shade(p.tree, 0.7), deep = shade(p.tree, 0.5), base = TREE_H - 3;
+    function inside(xx, yy) {
+      if (shape === 'pine') {
+        /* three stacked tiers, each a little wider than the one above */
+        for (var tr = 0; tr < 3; tr++) { var top = 1 + tr * 5, hw = (yy - top) * 0.75 + 1; if (yy >= top && yy < top + 8 && Math.abs(xx + 0.5 - 10) <= hw) return true; }
+        return false;
+      }
+      return shape.some(function (b) { var dx = (xx + 0.5 - b[0]) / b[2], dy = (yy + 0.5 - b[1]) / b[3]; return dx * dx + dy * dy <= 1; });
+    }
+    var mask = [], top = TREE_H, bot = 0;
+    for (y = 0; y < base; y++) for (x = 0; x < TREE_W; x++) if (inside(x, y)) { mask[y * TREE_W + x] = 1; top = Math.min(top, y); bot = Math.max(bot, y); }
+    /* shadow on the ground, then the trunk from under the canopy down */
+    g.fillStyle = 'rgba(0,0,0,.32)'; g.fillRect(5, base, 10, 2); g.fillRect(4, base + 1, 12, 1);
+    px(g, OUT, 8, bot - 2, 4, base - bot + 3); px(g, '#5a3a22', 9, bot - 2, 2, base - bot + 2); px(g, '#7a5232', 9, bot - 2, 1, base - bot + 2);
+    var cy0 = (top + bot) / 2, rr = (bot - top) / 2 || 1;
+    for (y = 0; y < base; y++) for (x = 0; x < TREE_W; x++) {
+      if (!mask[y * TREE_W + x]) continue;
+      var edge = !mask[(y - 1) * TREE_W + x] || !mask[(y + 1) * TREE_W + x] || x === 0 || !mask[y * TREE_W + x - 1] || x === TREE_W - 1 || !mask[y * TREE_W + x + 1];
+      if (edge) { px(g, OUT, x, y); continue; }
+      var dx = (x + 0.5 - 10) / rr, dy = (y + 0.5 - cy0) / rr, sh = dx + dy;
+      /* pine tiers: a dark band under each */
+      if (shape === 'pine' && (y - 1) % 5 >= 4) { px(g, deep, x, y); continue; }
+      px(g, sh < -0.55 ? lit : sh > 0.75 ? deep : sh > 0.25 ? dark : p.tree, x, y);
+    }
+    /* a few leaf glints, placed by the variant */
+    for (var i = 0; i < 4; i++) {
+      var lx = 4 + ((v * 7 + i * 5) % 9), ly = top + 2 + ((v * 3 + i * 4) % Math.max(1, rr));
+      if (mask[ly * TREE_W + lx] && mask[ly * TREE_W + lx + 1] && mask[(ly - 1) * TREE_W + lx] && (lx - 10) + (ly - cy0) < 2) { px(g, p.leaf, lx, ly, 2, 1); }
+    }
+    return (treeCache[key] = c);
   }
 
   /* once per map: every block of buildings gets one roof colour and one
@@ -2757,6 +2799,13 @@
       if (now < m.lunge) { var ld = DIRS[m.dir]; mx += ld[0] * 3; my += ld[1] * 3; }
       who.push({ x: mx, y: my, img: sprite(m.look, m.dir, m.moving && m.t > 0.25 && m.t < 0.75 ? 1 : 0), mob: m });
     });
+    /* trees, so you walk behind a canopy and in front of a trunk */
+    for (y = y0; y <= y0 + VH + 1 && y < world.H; y++) for (x = Math.max(0, x0 - 1); x <= x0 + VW + 1 && x < world.W; x++) {
+      var tk = y * world.W + x;
+      if (world.tile[tk] !== T.TREE) continue;
+      var th = hash(x + 101, y + 57), tv = Math.floor(th * 40);
+      who.push({ x: x * TS + ((tv >> 3) % 3) - 1, y: y * TS - 0.5, tree: treeCanvas(world.dist[tk], tv % 5 + 5 * ((tv >> 2) & 1)) });
+    }
     who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.sail ? 0 : me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1, boat: me.sail });
     if (L && (!inside || inside.place)) L.list().forEach(function (o) {
       var ox = (o.t < 1 ? o.fx + (o.x - o.fx) * o.t : o.x) * TS, oy = (o.t < 1 ? o.fy + (o.y - o.fy) * o.t : o.y) * TS;
@@ -2765,6 +2814,7 @@
     });
     who.sort(function (a, b) { return a.y - b.y; });
     who.forEach(function (p) {
+      if (p.tree) { ctx.drawImage(p.tree, Math.round(p.x - cx) - 2, Math.round(p.y + 0.5 - cy) + TS - TREE_H + 1); return; }
       var bob = p.boat ? Math.floor(now / 450) % 2 : 0;
       if (!p.boat) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(Math.round(p.x - cx) + 4, Math.round(p.y - cy) + 14, 8, 2); }
       if (p.mob && now < p.mob.hurt && Math.floor(now / 60) % 2) ctx.globalAlpha = 0.35;
