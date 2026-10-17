@@ -2965,6 +2965,8 @@
     var was = LAW.law(s).siren;
     if (was) LAW.cool(s, dt, lawSees(), !!inside);
     tickEnforcers(dt, now);
+    tickHelis(dt, now);
+    tickCharges(now);
     if (LAW.law(s).siren !== was) { drawSiren(); if (api.save) api.save(); }
     else if (was && now - lawT > 400) { lawT = now; drawSiren(); }
   }
@@ -3031,7 +3033,7 @@
   var lawDown = false, callClock = 0, shots = [];
   function lawSees() {
     var LAW = window.MFLaw, solid = function (x, y) { return M.solid(world, x, y); };
-    return !inside && mobs.some(function (m) { return m.law && !m.leaving && Math.abs(m.x - me.x) + Math.abs(m.y - me.y) <= LAW.SIGHT && LAW.clearShot(solid, m.x, m.y, me.x, me.y); });
+    return !inside && (helis.some(heliSees) || mobs.some(function (m) { return m.law && !m.leaving && Math.abs(m.x - me.x) + Math.abs(m.y - me.y) <= LAW.SIGHT && LAW.clearShot(solid, m.x, m.y, me.x, me.y); }));
   }
   function tickEnforcers(dt, now) {
     var LAW = window.MFLaw, siren = LAW.law(s).siren, zn = zoneNow();
@@ -3060,6 +3062,7 @@
     var LAW = window.MFLaw;
     if (m.leaving) { if (now > m.leaving) m.gone = true; return; }
     /* armed: shoot from range when there's a clear line */
+    if (m.f.auto && !m.burst && m.cd <= 0 && d >= LAW.BLAST.min && d <= LAW.RANGE && Math.random() < LAW.BLAST.chance) { m.dir = faceTo(dx, dy); return lob(m, now); }
     if (m.f.armed && d > 1 && d <= LAW.RANGE && m.cd <= 0 && LAW.clearShot(function (x, y) { return M.solid(world, x, y); }, m.x, m.y, me.x, me.y)) {
       m.dir = faceTo(dx, dy); return shoot(m, now);
     }
@@ -3078,19 +3081,140 @@
     }
   }
   function shoot(m, now) {
-    var C = window.MFCombat, MF = window.MF, P = C.player(s, window.MFLevel), r = C.strike({ pow: m.f.gun, ref: m.f.ref, crit: 0 }, { def: P.def, ref: P.ref, soak: P.soak });
-    m.cd = 1.7; m.lunge = now + 90;
-    shots.push({ x0: m.x * TS + 8, y0: m.y * TS + 7, x1: me.x * TS + 8 + (r.hit ? 0 : (Math.random() - 0.5) * 18), y1: me.y * TS + 7 + (r.hit ? 0 : (Math.random() - 0.5) * 18), t0: now });
+    var AU = window.MFLaw.AUTO;
+    m.lunge = now + 90;
+    if (m.f.auto) { m.burst = (m.burst || 0) + 1; if (m.burst < AU.burst) m.cd = AU.gap; else { m.burst = 0; m.cd = AU.rest; } }
+    else m.cd = 1.7;
+    fire(m.x * TS + 8, m.y * TS + 7, m.f.gun, m.f.ref, now, m);
+  }
+  /* one round from (x0, y0) px at you: a tracer, and maybe a hit. by: who
+     fired (a law mob, or a helicopter dressed as one) */
+  function fire(x0, y0, gun, ref, now, by) {
+    var C = window.MFCombat, MF = window.MF, P = C.player(s, window.MFLevel), r = C.strike({ pow: gun, ref: ref, crit: 0 }, { def: P.def, ref: P.ref, soak: P.soak });
+    shots.push({ x0: x0, y0: y0, x1: me.x * TS + 8 + (r.hit ? 0 : (Math.random() - 0.5) * 18), y1: me.y * TS + 7 + (r.hit ? 0 : (Math.random() - 0.5) * 18), t0: now });
     if (!r.hit) { float(me.x * TS + 2, me.y * TS - 6, 'miss', '#7cf5ff'); return; }
     MF.hurt(s, r.dmg); hurtUntil = now + 260; jolt(200, 2); freezeUntil = now + 40;
     burst(me.x * TS + 8, me.y * TS + 8, 5, ['#ff4f5e', '#ffe97c'], 50);
     float(me.x * TS + 3, me.y * TS - 6, '-' + r.dmg, '#ff4f5e');
     drawBody();
-    if (s.body.health <= 0) lose(m, now);
+    if (s.body.health <= 0) lose(by, now);
+  }
+  /* ── the top of the siren (law.js HELIS / AUTO / BLAST): helicopters
+     with a spotlight and a door gunner; at 5 the squad throws charges ── */
+  var helis = [], charges = [], heliClock = 0;
+  function meX() { return me.x * TS + 8; }
+  function meY() { return me.y * TS + 8; }
+  function heliSees(h) { var HL = window.MFLaw.HELI; return !h.leaving && Math.hypot(h.sx - meX(), h.sy - meY()) <= HL.spot * TS; }
+  function tickHelis(dt, now) {
+    var LAW = window.MFLaw, HL = LAW.HELI, siren = LAW.law(s).siren, want = zoneNow() === 'city' && !inside ? LAW.HELIS[siren] : 0;
+    var up = helis.filter(function (h) { return !h.leaving; });
+    up.slice(want).forEach(function (h) { h.leaving = true; });
+    heliClock += dt;
+    if (up.length < want && heliClock >= HL.call) {
+      heliClock = 0;
+      var side = Math.random() < 0.5 ? -1 : 1, kind = LAW.force(lawHere());
+      helis.push({ x: meX() + side * 18 * TS, y: meY() - 9 * TS, sx: meX() + side * 6 * TS, sy: meY() - 3 * TS, ang: Math.random() * 6.28, cd: 2, burst: 0, kind: kind, face: -side });
+      float(me.x * TS - 8, me.y * TS - 16, 'chopper inbound', '#7cc8ff');
+    }
+    helis.forEach(function (h) {
+      /* the body circles you, lazily; the spotlight hunts for you on its own */
+      h.ang += dt * 0.6;
+      var tx = h.leaving ? h.x + h.face * 40 * TS : meX() + Math.cos(h.ang) * 2.5 * TS, ty = h.leaving ? h.y - 20 * TS : meY() - 2 * TS + Math.sin(h.ang) * 1.2 * TS;
+      var dx = tx - h.x, dy = ty - h.y, dd = Math.hypot(dx, dy), v = HL.speed * TS * dt;
+      if (dd > 1) { h.x += dx / dd * Math.min(v, dd); h.y += dy / dd * Math.min(v, dd); if (Math.abs(dx) > 4) h.face = dx > 0 ? 1 : -1; }
+      var sx = meX() - h.sx, sy = meY() - h.sy, sd = Math.hypot(sx, sy), sv = HL.spotSpeed * TS * dt;
+      if (sd > 1) { h.sx += sx / sd * Math.min(sv, sd); h.sy += sy / sd * Math.min(sv, sd); }
+      if (h.leaving) { if (Math.hypot(h.x - meX(), h.y - meY()) > 30 * TS) h.gone = true; return; }
+      /* in the light: the door gunner opens up, a burst at a time */
+      h.cd -= dt;
+      if (h.cd > 0 || !heliSees(h)) return;
+      h.burst++;
+      if (h.burst < HL.burst) h.cd = 0.12; else { h.burst = 0; h.cd = HL.every; }
+      fire(h.x, h.y + 4, Math.round(HL.gun * (1 + 0.2 * (siren - 1))), 8, now, { law: h.kind, f: { name: 'helicopter' } });
+    });
+    helis = helis.filter(function (h) { return !h.gone; });
+  }
+  /* a charge, thrown at where you stand: it blinks, then goes */
+  function lob(m, now) {
+    m.cd = window.MFLaw.AUTO.rest + 0.5; m.lunge = now + 150;
+    charges.push({ x: me.x, y: me.y, sx: m.x, sy: m.y, t0: now, by: m });
+  }
+  function tickCharges(now) {
+    var LAW = window.MFLaw, B = LAW.BLAST, MF = window.MF;
+    charges = charges.filter(function (c) {
+      if (now - c.t0 < B.fuse * 1000) return true;
+      /* boom */
+      burst(c.x * TS + 8, c.y * TS + 8, 18, ['#ffe97c', '#ff8a2a', '#ff3a4a', '#ffffff'], 110);
+      jolt(320, 3); freezeUntil = now + 70;
+      booms.push({ x: c.x * TS + 8, y: c.y * TS + 8, t0: now });
+      var hit = function () { return Math.round(B.dmg * (0.85 + Math.random() * 0.3)); };
+      if (!inside && LAW.inBlast(c.x, c.y, me.x, me.y)) {
+        var n = hit(); MF.hurt(s, n); hurtUntil = now + 300;
+        float(me.x * TS + 3, me.y * TS - 6, '-' + n, '#ff4f5e'); drawBody();
+        if (s.body.health <= 0) { lose(c.by, now); return false; }
+      }
+      /* anyone else standing too close */
+      mobs.slice().forEach(function (m) {
+        if (m.law || !LAW.inBlast(c.x, c.y, m.x, m.y)) return;
+        m.f.hp -= hit(); m.flash = now + 70;
+        if (m.f.hp > 0) return;
+        m.dead = true; mobs = mobs.filter(function (o) { return o !== m; });
+        if (m.civ) layBody(m.civ, m.x, m.y, m.look, LAW.dies(B.lethal, Math.random) === 'dead');
+        else downs.push({ x: m.x * TS, y: m.y * TS, img: sprite(m.look, m.dir, 0), t0: now });
+      });
+      cityNpcs.slice().forEach(function (n) {
+        if (!LAW.attackable(n) || !LAW.inBlast(c.x, c.y, n.x, n.y)) return;
+        cityNpcs.splice(cityNpcs.indexOf(n), 1);
+        layBody(n, n.x, n.y, n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, LAW.dies(B.lethal, Math.random) === 'dead');
+      });
+      return false;
+    });
+  }
+  var booms = [];
+  /* the air: shadow on the ground, the body, a spinning rotor; a pool of light by day */
+  function drawAir(cx, cy, now) {
+    var B = window.MFLaw && window.MFLaw.BLAST;
+    charges.forEach(function (c) {
+      var e = now - c.t0, tx = c.x * TS + 8 - cx, ty = c.y * TS + 10 - cy;
+      if (e < 380) {
+        /* in the air: an arc from the thrower */
+        var f = e / 380, ax = (c.sx * TS + 8 - cx) + (tx - (c.sx * TS + 8 - cx)) * f, ay = (c.sy * TS + 8 - cy) + (ty - (c.sy * TS + 8 - cy)) * f - Math.sin(f * Math.PI) * 18;
+        px(ctx, OUT, Math.round(ax) - 2, Math.round(ay) - 2, 4, 4); px(ctx, '#3a3f4a', Math.round(ax) - 1, Math.round(ay) - 1, 2, 2);
+        return;
+      }
+      ctx.strokeStyle = 'rgba(255,58,74,' + (0.25 + 0.25 * Math.sin(e / 60)).toFixed(3) + ')'; ctx.lineWidth = 1;
+      ctx.strokeRect(Math.round(tx - 8 - B.radius * TS) + 0.5, Math.round(ty - 10 - B.radius * TS) + 0.5, (2 * B.radius + 1) * TS - 1, (2 * B.radius + 1) * TS - 1);
+      px(ctx, OUT, Math.round(tx) - 3, Math.round(ty) - 2, 6, 4); px(ctx, '#3a3f4a', Math.round(tx) - 2, Math.round(ty) - 1, 4, 2);
+      if (Math.floor(e / (e > 800 ? 60 : 140)) % 2) px(ctx, '#ff3a4a', Math.round(tx) - 1, Math.round(ty) - 2, 2, 1);
+    });
+    booms = booms.filter(function (b) { return now - b.t0 < 420; });
+    booms.forEach(function (b) {
+      var f = (now - b.t0) / 420, r = 6 + f * 20;
+      ctx.fillStyle = 'rgba(255,' + Math.round(233 - 140 * f) + ',124,' + (0.8 * (1 - f)).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(b.x - cx, b.y - cy, r, 0, 6.283); ctx.fill();
+    });
+    var dk = darkness(novaNow()), HL = window.MFLaw && window.MFLaw.HELI;
+    helis.forEach(function (h) {
+      if (dk < 0.5) {
+        ctx.fillStyle = 'rgba(255,255,236,' + (heliSees(h) ? 0.2 : 0.12) + ')';
+        ctx.beginPath(); ctx.ellipse(h.sx - cx, h.sy - cy, HL.spot * TS, HL.spot * TS * 0.75, 0, 0, 6.283); ctx.fill();
+      }
+      var x = Math.round(h.x - cx), y = Math.round(h.y - cy), body = h.kind === 'hashshashin' ? '#14141c' : '#1f3a8a', trim = h.kind === 'hashshashin' ? '#7cffb2' : '#f4f6ff';
+      ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(x - 8, y + 26, 20, 6); ctx.fillRect(x + 10 * h.face, y + 28, 12, 2);
+      ctx.save(); ctx.translate(x, y); if (h.face > 0) ctx.scale(-1, 1);
+      /* tail, fin, cabin, windscreen, stripe */
+      px(ctx, OUT, 6, -2, 16, 4); px(ctx, body, 7, -1, 14, 2); px(ctx, OUT, 20, -5, 3, 10); px(ctx, trim, 21, -4, 1, 8);
+      px(ctx, OUT, -11, -6, 19, 12); px(ctx, body, -10, -5, 17, 10); px(ctx, '#7cc8ff', -10, -4, 4, 8); px(ctx, trim, -5, -5, 11, 1);
+      if (Math.floor(now / 400) % 2) px(ctx, '#ff3a4a', 0, 5, 2, 1);
+      var a = now / 35; ctx.strokeStyle = 'rgba(220,227,255,.6)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (var i = 0; i < 2; i++) { var aa = a + i * Math.PI / 2; ctx.moveTo(-2 - Math.cos(aa) * 16, -Math.sin(aa) * 8); ctx.lineTo(-2 + Math.cos(aa) * 16, Math.sin(aa) * 8); }
+      ctx.stroke(); px(ctx, '#3a3f4a', -3, -1, 2, 2);
+      ctx.restore();
+    });
   }
   /* they gave up, or you went somewhere they can't follow: back in the crowd where they stand */
   function backToCrowd(m) { var n = m.civ; n.f = m.f; n.x = m.x; n.y = m.y; n.fx = m.x; n.fy = m.y; n.moving = false; n.t = 0; n.dir = m.dir; cityNpcs.push(n); }
-  function dropMobs() { mobs.forEach(function (m) { if (m.civ) backToCrowd(m); }); mobs = []; }
+  function dropMobs() { mobs.forEach(function (m) { if (m.civ) backToCrowd(m); }); mobs = []; helis = []; charges = []; }
   function civFalls(m, weapon) {
     var LAW = window.MFLaw, now = performance.now();
     var dead = LAW.fall(weapon, Math.random) === 'dead';
@@ -3246,6 +3370,8 @@
     if (!lightCv) lightCv = document.createElement('canvas');
     if (lightCv.width !== W || lightCv.height !== Hh) { lightCv.width = W; lightCv.height = Hh; }
     function add(x, y, r, a, col, ga) { if (x > -r && y > -r && x < W + r && y < Hh + r) lights.push({ x: x, y: y, r: r, a: a, col: col, ga: ga }); }
+    /* a helicopter's spotlight */
+    helis.forEach(function (h) { add(h.sx - cx, h.sy - cy, 30, 1, '#f4f6ff', 0.4); });
     /* lamps: a warm pool on the road */
     (deco.lamps || []).forEach(function (l) { var h = lampHead(l, cx, cy); add(h[0], h[1] + 10, 40, 0.95, '#ffcf7a', 0.2); });
     /* lit windows and doors on every building front in view */
@@ -3742,6 +3868,7 @@
     drawAmbient(now, cx, cy, true);
     drawPrompt(now, cx, cy);
     drawFight(cx, cy, now, ppx, ppy);
+    drawAir(cx, cy, now);
     drawWeather(now, cx, cy);
   }
 
@@ -3914,5 +4041,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving }; }); }, get lawSees() { return lawSees(); }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
 })();

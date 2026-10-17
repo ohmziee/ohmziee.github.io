@@ -37,6 +37,13 @@
              GRAB of the time. from GUN_AT on they carry guns and shoot from
              RANGE tiles with a clear line. put down by them, you're arrested.
              hitting one is a crime they always see (officer)
+   the air:  HELIS[siren] helicopters overhead (one at 4, two at 5). each
+             sweeps a spotlight after you, a little slower than you can run
+             (HELI.spotSpeed); caught in it you're seen and the door gunner
+             fires bursts. walls don't stop them; a roof does (go inside)
+   at 5:     the squad on foot carry automatics (AUTO bursts) and now and
+             then throw a charge (BLAST): it lands where you stood, blinks,
+             and goes off, hurting anyone within its radius
    PLACEHOLDER numbers, all of them. */
 (function (root) {
   'use strict';
@@ -92,6 +99,10 @@
     hashshashin: { name: 'hashshashin', hp: 44, atk: 8, def: 3, ref: 8, gun: 10, xp: 12, where: 'redrum' }
   };
   var SQUAD = [0, 1, 2, 3, 4, 5], SIGHT = 10, RANGE = 6, GUN_AT = 3, GRAB = 0.35, CALL_EVERY = 8, LAW_SPEED = 5.5;
+  var HELIS = [0, 0, 0, 0, 1, 2];
+  var HELI = { speed: 7, spotSpeed: 6, spot: 1.6, gun: 8, every: 3.2, burst: 3, call: 4 };   /* tiles a second, tiles of light, seconds */
+  var AUTO_AT = 5, AUTO = { burst: 3, gap: 0.09, rest: 1.9 };
+  var BLAST = { radius: 1, dmg: 24, fuse: 1.1, chance: 0.25, min: 3, lethal: 0.4 };
   var HEAT_STEP = 4, WITNESS = 8, COOL = [0, 45, 60, 90, 120, 150], HIDE = 2, MAX_SIREN = 5;
   var JAIL = { 3: { mins: 3, bail: 1500 }, 4: { mins: 5, bail: 4000 }, 5: { mins: 8, bail: 10000 } };
   var JAILS = { city: { room: 'ncpd', cell: { x: 2, y: 1 }, by: 'NCPD' }, redrum: { room: 'lockup', cell: { x: 2, y: 1 }, by: 'HASHSHASHIN' } };
@@ -152,8 +163,10 @@
     var hp = Math.round(b.hp * g);
     return { id: 'law:' + k, sub: '', name: b.name, tier: 'law', level: lv, hp: hp, max: hp, pow: Math.round(b.atk * g), gun: Math.round(b.gun * g),
              def: Math.round(b.def * g), ref: Math.round(b.ref * g), crit: 0, xp: Math.round(b.xp * g), joules: 0, robs: false, drain: 0,
-             gang: '', colour: '', lethal: lv >= GUN_AT ? 0.5 : 0, law: k, armed: lv >= GUN_AT };
+             gang: '', colour: '', lethal: lv >= GUN_AT ? 0.5 : 0, law: k, armed: lv >= GUN_AT, auto: lv >= AUTO_AT };
   }
+  /* a charge going off at (bx, by): who's caught in it (chebyshev radius) */
+  function inBlast(bx, by, x, y) { return Math.max(Math.abs(x - bx), Math.abs(y - by)) <= BLAST.radius; }
   /* a straight line between two tiles with nothing solid in between (solid(x, y)) */
   function clearShot(solid, x0, y0, x1, y1) {
     var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx - dy, x = x0, y = y0;
@@ -200,6 +213,7 @@
                  civ: civ, dies: dies, fall: fall, preys: preys, brave: brave,
                  CRIMES: CRIMES, HEAT_STEP: HEAT_STEP, WITNESS: WITNESS, COOL: COOL, HIDE: HIDE, JAIL: JAIL, JAILS: JAILS,
                  ENFORCERS: ENFORCERS, SQUAD: SQUAD, SIGHT: SIGHT, RANGE: RANGE, GUN_AT: GUN_AT, GRAB: GRAB, CALL_EVERY: CALL_EVERY, LAW_SPEED: LAW_SPEED,
-                 force: force, enforcer: enforcer, clearShot: clearShot,
+                 HELIS: HELIS, HELI: HELI, AUTO_AT: AUTO_AT, AUTO: AUTO, BLAST: BLAST,
+                 force: force, enforcer: enforcer, clearShot: clearShot, inBlast: inBlast,
                  law: law, commit: commit, cool: cool, caught: caught, jailed: jailed, served: served, bail: bail, release: release, tidy: tidy, pockets: pockets, empty: empty, loot: loot, attackable: attackable };
 })(typeof window !== 'undefined' ? window : globalThis);
