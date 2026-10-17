@@ -29,6 +29,14 @@
              comes to that); at 3+ it's a cell: JAIL[level] real minutes,
              bail to walk out early, weapons taken. nova city's cell is the
              NCPD's; on redrum, hex's hashshashin hold you in the lockup
+
+   enforcers: the NPD in the city, hex's hashshashin on redrum. SQUAD[siren]
+             of them on foot, a new one called in every CALL_EVERY seconds
+             until the squad is full. they see you within SIGHT tiles (that
+             holds the siren). up close they grab: a hit that lands cuffs you
+             GRAB of the time. from GUN_AT on they carry guns and shoot from
+             RANGE tiles with a clear line. put down by them, you're arrested.
+             hitting one is a crime they always see (officer)
    PLACEHOLDER numbers, all of them. */
 (function (root) {
   'use strict';
@@ -76,8 +84,14 @@
     assault:  { name: 'assault',            level: 1, heat: 1, fine: 40 },
     theft:    { name: 'theft',              level: 1, heat: 1, fine: 25 },
     knockout: { name: 'aggravated assault', level: 2, heat: 2, fine: 150 },
-    murder:   { name: 'murder',             level: 3, heat: 4, fine: 600 }
+    murder:   { name: 'murder',             level: 3, heat: 4, fine: 600 },
+    officer:  { name: 'assaulting the law', level: 2, heat: 3, fine: 300 }
   };
+  var ENFORCERS = {
+    npd:         { name: 'NPD officer', hp: 40, atk: 6, def: 4, ref: 6, gun: 9, xp: 10, where: 'city' },
+    hashshashin: { name: 'hashshashin', hp: 44, atk: 8, def: 3, ref: 8, gun: 10, xp: 12, where: 'redrum' }
+  };
+  var SQUAD = [0, 1, 2, 3, 4, 5], SIGHT = 10, RANGE = 6, GUN_AT = 3, GRAB = 0.35, CALL_EVERY = 8, LAW_SPEED = 5.5;
   var HEAT_STEP = 4, WITNESS = 8, COOL = [0, 45, 60, 90, 120, 150], HIDE = 2, MAX_SIREN = 5;
   var JAIL = { 3: { mins: 3, bail: 1500 }, 4: { mins: 5, bail: 4000 }, 5: { mins: 8, bail: 10000 } };
   var JAILS = { city: { room: 'ncpd', cell: { x: 2, y: 1 }, by: 'NCPD' }, redrum: { room: 'lockup', cell: { x: 2, y: 1 }, by: 'HASHSHASHIN' } };
@@ -131,6 +145,26 @@
     return { ok: true };
   }
   function release(s) { law(s).jail = { until: 0, bail: 0, room: '' }; }
+  /* who answers the siren here, and one of them, ready: tougher the higher it is */
+  function force(where) { return where === 'redrum' ? 'hashshashin' : 'npd'; }
+  function enforcer(where, siren) {
+    var k = force(where), b = ENFORCERS[k], lv = Math.max(1, Math.min(MAX_SIREN, Math.floor(+siren || 1))), g = 1 + 0.2 * (lv - 1);
+    var hp = Math.round(b.hp * g);
+    return { id: 'law:' + k, sub: '', name: b.name, tier: 'law', level: lv, hp: hp, max: hp, pow: Math.round(b.atk * g), gun: Math.round(b.gun * g),
+             def: Math.round(b.def * g), ref: Math.round(b.ref * g), crit: 0, xp: Math.round(b.xp * g), joules: 0, robs: false, drain: 0,
+             gang: '', colour: '', lethal: lv >= GUN_AT ? 0.5 : 0, law: k, armed: lv >= GUN_AT };
+  }
+  /* a straight line between two tiles with nothing solid in between (solid(x, y)) */
+  function clearShot(solid, x0, y0, x1, y1) {
+    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx - dy, x = x0, y = y0;
+    while (x !== x1 || y !== y1) {
+      var e2 = 2 * e;
+      if (e2 > -dy) { e -= dy; x += sx; }
+      if (e2 < dx) { e += dx; y += sy; }
+      if ((x !== x1 || y !== y1) && solid(x, y)) return false;
+    }
+    return true;
+  }
   /* a save's s.law, whatever state it's in */
   function tidy(o) {
     var L = fresh(), n = function (v, top) { v = Math.floor(+v || 0); return Math.max(0, Math.min(top, v)); };
@@ -165,5 +199,7 @@
   root.MFLaw = { CIV: CIV, POCKET: POCKET, DOWN_SECS: DOWN_SECS, BODY_SECS: BODY_SECS, RESPAWN_SECS: RESPAWN_SECS, MAX_FIGHTERS: MAX_FIGHTERS, SEEN: SEEN, BRAVE: BRAVE, FLEE: FLEE,
                  civ: civ, dies: dies, fall: fall, preys: preys, brave: brave,
                  CRIMES: CRIMES, HEAT_STEP: HEAT_STEP, WITNESS: WITNESS, COOL: COOL, HIDE: HIDE, JAIL: JAIL, JAILS: JAILS,
+                 ENFORCERS: ENFORCERS, SQUAD: SQUAD, SIGHT: SIGHT, RANGE: RANGE, GUN_AT: GUN_AT, GRAB: GRAB, CALL_EVERY: CALL_EVERY, LAW_SPEED: LAW_SPEED,
+                 force: force, enforcer: enforcer, clearShot: clearShot,
                  law: law, commit: commit, cool: cool, caught: caught, jailed: jailed, served: served, bail: bail, release: release, tidy: tidy, pockets: pockets, empty: empty, loot: loot, attackable: attackable };
 })(typeof window !== 'undefined' ? window : globalThis);

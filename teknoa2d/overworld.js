@@ -1686,6 +1686,14 @@
   }
   /* you come round in your own bed, or the hospital's (and it isn't free) */
   function wakeUp() {
+    /* the law put you down: you come round cuffed (law.js caught) */
+    if (lawDown) {
+      lawDown = false; collapsed = false; fainting = 0;
+      $('world').classList.remove('fainted');
+      window.MF.revive(s);
+      s.body.health = Math.max(s.body.health, 30);
+      if (arrest()) { drawBody(); return; }
+    }
     var MF = window.MF, home = collapsed ? '' : s.wake && s.homes[s.wake] ? s.wake : Object.keys(s.homes || {})[0], line;
     /* down on redrum: the street doc drags you in, not the city hospital */
     var doc = (inside ? M.ROOMS[inside.id] && M.ROOMS[inside.id].d === 'redrum' : whereNow() === 'redrum') && (inside ? cityNpcs : npcs).filter(function (n) { return n.id === 'street-doc'; })[0];
@@ -2654,7 +2662,9 @@
     rogueai:  { H: '#3a3f4a', S: '#8a92a6', C: '#2a2f3d', P: '#2a2f3d', k: '#111', E: '#ff3a4a', m: '#5a6378', hair: 'buzz' },
     vampire:  { H: '#14121c', S: '#e8e4f0', C: '#14121c', c: '#5a1020', P: '#14121c', k: '#000', E: '#ff3a4a', m: '#8a1a2a' },
     werewolf: { H: '#5a4632', B: '#5a4632', S: '#7a5e44', C: '#5a4632', P: '#4a3a2a', k: '#1a1410', E: '#ffe97c', fur: 1 },
-    agent:    { H: '#14121c', S: '#e0b48a', C: '#e6e8f0', c: '#b8bcc8', P: '#14121c', k: '#000', hair: 'buzz', acc: 'glasses', A: '#111' }
+    agent:    { H: '#14121c', S: '#e0b48a', C: '#e6e8f0', c: '#b8bcc8', P: '#14121c', k: '#000', hair: 'buzz', acc: 'glasses', A: '#111' },
+    'law:npd':         { H: '#1a2a5a', S: '#c89a74', C: '#1f3a8a', c: '#16296a', P: '#14183a', k: '#000', hair: 'buzz', acc: 'glasses', A: '#0b0d1a' },
+    'law:hashshashin': { H: '#0b0b10', B: '#0b0b10', S: '#a87a5a', C: '#14141c', c: '#7cffb2', P: '#0b0b10', k: '#000', E: '#7cffb2' }
   };
   /* gangs wear their colour; the troop and the revengers are apes */
   var APE_GANGS = { troop: 1, revengers: 1 };
@@ -2710,6 +2720,7 @@
     /* hit a passer-by who was busy with someone else: now it's you */
     m.foe = null;
     if (m.civ && !m.struck) { m.struck = true; crime('assault', m.x, m.y, m.civ); }
+    if (m.law && !m.struck) { m.struck = true; crime('officer', m.x, m.y, null, true); }
     if (w.broke) float(me.x * TS + 2, me.y * TS - 12, C.WEAPONS[w.key].name.replace(/^an? /, '') + ' breaks!', '#ffb02e');
     if (!r.hit) { float(m.x * TS + 2, m.y * TS - 6, 'miss', '#9aa0b8'); return; }
     m.f.hp -= r.dmg; m.hurt = now + 220; m.cd = Math.max(m.cd, 0.35); m.flash = now + 70;
@@ -2728,6 +2739,7 @@
     wonAt = performance.now();
     mobs = mobs.filter(function (o) { return o !== m; });
     if (m.civ) return civFalls(m, weapon);
+    if (m.law) crime(window.MFLaw.fall(weapon, Math.random) === 'dead' ? 'murder' : 'officer', m.x, m.y, null, true);
     downs.push({ x: m.x * TS, y: m.y * TS, img: sprite(m.look, m.dir, 0), t0: performance.now() });
     freezeUntil = performance.now() + 120; jolt(180, 1);
     if (m.f.joules > 0) { MF.earn(s, m.f.joules); wallet('+' + MF.fmtJ(m.f.joules)); }
@@ -2738,15 +2750,17 @@
   function mobHit(m, now) {
     var C = window.MFCombat, MF = window.MF, P = C.player(s, window.MFLevel), r = C.strike(m.f, { def: P.def, ref: P.ref, soak: P.soak });
     m.cd = 1.5 - Math.min(0.7, m.f.ref * 0.03); m.lunge = now + 150;
-    if (!r.hit) { float(me.x * TS + 2, me.y * TS - 6, 'dodge', '#7cf5ff'); return; }
+    if (!r.hit) { float(me.x * TS + 2, me.y * TS - 6, 'dodge', '#7cf5ff'); return false; }
     MF.hurt(s, r.dmg); hurtUntil = now + 260; jolt(220, 2); freezeUntil = now + 45;
     burst(me.x * TS + 8, me.y * TS + 8, 4, ['#ff4f5e', '#ffb0b8'], 40);
     if (m.f.drain) m.f.hp = Math.min(m.f.max, m.f.hp + Math.round(r.dmg * m.f.drain));
     float(me.x * TS + 3, me.y * TS - 6, '-' + r.dmg, '#ff4f5e');
     drawBody();
-    if (s.body.health <= 0) lose(m, now);
+    if (s.body.health <= 0) { lose(m, now); return false; }
+    return true;
   }
   function lose(m, now) {
+    if (m.law) { lawDown = true; dropMobs(); floats = []; faint(now, true); return; }
     var took = m.f.robs ? window.MFCombat.rob(s, window.MF) : null;
     lostTo = { name: m.f.name, took: took, civ: !!m.civ };
     dropMobs(); floats = [];
@@ -2804,7 +2818,8 @@
     mobs.forEach(function (m) {
       m.cd -= dt;
       if (m.moving) { m.t += dt * m.speed; if (m.t >= 1) { m.moving = false; m.t = 0; } return; }
-      if (m.dead) return;
+      /* gone from the street mid-tick (an arrest clears it) */
+      if (m.dead || mobs.indexOf(m) < 0) return;
       /* a passer-by squaring up to a hostile: once it's gone, so are they */
       var foe = m.foe;
       if (foe && (foe.dead || mobs.indexOf(foe) < 0)) { m.gone = true; return; }
@@ -2812,6 +2827,7 @@
       if (d > GIVE_UP) { m.gone = true; return; }
       /* a hostile goes for whoever it passes that it would: always on the way
          to you, now and then even with you right there (SIDE_SWING) */
+      if (m.law) return lawMove(m, d, dx, dy, now);
       var v = !foe && !m.civ && m.cd <= 0 ? victimNear(m) : null;
       if (v && (d !== 1 || Math.random() < SIDE_SWING)) { m.dir = faceTo(v.x - m.x, v.y - m.y); return mobOn(m, v, now); }
       if (d === 1) { m.dir = faceTo(dx, dy); if (m.cd <= 0) { if (foe) brawl(m, foe, now); else mobHit(m, now); } return; }
@@ -2935,8 +2951,8 @@
     var W = window.MFLaw.WITNESS, near = function (o) { return o !== victim && Math.abs(o.x - x) + Math.abs(o.y - y) <= W; };
     return cityNpcs.some(near) || mobs.some(function (m) { return m.civ && m.civ !== victim && near(m); });
   }
-  function crime(kind, x, y, victim) {
-    var LAW = window.MFLaw, was = LAW.law(s).siren, seen = witnessed(x, y, victim), now = LAW.commit(s, kind, seen);
+  function crime(kind, x, y, victim, sure) {
+    var LAW = window.MFLaw, was = LAW.law(s).siren, seen = sure || witnessed(x, y, victim), now = LAW.commit(s, kind, seen);
     if (!seen) float(me.x * TS - 4, me.y * TS - 16, 'no witnesses', '#9aa0b8');
     else if (now > was) { float(me.x * TS - 2, me.y * TS - 16, 'SIREN ' + now, '#ff3a4a'); jolt(160, 1); }
     drawSiren();
@@ -2947,7 +2963,8 @@
     var LAW = window.MFLaw;
     if (!LAW) return;
     var was = LAW.law(s).siren;
-    if (was) LAW.cool(s, dt, false, !!inside);
+    if (was) LAW.cool(s, dt, lawSees(), !!inside);
+    tickEnforcers(dt, now);
     if (LAW.law(s).siren !== was) { drawSiren(); if (api.save) api.save(); }
     else if (was && now - lawT > 400) { lawT = now; drawSiren(); }
   }
@@ -2965,7 +2982,8 @@
   function arrest() {
     var LAW = window.MFLaw, MF = window.MF, where = lawHere(), by = LAW.JAILS[where].by, out = LAW.caught(s, MF, where, Date.now());
     if (!out.level) return '';
-    dropMobs(); drawSiren(); wallet();
+    dropMobs(); shots = []; drawSiren(); wallet();
+    talkBox = null; $('wTalk').hidden = true; held = {}; me.moving = false;
     var what = Object.keys(out.crimes).map(function (k) { return LAW.CRIMES[k].name + (out.crimes[k] > 1 ? ' x' + out.crimes[k] : ''); }).join(', ');
     if (!out.jail) {
       say([(where === 'redrum' ? 'a hashshashin steps out of nowhere and takes your wrist.\n' : 'an officer stops you. very politely.\n') + what + '.',
@@ -3005,6 +3023,70 @@
     else if (act === 'free') { if (L.jail.room) L.jail.until = 0; return 'sentence served: talk to the bars'; }
     drawSiren(); if (api.save) api.save();
     return 'siren ' + L.siren;
+  }
+  /* ── enforcers (law.js): the NPD in the city, hex's hashshashin on
+     redrum. called in while the siren's on, a squad per level; they hold
+     the siren while they can see you; up close they grab, from GUN_AT on
+     they shoot. once the siren's off they stand down and go ── */
+  var lawDown = false, callClock = 0, shots = [];
+  function lawSees() {
+    var LAW = window.MFLaw, solid = function (x, y) { return M.solid(world, x, y); };
+    return !inside && mobs.some(function (m) { return m.law && !m.leaving && Math.abs(m.x - me.x) + Math.abs(m.y - me.y) <= LAW.SIGHT && LAW.clearShot(solid, m.x, m.y, me.x, me.y); });
+  }
+  function tickEnforcers(dt, now) {
+    var LAW = window.MFLaw, siren = LAW.law(s).siren, zn = zoneNow();
+    if (!siren) { mobs.forEach(function (m) { if (m.law && !m.leaving) { m.leaving = now + 1500; float(m.x * TS, m.y * TS - 8, 'stand down', '#7cc8ff'); } }); return; }
+    if (zn !== 'city') return;
+    callClock += dt;
+    var have = mobs.filter(function (m) { return m.law && !m.leaving; }).length;
+    if (have >= LAW.SQUAD[siren] || mobs.length >= LAW.MAX_FIGHTERS || callClock < (have ? LAW.CALL_EVERY : 2)) return;
+    callClock = 0;
+    callIn(siren);
+  }
+  function callIn(siren) {
+    var LAW = window.MFLaw, f = LAW.enforcer(lawHere(), siren), seed = Math.floor(Math.random() * 1e9);
+    for (var tries = 0; tries < 80; tries++) {
+      var dx = Math.floor(Math.random() * 25) - 12, dy = Math.floor(Math.random() * 17) - 8, d = Math.abs(dx) + Math.abs(dy), x = me.x + dx, y = me.y + dy;
+      if (d < 8 || d > 13 || x < 0 || y < 0 || x >= world.W || y >= world.H || occupied(x, y) || world.dist[y * world.W + x] < 0) continue;
+      var m = { f: f, law: f.law, x: x, y: y, fx: x, fy: y, t: 0, moving: false, dir: 'down', step: 0, cd: 1, hurt: 0, lunge: 0,
+                speed: LAW.LAW_SPEED, look: MOB_LOOK[f.id] };
+      mobs.push(m);
+      float(x * TS + 4, y * TS - 4, '!', '#7cc8ff');
+      return m;
+    }
+    return null;
+  }
+  function lawMove(m, d, dx, dy, now) {
+    var LAW = window.MFLaw;
+    if (m.leaving) { if (now > m.leaving) m.gone = true; return; }
+    /* armed: shoot from range when there's a clear line */
+    if (m.f.armed && d > 1 && d <= LAW.RANGE && m.cd <= 0 && LAW.clearShot(function (x, y) { return M.solid(world, x, y); }, m.x, m.y, me.x, me.y)) {
+      m.dir = faceTo(dx, dy); return shoot(m, now);
+    }
+    if (d === 1) { m.dir = faceTo(dx, dy); if (m.cd <= 0) grab(m, now); return; }
+    /* armed ones keep their distance a little: no need to close past 3 */
+    if (m.f.armed && d <= 3 && m.cd > 0) return;
+    var o = chaseStep(m, me.x, me.y);
+    if (o) { m.fx = m.x; m.fy = m.y; m.x += o[0]; m.y += o[1]; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]); }
+  }
+  /* up close: a baton or a hand; a hit that lands may be the cuffs */
+  function grab(m, now) {
+    var LAW = window.MFLaw;
+    if (mobHit(m, now) && Math.random() < LAW.GRAB) {
+      float(me.x * TS - 2, me.y * TS - 14, 'CUFFED', '#7cc8ff');
+      arrest();
+    }
+  }
+  function shoot(m, now) {
+    var C = window.MFCombat, MF = window.MF, P = C.player(s, window.MFLevel), r = C.strike({ pow: m.f.gun, ref: m.f.ref, crit: 0 }, { def: P.def, ref: P.ref, soak: P.soak });
+    m.cd = 1.7; m.lunge = now + 90;
+    shots.push({ x0: m.x * TS + 8, y0: m.y * TS + 7, x1: me.x * TS + 8 + (r.hit ? 0 : (Math.random() - 0.5) * 18), y1: me.y * TS + 7 + (r.hit ? 0 : (Math.random() - 0.5) * 18), t0: now });
+    if (!r.hit) { float(me.x * TS + 2, me.y * TS - 6, 'miss', '#7cf5ff'); return; }
+    MF.hurt(s, r.dmg); hurtUntil = now + 260; jolt(200, 2); freezeUntil = now + 40;
+    burst(me.x * TS + 8, me.y * TS + 8, 5, ['#ff4f5e', '#ffe97c'], 50);
+    float(me.x * TS + 3, me.y * TS - 6, '-' + r.dmg, '#ff4f5e');
+    drawBody();
+    if (s.body.health <= 0) lose(m, now);
   }
   /* they gave up, or you went somewhere they can't follow: back in the crowd where they stand */
   function backToCrowd(m) { var n = m.civ; n.f = m.f; n.x = m.x; n.y = m.y; n.fx = m.x; n.fy = m.y; n.moving = false; n.t = 0; n.dir = m.dir; cityNpcs.push(n); }
@@ -3077,7 +3159,7 @@
       var mx = Math.round((m.moving ? m.fx + (m.x - m.fx) * m.t : m.x) * TS - cx), my = Math.round((m.moving ? m.fy + (m.y - m.fy) * m.t : m.y) * TS - cy);
       px(ctx, OUT, mx + 1, my - 6, 14, 4); px(ctx, '#3a1218', mx + 2, my - 5, 12, 2);
       /* pink: far past your level. amber: a passer-by fighting someone else, not you */
-      px(ctx, m.foe ? '#ffb02e' : m.f.tier === 'unnamed' && m.f.level > (window.MFLevel ? window.MFLevel.level(s) + 3 : 99) ? '#ff4fd8' : '#ff4f5e', mx + 2, my - 5, Math.max(1, Math.round(12 * m.f.hp / m.f.max)), 2);
+      px(ctx, m.law ? '#4f8aff' : m.foe ? '#ffb02e' : m.f.tier === 'unnamed' && m.f.level > (window.MFLevel ? window.MFLevel.level(s) + 3 : 99) ? '#ff4fd8' : '#ff4f5e', mx + 2, my - 5, Math.max(1, Math.round(12 * m.f.hp / m.f.max)), 2);
     });
     if (mobs.length || now < hurtUntil + 1500) {
       var hx = Math.round(ppx - cx), hy = Math.round(ppy - cy), MF = window.MF;
@@ -3095,6 +3177,13 @@
         ctx.strokeStyle = '#f4f6ff'; ctx.beginPath(); ctx.arc(sx, sy, 5, base - 1.3, base + 1.3); ctx.stroke();
       }
     }
+    /* gunfire: a tracer and a muzzle flash, gone in a blink */
+    shots = shots.filter(function (q) { return now - q.t0 < 110; });
+    shots.forEach(function (q) {
+      ctx.strokeStyle = 'rgba(255,233,124,' + (1 - (now - q.t0) / 110).toFixed(3) + ')'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(q.x0 - cx, q.y0 - cy); ctx.lineTo(q.x1 - cx, q.y1 - cy); ctx.stroke();
+      if (now - q.t0 < 50) px(ctx, '#fff3b0', Math.round(q.x0 - cx) - 1, Math.round(q.y0 - cy) - 1, 3, 3);
+    });
     sparks = sparks.filter(function (q) { return now - q.t0 < 260; });
     sparks.forEach(function (q) {
       var a = (now - q.t0) / 1000;
@@ -3825,5 +3914,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe }; }); }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving }; }); }, get lawSees() { return lawSees(); }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
 })();
