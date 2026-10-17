@@ -47,8 +47,11 @@
       walkStep ^= 1; drawWalk();
     }, 420);
   }
+  /* the look waits for an origin: the origin decides the body */
   function drawSlots() {
     var box = $('slots'); box.innerHTML = '';
+    $('lookWait').hidden = !!origin; box.hidden = !origin; $('avRand').hidden = !origin;
+    if (!origin) return;
     A.slots(look).forEach(function (sl) {
       var row = document.createElement('div'), l = document.createElement('span'), v = document.createElement('span');
       row.className = 'slot'; l.className = 'l'; l.textContent = sl.label; v.className = 'v';
@@ -77,7 +80,9 @@
       b.addEventListener('click', function () {
         var was = origin; origin = id;
         /* the origin decides the body: an ape, an android, a human; a product comes stamped */
-        look = A.normalize(look, id);
+        /* the first pick deals a fresh look for that body; after that, a
+           change of origin keeps what it can of the one they made */
+        look = was ? A.normalize(look, id) : A.random(null, id);
         if (id === 'product' && was !== 'product' && look.marks === 'none') look.marks = 'barcode';
         drawOrigins(); drawSlots(); drawFace();
       });

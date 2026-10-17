@@ -290,8 +290,10 @@
      (cold), discount street food (street), start with more joules
      (joules), offer a power source (power). level.js start() applies
      the one-off parts at Chippin' In ───────────────────────────────── */
+  /* sapien learns fast while it's all new (xp until level xpTo), then
+     only a little faster: the easy start, without outgrowing everyone */
   var ORIGINS = {
-    sapien:    { xp: 1.1 },
+    sapien:    { xp: 1.2, xpTo: 10, xpAfter: 1.05 },
     simian:    { start: { atk: 5 }, carry: 15 },
     ai:        { cold: 1, max: { int: 10 }, power: ['ade', 'ibc'] },
     novan:     { start: { stl: 5 }, street: 0.8 },

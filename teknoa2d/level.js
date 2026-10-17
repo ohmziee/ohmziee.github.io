@@ -95,7 +95,7 @@
     if (!TRAITS[t]) throw new Error('unknown trait: ' + t);
     ready(s);
     var fx = root.MF && root.MF.originFx ? root.MF.originFx(s) : {};
-    var rate = root.MFLevel ? root.MFLevel.EXP_RATE : EXP_RATE, raw = src.xp(d) * (fx.xp || 1), n = raw > 0 ? Math.max(1, Math.floor(raw * rate)) : 0, before = level(s), tb = traitLevel(s, t);
+    var rate = root.MFLevel ? root.MFLevel.EXP_RATE : EXP_RATE, raw = src.xp(d) * (fx.xpTo && level(s) >= fx.xpTo ? fx.xpAfter || 1 : fx.xp || 1), n = raw > 0 ? Math.max(1, Math.floor(raw * rate)) : 0, before = level(s), tb = traitLevel(s, t);
     s.xp.total = Math.max(0, Math.floor(+s.xp.total || 0)) + n;
     s.xp.by[source] = (Math.floor(+s.xp.by[source]) || 0) + n;
     s.skills[t] = (Math.floor(+s.skills[t]) || 0) + n;
