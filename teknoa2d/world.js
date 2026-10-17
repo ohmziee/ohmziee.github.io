@@ -346,6 +346,14 @@
         'NO SIGN\njust a door, and a light under it.\nsomebody inside is laughing at somebody else\'s luck.', true);
       walkIn('backroom');
     }
+    /* the lockup: where hex's hashshashin hold anyone who makes trouble on
+       redrum (law.js JAILS). PLACEHOLDER words */
+    var lockAt = clearSpot(R0, 3, 2, 5, 4);
+    if (lockAt) {
+      landmark(R0, 'lockup', 'the lockup', lockAt[0], lockAt[1], 3, 2,
+        'a steel door, no handle on this side.\nsomeone painted a crescent on it. small.', true);
+      walkIn('lockup');
+    }
     /* someone on the street, on the nearest free tile to a spot in the district */
     function standIn(d, dx, dy) {
       for (var rr = 0; rr < 10; rr++) for (var oy = -rr; oy <= rr; oy++) for (var ox = -rr; ox <= rr; ox++) {
@@ -841,7 +849,7 @@
       '#............#',
       '######==######'],
       things: [
-        { id: 'bars', x: 1, y: 3, w: 4, h: 1, text: 'a holding cell. empty. spotless.\nthe cleanest cell in teknoa.' },
+        { id: 'bars', x: 1, y: 3, w: 4, h: 1, cell: true, text: 'a holding cell. empty. spotless.\nthe cleanest cell in teknoa.' },
         { id: 'board', x: 7, y: 0, w: 2, h: 1, text: 'WANTED: nobody.\nhaven has no crime.' },
         { id: 'desk', x: 8, y: 2, w: 3, h: 1, text: 'the front desk. a bell, a pen on a chain,\na sign: TAKE A NUMBER. there are no numbers.' },
         { id: 'tv', x: 6, y: 4, w: 1, h: 1, text: 'security monitors. every screen shows this room.\none of them shows it a second late.' },
@@ -937,6 +945,22 @@
       people: [
         { x: 5, y: 1, look: 'local', name: 'TEA MASTER', still: true, lines: ['the house blend steadies the hands.\nwhat\'s in it is between me and the leaves.', 'interns from the labs drink it before exams.\nthey never say which exams.'] },
         { x: 5, y: 4, look: 'android', lines: ['i cannot taste the tea.\ni come for the steam.'] }] },
+    /* the lockup: hex's hashshashin keep redrum's peace here. PLACEHOLDER lines */
+    lockup: { d: 'redrum', map: [
+      '############',
+      '#...#......#',
+      '#...#......#',
+      '#...#......#',
+      '#..........#',
+      '#..........#',
+      '#..........#',
+      '#####==#####'],
+      things: [
+        { id: 'bars', x: 1, y: 3, w: 3, h: 1, cell: true, text: 'a cage of welded rebar.\nit\'s held better men than you. it says so, scratched in.' },
+        { id: 'desk', x: 7, y: 1, w: 3, h: 1, text: 'a desk made of a door.\na ledger, a knife holding it open.' },
+        { id: 'bench', x: 8, y: 5, w: 3, h: 1, text: 'a bench. the hashshashin don\'t sit on it.\nthey don\'t sit.' }],
+      people: [
+        { x: 8, y: 3, look: 'merc', name: 'HASHSHASHIN', still: true, lines: ['the captain\'s gone. she keeps the peace now.\nwe keep it for her.', 'make trouble on redrum, you sit in the cage.\nthat\'s the whole law.'] }] },
     /* the back room: redrum's own casino. no door, no dress code, small change */
     backroom: { d: 'redrum', house: 'dive', map: [
       '############',
@@ -1034,7 +1058,7 @@
     def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
       marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), kitchen: !!(f.kitchen && !ROOMS.hasOwnProperty(id)), chest: !!(f.chest && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
-                   game: f.game, house: f.game ? f.house || def.house : undefined, vend: f.vend });
+                   game: f.game, house: f.game ? f.house || def.house : undefined, vend: f.vend, cell: !!f.cell });
     });
     (def.people || []).forEach(function (p, i) {
       npcs.push({ id: id + '-' + i, x: p.x, y: p.y, dir: p.dir || 'down', look: p.look, seed: p.seed, lines: p.lines, shop: p.shop, name: p.name, still: !!p.still, roam: 2 });

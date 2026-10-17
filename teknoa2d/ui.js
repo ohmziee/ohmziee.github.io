@@ -496,6 +496,10 @@
       return devMsg('spawned: ' + window.MFWorld.devFoe(who));
     }
     else if (act === 'peace') s.dev.peace = !s.dev.peace;
+    else if (act === 'siren' || act === 'siren0' || act === 'caught' || act === 'free') {
+      if (!(window.MFWorld && window.MFWorld.active)) return devMsg('open the street first.');
+      return devMsg(window.MFWorld.devLaw(act));
+    }
     else if (act === 'tp') {
       var p = $('devTo')._places[+$('devTo').value];
       if (!p) return;

@@ -332,6 +332,15 @@ a{color:var(--lavender)}
 .wbody .bf{color:#7cffb2}
 .wbody .tm{color:#ffe97c;text-align:right}
 .wbody .bf:empty{display:none}
+.wbody .siren{display:flex;gap:2px}
+.wbody .siren[hidden]{display:none}
+.wbody .siren i{display:block;width:7px;height:7px;border:1px solid #3a3150;background:#141a2e}
+.wbody .siren i.on{background:#ff3a4a;border-color:#ff9da6;animation:siren 0.5s steps(1) infinite}
+.wbody .siren i.on:nth-child(even){animation-delay:.25s}
+.wbody .siren.cooling i.on{animation:sirenfade 1.2s ease-in-out infinite}
+@keyframes siren{0%{background:#ff3a4a;border-color:#ff9da6}50%{background:#2a6aff;border-color:#9dc0ff}}
+@keyframes sirenfade{0%,100%{opacity:1}50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.wbody .siren i.on,.wbody .siren.cooling i.on{animation:none}}
 .wbody .alert{pointer-events:auto;cursor:pointer;font:inherit;color:#0b0d1a;background:#ffd36a;border:2px solid #0b0d1a;border-radius:3px;padding:.2rem .35rem}
 .wbody .alert.crit{background:#ff4f5e;color:#fff;animation:critpulse 1s ease-in-out infinite}
 .wbody .alert[hidden]{display:none}

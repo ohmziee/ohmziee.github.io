@@ -18,6 +18,17 @@
              novan). bystanders: false means they're only after you
    brave:    those who hit back when a hostile goes for them; the rest run,
              anyone within FLEE tiles of a hostile that would go for them
+
+   the siren (s.law): how badly the law wants you, 0 to 5
+   commit:   a crime counts only if someone saw it (a passer-by within
+             WITNESS tiles). it sets the siren to at least the crime's level,
+             and the heat it adds pushes it up a level every HEAT_STEP
+   cool:     out of sight of the law the siren winds down, one level per
+             COOL[level] seconds (HIDE times faster indoors)
+   caught:   at 1-2 you pay the fine for what you did (all you have, if it
+             comes to that); at 3+ it's a cell: JAIL[level] real minutes,
+             bail to walk out early, weapons taken. nova city's cell is the
+             NCPD's; on redrum, hex's hashshashin hold you in the lockup
    PLACEHOLDER numbers, all of them. */
 (function (root) {
   'use strict';
@@ -60,6 +71,77 @@
     return !!b && b.bystanders !== false && (b.never || []).indexOf(seen) < 0;
   }
   function brave(n) { return !!(n && BRAVE[n.kind]); }
+
+  var CRIMES = {
+    assault:  { name: 'assault',            level: 1, heat: 1, fine: 40 },
+    theft:    { name: 'theft',              level: 1, heat: 1, fine: 25 },
+    knockout: { name: 'aggravated assault', level: 2, heat: 2, fine: 150 },
+    murder:   { name: 'murder',             level: 3, heat: 4, fine: 600 }
+  };
+  var HEAT_STEP = 4, WITNESS = 8, COOL = [0, 45, 60, 90, 120, 150], HIDE = 2, MAX_SIREN = 5;
+  var JAIL = { 3: { mins: 3, bail: 1500 }, 4: { mins: 5, bail: 4000 }, 5: { mins: 8, bail: 10000 } };
+  var JAILS = { city: { room: 'ncpd', cell: { x: 2, y: 1 }, by: 'NCPD' }, redrum: { room: 'lockup', cell: { x: 2, y: 1 }, by: 'HASHSHASHIN' } };
+  function fresh() { return { siren: 0, heat: 0, fine: 0, cool: 0, crimes: {}, jail: { until: 0, bail: 0, room: '' } }; }
+  function law(s) { if (!s.law || typeof s.law !== 'object') s.law = fresh(); return s.law; }
+  /* a crime, if anyone saw it: the siren it leaves you at */
+  function commit(s, crime, seen) {
+    var c = CRIMES[crime], L = law(s);
+    if (!c || !seen) return L.siren;
+    L.heat += c.heat; L.fine += c.fine; L.cool = 0;
+    L.crimes[crime] = (L.crimes[crime] || 0) + 1;
+    L.siren = Math.min(MAX_SIREN, Math.max(L.siren, c.level, Math.ceil(L.heat / HEAT_STEP)));
+    return L.siren;
+  }
+  function clear(L) { L.siren = 0; L.heat = 0; L.fine = 0; L.cool = 0; L.crimes = {}; }
+  /* time passing. seen: the law has eyes on you (the siren holds) */
+  function cool(s, secs, seen, indoors) {
+    var L = law(s);
+    if (!L.siren) return 0;
+    if (seen) { L.cool = 0; return L.siren; }
+    L.cool += Math.max(0, +secs || 0) * (indoors ? HIDE : 1);
+    if (L.cool >= COOL[L.siren]) { L.cool = 0; L.siren--; if (!L.siren) clear(L); }
+    return L.siren;
+  }
+  /* caught, by the law of `where` (city or redrum) at time `now` (ms) */
+  function caught(s, MF, where, now) {
+    var L = law(s), lv = L.siren, out = { level: lv, fine: 0, owed: 0, jail: null, took: {}, crimes: L.crimes };
+    if (!lv) return out;
+    if (lv < 3) {
+      out.fine = Math.min(MF.joules(s), L.fine); out.owed = L.fine - out.fine;
+      MF.spend(s, out.fine);
+    } else {
+      var C = root.MFCombat, j = JAIL[lv], at = JAILS[where] || JAILS.city;
+      if (!s.items) s.items = {};
+      Object.keys(C ? C.WEAPONS : {}).forEach(function (k) { if (C.isWeapon(k) && s.items[k]) { out.took[k] = s.items[k]; delete s.items[k]; if (s.wear) delete s.wear[k]; } });
+      s.equip = '';
+      L.jail = { until: now + j.mins * 60000, bail: Math.max(j.bail, L.fine * 2), room: at.room };
+      out.jail = L.jail;
+    }
+    clear(L);
+    return out;
+  }
+  function jailed(s, now) { var j = law(s).jail; return j && j.room && j.until > now ? j : null; }
+  /* the sentence is up (or never was): out you go */
+  function served(s, now) { var j = law(s).jail; return !!(j && j.room && j.until <= now); }
+  function bail(s, MF, now) {
+    var j = jailed(s, now);
+    if (!j) return { ok: false, why: 'you\'re free to go' };
+    if (!MF.spend(s, j.bail)) return { ok: false, why: 'bail is ' + MF.fmtJ(j.bail) };
+    j.until = 0;
+    return { ok: true };
+  }
+  function release(s) { law(s).jail = { until: 0, bail: 0, room: '' }; }
+  /* a save's s.law, whatever state it's in */
+  function tidy(o) {
+    var L = fresh(), n = function (v, top) { v = Math.floor(+v || 0); return Math.max(0, Math.min(top, v)); };
+    if (!o || typeof o !== 'object') return L;
+    L.siren = n(o.siren, MAX_SIREN); L.heat = n(o.heat, 999); L.fine = n(o.fine, 1e6); L.cool = Math.max(0, +o.cool || 0);
+    Object.keys(CRIMES).forEach(function (k) { if (o.crimes && o.crimes[k] > 0) L.crimes[k] = n(o.crimes[k], 999); });
+    var j = o.jail;
+    if (j && typeof j === 'object' && typeof j.room === 'string' && (j.room === JAILS.city.room || j.room === JAILS.redrum.room)) L.jail = { until: Math.max(0, +j.until || 0), bail: n(j.bail, 1e6), room: j.room };
+    if (!L.siren) clear(L);
+    return L;
+  }
   function pockets(n, rng) {
     rng = rng || Math.random;
     var b = CIV[n.kind] || CIV.novan, out = { joules: Math.round(b.joules[0] + rng() * (b.joules[1] - b.joules[0])), items: {} };
@@ -81,5 +163,7 @@
   function attackable(n) { return !!(n && n.pool && n.kind && !n.still && !n.store && !n.shop && !n.vend && !n.scene && !n.name); }
 
   root.MFLaw = { CIV: CIV, POCKET: POCKET, DOWN_SECS: DOWN_SECS, BODY_SECS: BODY_SECS, RESPAWN_SECS: RESPAWN_SECS, MAX_FIGHTERS: MAX_FIGHTERS, SEEN: SEEN, BRAVE: BRAVE, FLEE: FLEE,
-                 civ: civ, dies: dies, fall: fall, preys: preys, brave: brave, pockets: pockets, empty: empty, loot: loot, attackable: attackable };
+                 civ: civ, dies: dies, fall: fall, preys: preys, brave: brave,
+                 CRIMES: CRIMES, HEAT_STEP: HEAT_STEP, WITNESS: WITNESS, COOL: COOL, HIDE: HIDE, JAIL: JAIL, JAILS: JAILS,
+                 law: law, commit: commit, cool: cool, caught: caught, jailed: jailed, served: served, bail: bail, release: release, tidy: tidy, pockets: pockets, empty: empty, loot: loot, attackable: attackable };
 })(typeof window !== 'undefined' ? window : globalThis);

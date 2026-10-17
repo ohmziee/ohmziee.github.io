@@ -36,6 +36,7 @@
              treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
              inbox: [],                                      /* letters on the phone: { id, from, day, title, body, read } */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
+             law: { siren: 0, heat: 0, fine: 0, cool: 0, crimes: {}, jail: { until: 0, bail: 0, room: '' } },  /* how badly the law wants you, and any cell you're in (law.js) */
              body: { food: 100, drink: 100, health: 100, sta: 100, int: 100, buff: '', buffT: 0, rested: -1 },  /* hunger, thirst, health, stamina, intelligence, a dish's perk and its seconds left, the nova day you last slept */
              core: { hp: 0, sta: 0, int: 0 },                /* level-up picks: each one raises that maximum by CORE_STEP */
              xp: { total: 0, by: {} },                       /* experience, and how much came from each source (level.js) */
@@ -207,6 +208,7 @@
     /* sources this build doesn't know are kept: a newer build may */
     var xb = s.xp.by && typeof s.xp.by === 'object' ? s.xp.by : {};
     s.xp = { total: Math.max(0, Math.floor(+s.xp.total || 0)), by: counts(xb) };
+    if (root.MFLaw) s.law = root.MFLaw.tidy(s.law);
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
