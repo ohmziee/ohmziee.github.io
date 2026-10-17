@@ -795,6 +795,8 @@
   };
   var STEP = { down: ['....PPP..PPP....', '....PPP...PP....', '....kkk...kk....'], up: ['....PPP..PPP....', '....PP...PPP....', '....kk...kkk....'],
                left: ['.....PPPPP......', '....PP..PP......', '....kk...kk.....'] };
+  /* the other foot: with STEP that's stand, one foot, stand, the other */
+  var STEP2 = { down: STEP.up, up: STEP.down, left: ['.....PPPPP......', '......PPP.......', '......kkk.......'] };
   var LOOKS = {
     /* magenta on the left, violet on the right, like her portrait */
     hex:     { H: '#ff4fd8', h: '#b14cff', S: '#e8b48a', C: '#1a1a22', P: '#2a2a3a', k: '#0b0b10', A: '#c8ccd8', hair: 'hex', acc: 'choker' },
@@ -913,13 +915,16 @@
     edge.forEach(function (e) { px(g, OUT, e[0], e[1]); });
   }
   var spriteCache = {};
+  /* step: 0 standing, 1 and 2 the two walking feet, 3 breathing out (head
+     and shoulders down a pixel) */
   function sprite(look, dir, step) {
     var key = JSON.stringify(look) + dir + step;
     if (spriteCache[key]) return spriteCache[key];
     var c = document.createElement('canvas'); c.width = c.height = TS;
     var g = c.getContext('2d'), flip = dir === 'right', rows = BODY[flip ? 'left' : dir].slice();
-    if (step) { var st = STEP[flip ? 'left' : dir]; rows[13] = st[0]; rows[14] = st[1]; rows[15] = st[2]; }
+    if (step === 1 || step === 2) { var st = (step === 1 ? STEP : STEP2)[flip ? 'left' : dir]; rows[13] = st[0]; rows[14] = st[1]; rows[15] = st[2]; }
     rows = styled(rows, flip ? 'left' : dir, look);
+    if (step === 3) rows = ['................'].concat(rows.slice(0, 12), rows.slice(13));
     var colours = { H: look.H, h: look.h || look.H, B: look.B || look.H, S: look.S, f: shade(look.S || '#c88a64', 0.62), r: '#d48a8a', G: '#7cf5ff', E: '#0b0d1a', m: '#7a3a3a', C: look.C, c: look.c || look.C, E: look.E || '#0b0d1a', m: look.m || '#7a3a3a',
                     A: look.A || '#d8dce8', P: look.P || '#2a2f4a', k: look.k || '#111' };
     rows.forEach(function (r, y) {
@@ -1332,7 +1337,7 @@
     if (!r) return;
     inside = { id: id, place: !!r.place };
     world = r; deco = decorate(r);
-    npcs = r.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; return c; });
+    npcs = r.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; c.step = 0; return c; });
     me.x = at ? at.x : r.spawn.x; me.y = at ? at.y : r.spawn.y; me.dir = at ? at.d || 'up' : r.spawn.dir;
     me.moving = false; held = {};
     /* an apartment is private: off the street's channel until they come back out */
@@ -2516,7 +2521,7 @@
         var nx = n.x + d[0], ny = n.y + d[1];
         n.dir = k;
         if (Math.abs(nx - n.hx) > n.roam || Math.abs(ny - n.hy) > n.roam || occupied(nx, ny)) return;
-        n.fx = n.x; n.fy = n.y; n.x = nx; n.y = ny; n.moving = true; n.t = 0;
+        n.fx = n.x; n.fy = n.y; n.x = nx; n.y = ny; n.moving = true; n.t = 0; n.step ^= 1;
       });
     }
   }
@@ -2981,6 +2986,33 @@
     cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
   }
 
+  /* ── a little bubble over whatever you're facing that A would use:
+     dots for someone to talk to, an A for a thing ── */
+  function usable(tx, ty) {
+    if (npcs.some(function (n) { return n.x === tx && n.y === ty; })) return 'talk';
+    if (L && (!inside || inside.place) && L.list().some(function (o) { return o.x === tx && o.y === ty; })) return 'talk';
+    if (world.signs.some(function (sg) { return sg.x === tx && sg.y === ty; })) return 'use';
+    var m = markAt(tx, ty);
+    if (m && (m.shop || m.store || m.home || (m.room && !inside) || m.game || m.vend || m.fire || m.fountain || m.shut || m.text
+      || (inside && (m.kitchen || m.chest)))) return 'use';
+    return '';
+  }
+  var GLYPH_A = ['.#.', '#.#', '###', '#.#'];
+  function drawPrompt(now, cx, cy) {
+    if (me.moving || talkBox || phone || mini || counter || table || fainting) return;
+    var d = DIRS[me.dir], tx = me.x + d[0], ty = me.y + d[1], what = usable(tx, ty);
+    if (!what) return;
+    var bx = tx * TS - cx + 4, by = ty * TS - cy - 12 - (Math.floor(now / 400) % 2);
+    px(ctx, OUT, bx, by, 9, 8); px(ctx, '#f4f6ff', bx + 1, by + 1, 7, 6);
+    px(ctx, OUT, bx + 3, by + 8, 3, 1); px(ctx, '#f4f6ff', bx + 4, by + 7, 1, 1);
+    if (what === 'talk') { px(ctx, OUT, bx + 2, by + 4, 1, 1); px(ctx, OUT, bx + 4, by + 4, 1, 1); px(ctx, OUT, bx + 6, by + 4, 1, 1); }
+    else GLYPH_A.forEach(function (r, yy) { for (var xx = 0; xx < 3; xx++) if (r.charAt(xx) === '#') px(ctx, OUT, bx + 3 + xx, by + 2 + yy, 1, 1); });
+  }
+
+  /* which frame: a foot at a time while walking, a slow breath standing */
+  function walkFrame(moving, t, foot) { return moving && t > 0.25 && t < 0.75 ? (foot ? 1 : 2) : 0; }
+  function idleFrame(now, seed) { return (now + seed * 397) % 2600 < 420 ? 3 : 0; }
+
   function draw(now) {
     var wave = Math.floor(now / 380) % 4;
     var ppx = (me.moving ? me.fx + (me.x - me.fx) * me.t : me.x) * TS, ppy = (me.moving ? me.fy + (me.y - me.fy) * me.t : me.y) * TS;
@@ -3055,12 +3087,12 @@
     /* people, back to front */
     var who = npcs.map(function (n) {
       var nx = (n.moving ? n.fx + (n.x - n.fx) * n.t : n.x) * TS, ny = (n.moving ? n.fy + (n.y - n.fy) * n.t : n.y) * TS;
-      return { x: nx, y: ny, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.moving && n.t > 0.25 && n.t < 0.75 ? 1 : 0) };
+      return { x: nx, y: ny, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.moving ? walkFrame(true, n.t, n.step) : idleFrame(now, n.hx * 7 + n.hy)) };
     });
     mobs.forEach(function (m) {
       var mx = (m.moving ? m.fx + (m.x - m.fx) * m.t : m.x) * TS, my = (m.moving ? m.fy + (m.y - m.fy) * m.t : m.y) * TS;
       if (now < m.lunge) { var ld = DIRS[m.dir]; mx += ld[0] * 3; my += ld[1] * 3; }
-      who.push({ x: mx, y: my, img: sprite(m.look, m.dir, m.moving && m.t > 0.25 && m.t < 0.75 ? 1 : 0), mob: m });
+      who.push({ x: mx, y: my, img: sprite(m.look, m.dir, walkFrame(m.moving, m.t, m.step)), mob: m });
     });
     /* trees, so you walk behind a canopy and in front of a trunk */
     for (y = y0; y <= y0 + VH + 1 && y < world.H; y++) for (x = Math.max(0, x0 - 1); x <= x0 + VW + 1 && x < world.W; x++) {
@@ -3069,11 +3101,11 @@
       var th = hash(x + 101, y + 57), tv = Math.floor(th * 40);
       who.push({ x: x * TS + ((tv >> 3) % 3) - 1, y: y * TS - 0.5, tree: treeCanvas(world.dist[tk], tv % 5 + 5 * ((tv >> 2) & 1)) });
     }
-    who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.sail ? 0 : me.moving && me.t > 0.25 && me.t < 0.75 ? 1 : 0), me: 1, boat: me.sail });
+    who.push({ x: ppx, y: ppy, img: sprite(playerLook(), me.dir, me.sail ? 0 : me.moving ? walkFrame(true, me.t, me.step) : idleFrame(now, 0)), me: 1, boat: me.sail });
     if (L && (!inside || inside.place)) L.list().forEach(function (o) {
       var ox = (o.t < 1 ? o.fx + (o.x - o.fx) * o.t : o.x) * TS, oy = (o.t < 1 ? o.fy + (o.y - o.fy) * o.t : o.y) * TS;
       if (ox - cx < -TS || oy - cy < -TS || ox - cx > VW * TS || oy - cy > VH * TS) return;
-      who.push({ x: ox, y: oy, img: sprite(lookOf(o.look), o.dir, o.boat ? 0 : o.t > 0.25 && o.t < 0.75 ? 1 : 0), them: 1, boat: o.boat });
+      who.push({ x: ox, y: oy, img: sprite(lookOf(o.look), o.dir, o.boat ? 0 : o.t < 1 ? walkFrame(true, o.t, (o.x + o.y) & 1) : idleFrame(now, o.x * 3 + o.y)), them: 1, boat: o.boat });
     });
     who.sort(function (a, b) { return a.y - b.y; });
     who.forEach(function (p) {
@@ -3109,6 +3141,7 @@
     ctx.fillStyle = skyTint(nc); ctx.fillRect(0, 0, VW * TS, VH * TS);
     if (dk > 0) night(dk, cx, cy, now, ppx, ppy);
     drawAmbient(now, cx, cy, true);
+    drawPrompt(now, cx, cy);
     drawFight(cx, cy, now, ppx, ppy);
     ctx.fillStyle = 'rgba(159,140,255,.3)';
     var drops = Math.round(VW * VH / 10);
@@ -3192,7 +3225,7 @@
       canvas = $('wCanvas');
       fit();
       window.addEventListener('resize', function () { if (active) fit(); });
-      npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; return c; });
+      npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; c.step = 0; return c; });
       pad();
       counterButtons();
       tableButtons();
