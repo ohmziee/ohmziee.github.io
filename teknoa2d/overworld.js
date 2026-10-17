@@ -50,7 +50,9 @@
      as one building. m says which sides matter for this tile (1 north,
      2 east, 4 south, 8 west): for roads and buildings, the sides that are
      more of the same; for water and bridges, the sides that are land or
-     water. */
+     water. 16/32/64/128 (NE, SE, SW, NW) mark an inside corner: both
+     sides next to it match but the diagonal doesn't, so the kerb, roof
+     outline or grass edge has a notch to close. */
   var OUT = '#0b0d1a';
   function drawTile(g, t, di, v, m, wave, rv, door) {
     var p = pal(di), i;
@@ -136,6 +138,11 @@
       if (!S) { px(g, rDk, 0, 13, TS, 1); px(g, p.line, 0, 14, TS, 1); px(g, kDk, 0, 15, TS, 1); }
       if (!E) { px(g, rDk, 13, 0, 1, TS); px(g, p.line, 14, 0, 1, TS); px(g, kDk, 15, 0, 1, TS); }
       if (!Wd) { px(g, kLt, 0, 0, 1, TS); px(g, p.line, 1, 0, 1, TS); px(g, rDk, 2, 0, 1, TS); }
+      /* inside corners: the two kerbs meeting here, joined up */
+      if (m & 16) { px(g, rDk, 13, 0, 3, 3); px(g, p.line, 14, 0, 2, 2); px(g, kDk, 15, 0); }
+      if (m & 32) { px(g, rDk, 13, 13, 3, 3); px(g, p.line, 14, 14, 2, 2); px(g, kDk, 15, 15); }
+      if (m & 64) { px(g, rDk, 0, 13, 3, 3); px(g, p.line, 0, 14, 2, 2); px(g, kDk, 0, 15); }
+      if (m & 128) { px(g, rDk, 0, 0, 3, 3); px(g, p.line, 0, 0, 2, 2); px(g, kLt, 0, 0); }
       return;
     }
     if (t === T.GRASS) {
@@ -144,6 +151,8 @@
       var gEdge = shade(p.grass, 0.65);
       if (N) px(g, gEdge, 0, 0, TS, 1); if (S) px(g, gEdge, 0, 15, TS, 1);
       if (E) px(g, gEdge, 15, 0, 1, TS); if (Wd) px(g, gEdge, 0, 0, 1, TS);
+      if (m & 16) px(g, gEdge, 15, 0); if (m & 32) px(g, gEdge, 15, 15);
+      if (m & 64) px(g, gEdge, 0, 15); if (m & 128) px(g, gEdge, 0, 0);
       /* tufts: little ^^ pairs on a grid, the way the old games did it */
       (v & 1 ? [[2, 3], [10, 10]] : [[10, 2], [3, 10]]).forEach(function (c) {
         px(g, p.leaf, c[0], c[1] + 1); px(g, p.leaf, c[0] + 1, c[1]); px(g, p.leaf, c[0] + 2, c[1] + 1);
@@ -188,6 +197,8 @@
         if (!N) { px(g, OUT, 0, 0, TS, 1); px(g, rLit, 0, 1, TS, 1); }
         if (!E) px(g, OUT, 15, 0, 1, TS);
         if (!Wd) px(g, OUT, 0, 0, 1, TS);
+        if (m & 16) px(g, OUT, 15, 0); if (m & 32) px(g, OUT, 15, 15);
+        if (m & 64) px(g, OUT, 0, 15); if (m & 128) px(g, OUT, 0, 0);
         return;
       }
       /* the front: eave shadow, windows in frames, maybe the door */
@@ -2639,6 +2650,50 @@
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  /* ── the shoreline, rounded: tiles meet the water on a grid, so the coast
+     comes out in stair steps. land jutting into the water gets its corner
+     washed away, and water tucked into the land gets its corner filled in,
+     each with the foam running along the cut ── */
+  var CORNER = [[1, -1, 0, 1], [1, 1, 1, 2], [-1, 1, 2, 3], [-1, -1, 3, 0]];  /* NE SE SW NW: diagonal, the two sides */
+  var SIDE = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  function landBase(t, di) {
+    var p = pal(di);
+    return t === T.SAND ? '#76664a' : t === T.GRASS || t === T.TREE ? p.grass : t === T.GROUND || t === T.STALL ? p.ground : t === T.MAINLAND ? '#14301c' : t === T.ROAD ? p.road : null;
+  }
+  function seaOf(t) { return t === T.DEEP ? '#0a1834' : '#123563'; }
+  /* a triangle in corner c of the tile at (sx, sy): pixels within n of the corner */
+  function wedge(sx, sy, c, n, col, edge) {
+    for (var i = 0; i <= n; i++) {
+      var len = n - i, ex = c === 0 || c === 1, ey = c === 1 || c === 2;
+      var rx = ex ? sx + TS - 1 - i : sx + i, ry = ey ? sy + TS - len : sy;
+      if (len > 0) px(ctx, col, rx, ry, 1, len);
+      if (edge) px(ctx, edge, rx, ey ? ry - 1 : sy + len, 1, 1);
+    }
+  }
+  var FOAM = '#6fb4e0', CUT = 4;
+  function shores(x0, y0, cx, cy, at, wet) {
+    for (var y = y0; y <= y0 + VH && y < world.H; y++) for (var x = x0; x <= x0 + VW && x < world.W; x++) {
+      var k = y * world.W + x, t = world.tile[k], sx = x * TS - cx, sy = y * TS - cy;
+      for (var c = 0; c < 4; c++) {
+        var C = CORNER[c], a = SIDE[C[2]], b = SIDE[C[3]];
+        var ta = at(x + a[0], y + a[1]), tb = at(x + b[0], y + b[1]), td = at(x + C[0], y + C[1]);
+        if (wet(t)) {
+          /* water with land on both sides of this corner: fill it in */
+          var lc = landBase(ta, world.dist[(y + a[1]) * world.W + x + a[0]]);
+          if (!wet(ta) && !wet(tb) && !wet(td) && lc && landBase(tb, 0) && landBase(td, 0)) wedge(sx, sy, c, CUT, lc, FOAM);
+        } else if (landBase(t, world.dist[k]) && wet(ta) && wet(tb) && wet(td)) {
+          /* land poking out: wash the corner away, and stop the
+             neighbours' foam where the new edge takes over */
+          var sea = seaOf(td);
+          wedge(sx, sy, c, CUT, sea, FOAM);
+          var ex = c === 0 || c === 1, ey = c === 1 || c === 2;
+          px(ctx, sea, ex ? sx + TS - CUT : sx, ey ? sy + TS : sy - 1, CUT, 1);
+          px(ctx, sea, ex ? sx + TS : sx - 1, ey ? sy + TS - CUT : sy, 1, CUT);
+        }
+      }
+    }
+  }
+
   function draw(now) {
     var wave = Math.floor(now / 600) % 2;
     var ppx = (me.moving ? me.fx + (me.x - me.fx) * me.t : me.x) * TS, ppy = (me.moving ? me.fy + (me.y - me.fy) * me.t : me.y) * TS;
@@ -2664,12 +2719,22 @@
         else if (t === T.BRIDGE) hit = wet(o);
         if (hit) m |= 1 << b;
       }
+      if (t === T.BUILDING || t === T.ROAD || t === T.GRASS) {
+        var same = t === T.GRASS ? 0 : 1, dg = [at(x + 1, y - 1), at(x + 1, y + 1), at(x - 1, y + 1), at(x - 1, y - 1)];
+        for (var c = 0; c < 4; c++) {
+          if (((m >> c) & 1) !== same || ((m >> ((c + 1) % 4)) & 1) !== same) continue;
+          var od = dg[c], dHit = t === T.BUILDING ? od !== T.BUILDING : t === T.ROAD ? od !== T.ROAD && od !== T.BRIDGE
+            : od !== T.GRASS && od !== T.TREE && !wet(od) && od !== T.DEEP;
+          if (dHit) m |= 16 << c;
+        }
+      }
       if (t === T.BUILDING) { rv = deco.roof[k]; dr = deco.door[k]; }
       else if (t !== T.STALL && t !== T.ROAD && t !== T.GROUND) v &= 7;
       var w = wet(t) ? wave : 0;
       var key = t + '.' + di + '.' + v + '.' + m + '.' + w + '.' + rv + dr;
       ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
     }
+    if (!inside) shores(x0, y0, cx, cy, at, wet);
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy < 0) return;
       ctx.drawImage(markCanvas(m), m.x * TS - cx, m.y * TS - cy);
