@@ -3802,9 +3802,9 @@
           if (dHit) m |= 16 << c;
         }
       }
-      /* redrum's wide roads: a centre line between the lanes, a zebra
-         crossing where a road meets a junction */
-      if (t === T.ROAD && di >= 0 && D[di].style === 'island') m |= laneMarks(x, y, at) | (hash(x * 5 + 1, y * 3) > 0.25 ? 16384 : 0);
+      /* the wide roads: a centre line between the lanes, a zebra crossing
+         where a road meets a junction */
+      if (t === T.ROAD && di >= 0) m |=laneMarks(x, y, at) | (hash(x * 5 + 1, y * 3) > 0.25 ? 16384 : 0);
       if (t === T.BUILDING) {
         rv = deco.roof[k]; dr = deco.door[k];
         if (storey(x, y)) m = (m & 15) | 256;
