@@ -1537,7 +1537,7 @@
      warning when something's low. the full picture is the phone's ID › VITALS */
   function drawBody() {
     var b = s.body, c = novaNow();
-    $('wTime').textContent = c.text + ' · ' + tempNow() + '°C';
+    $('wTime').textContent = c.text + ' · ' + WEATHER[weatherAt(c)].icon + ' ' + tempNow() + '°C';
     $('wBuff').textContent = b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
     var al = alerts(), crit = al.some(function (a) { return a.crit; }), btn = $('wAlert');
     btn.hidden = !al.length;
@@ -2986,6 +2986,80 @@
     cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
   }
 
+  /* ── weather: the same sky for everyone, picked per six nova hours from
+     the day, so it lasts a while and anyone online sees the same rain.
+     the amounts on screen ease toward it, so a shower rolls in and off.
+     fog only forms in the morning. s.dev.weather forces one ── */
+  var WEATHER = {
+    clear:   { icon: '☀', rain: 0, fog: 0, dim: 0 },
+    drizzle: { icon: '🌦', rain: 0.35, fog: 0, dim: 0.04 },
+    rain:    { icon: '🌧', rain: 0.8, fog: 0, dim: 0.1 },
+    storm:   { icon: '⛈', rain: 1.3, fog: 0, dim: 0.18, bolts: 1 },
+    fog:     { icon: '🌫', rain: 0, fog: 1, dim: 0.02 }
+  };
+  function weatherAt(c) {
+    if (s.dev && WEATHER[s.dev.weather]) return s.dev.weather;
+    var block = Math.floor(c.hour / 6), r = hash(c.day * 4 + block, 9001);
+    if (r < 0.42) return 'clear';
+    if (r < 0.66) return 'drizzle';
+    if (r < 0.84) return 'rain';
+    if (r < 0.91) return 'storm';
+    return c.hour < 12 ? 'fog' : 'drizzle';
+  }
+  var sky = { rain: 0, fog: 0, dim: 0, at: 0, bolt: 0, splashes: [] };
+  function drawWeather(now, cx, cy) {
+    var W = VW * TS, Hh = VH * TS, w = WEATHER[weatherAt(novaNow())];
+    var dt = Math.min(0.05, (now - (sky.at || now)) / 1000), k = sky.at ? 1 - Math.exp(-dt * 0.6) : 1;
+    sky.at = now;
+    sky.rain += (w.rain - sky.rain) * k; sky.fog += (w.fog - sky.fog) * k; sky.dim += (w.dim - sky.dim) * k;
+    if (sky.dim > 0.005) { ctx.fillStyle = 'rgba(10,12,30,' + sky.dim.toFixed(3) + ')'; ctx.fillRect(0, 0, W, Hh); }
+    /* fog: a pale wash and slow banks drifting across */
+    if (sky.fog > 0.01) {
+      ctx.fillStyle = 'rgba(190,196,216,' + (0.16 * sky.fog).toFixed(3) + ')'; ctx.fillRect(0, 0, W, Hh);
+      ctx.fillStyle = 'rgba(206,212,232,' + (0.09 * sky.fog).toFixed(3) + ')';
+      for (var b = 0; b < 8; b++) {
+        /* each bank a lens of 2px rows, overlapping into a soft edge */
+        var bw = 70 + (b * 37) % 60, bh = 14 + (b * 13) % 12;
+        var bx = ((b * 97 + now * (0.006 + b * 0.0015) - cx * 0.3) % (W + bw) + W + bw) % (W + bw) - bw;
+        var by = ((b * 61 - cy * 0.3) % (Hh + 30) + Hh + 30) % (Hh + 30) - 15;
+        for (var row = 0; row < bh; row += 2) {
+          var e2 = (row - bh / 2) / (bh / 2), rw = Math.round(bw * Math.sqrt(Math.max(0, 1 - e2 * e2)));
+          ctx.fillRect(Math.round(bx + (bw - rw) / 2), Math.round(by) + row, rw, 2);
+          ctx.fillRect(Math.round(bx + (bw - rw * 0.6) / 2), Math.round(by) + row, Math.round(rw * 0.6), 2);
+        }
+      }
+    }
+    /* rain: more drops, longer and more slanted the harder it comes down */
+    if (sky.rain > 0.02) {
+      var drops = Math.round(VW * VH / 6 * sky.rain), slant = 0.1 + sky.rain * 0.3, len = 2 + Math.round(sky.rain * 3);
+      ctx.fillStyle = 'rgba(159,140,255,' + (0.22 + 0.12 * Math.min(1, sky.rain)).toFixed(3) + ')';
+      for (var r = 0; r < drops; r++) {
+        var fall = 0.3 + (r % 5) * 0.03, ry = (r * 37 + now * fall) % Hh, rx = ((r * 53 + now * fall * slant) % W + W) % W;
+        for (var j = 0; j < len; j++) ctx.fillRect(Math.floor(rx + j * slant), Math.floor(ry + j), 1, 1);
+      }
+      /* splashes where it lands, held in world pixels so they stay put */
+      var n = sky.rain * 45 * dt;
+      while (n > 0 && sky.splashes.length < 60) {
+        if (n < 1 && Math.random() > n) break;
+        sky.splashes.push({ x: cx + Math.random() * W, y: cy + Math.random() * Hh, t0: now }); n--;
+      }
+    }
+    sky.splashes = sky.splashes.filter(function (q) { return now - q.t0 < 240; });
+    ctx.fillStyle = 'rgba(190,180,255,.45)';
+    sky.splashes.forEach(function (q) {
+      var x = Math.round(q.x - cx), y = Math.round(q.y - cy);
+      if (now - q.t0 < 110) ctx.fillRect(x, y, 1, 1);
+      else { ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x, y - 1, 1, 1); }
+    });
+    /* a storm throws lightning: a flash, a gap, a smaller flash */
+    if (w.bolts && !sky.bolt && Math.random() < dt * 0.15) sky.bolt = now;
+    if (sky.bolt) {
+      var e = now - sky.bolt, fl = e < 70 ? 0.55 : e < 140 ? 0 : e < 230 ? 0.35 : e < 600 ? 0.35 * (1 - (e - 230) / 370) : -1;
+      if (fl < 0) sky.bolt = 0;
+      else if (fl > 0) { ctx.fillStyle = 'rgba(230,234,255,' + fl.toFixed(3) + ')'; ctx.fillRect(0, 0, W, Hh); }
+    }
+  }
+
   /* ── a little bubble over whatever you're facing that A would use:
      dots for someone to talk to, an A for a thing ── */
   function usable(tx, ty) {
@@ -3143,12 +3217,7 @@
     drawAmbient(now, cx, cy, true);
     drawPrompt(now, cx, cy);
     drawFight(cx, cy, now, ppx, ppy);
-    ctx.fillStyle = 'rgba(159,140,255,.3)';
-    var drops = Math.round(VW * VH / 10);
-    for (var r = 0; r < drops; r++) {
-      var rx = (r * 53 + now * 0.12) % (VW * TS), ry = (r * 37 + now * 0.35) % (VH * TS);
-      ctx.fillRect(Math.floor(rx), Math.floor(ry), 1, 3);
-    }
+    drawWeather(now, cx, cy);
   }
 
   function loop(now) {
