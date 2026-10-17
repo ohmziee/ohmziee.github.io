@@ -358,6 +358,9 @@
       }
       return null;
     }
+    /* redrum's street doc: the only healing on the island (shops.js VENDORS) */
+    var docAt = standIn(R0, 1, -3), doc = root.MFShops && root.MFShops.VENDORS['street-doc'];
+    if (docAt) npcs.push({ id: 'street-doc', x: docAt[0], y: docAt[1], dir: 'down', look: 'medic', name: doc ? doc.name : 'STREET DOC', vend: 'street-doc', still: true });
     /* food carts: one per district, on the street (shops.js VENDORS) */
     [['patty-cart', Y0, 2, 5], ['noodle-cart', W0, -2, 4], ['dumpling-cart', M0, 3, -2], ['juice-stand', N0, 4, 1], ['tea-stall', H0, 2, -3], ['skewer-guy', R0, -1, 2]].forEach(function (c) {
       var at2 = standIn(c[1], c[2], c[3]), v = root.MFShops && root.MFShops.VENDORS[c[0]];

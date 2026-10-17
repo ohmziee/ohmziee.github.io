@@ -1674,6 +1674,8 @@
   /* you come round in your own bed, or the hospital's (and it isn't free) */
   function wakeUp() {
     var MF = window.MF, home = collapsed ? '' : s.wake && s.homes[s.wake] ? s.wake : Object.keys(s.homes || {})[0], line;
+    /* down on redrum: the street doc drags you in, not the city hospital */
+    var doc = (inside ? M.ROOMS[inside.id] && M.ROOMS[inside.id].d === 'redrum' : whereNow() === 'redrum') && (inside ? cityNpcs : npcs).filter(function (n) { return n.id === 'street-doc'; })[0];
     fainting = 0;
     $('world').classList.remove('fainted');
     MF.revive(s);
@@ -1687,16 +1689,26 @@
       var bill = collapsed ? Math.min(600, Math.floor(MF.joules(s) * 0.2)) : Math.min(300, Math.floor(MF.joules(s) * 0.1));
       MF.spend(s, bill);
       if (collapsed) s.body.health = Math.max(s.body.health, 50);
-      goIn('hospital');
+      if (doc) {
+        /* beside the doc's table, on whichever side is free */
+        var side = [[0, 1, 'up'], [-1, 0, 'right'], [1, 0, 'left'], [0, -1, 'down']].filter(function (o) {
+          var x = doc.x + o[0], y = doc.y + o[1];
+          return !M.solid(world, x, y) && !npcs.some(function (n) { return n.x === x && n.y === y; });
+        })[0] || [0, 1, 'up'];
+        me.x = doc.x + side[0]; me.y = doc.y + side[1]; me.dir = side[2]; me.moving = false; s.world = here();
+      }
+      else goIn('hospital');
       wallet(bill ? '-' + MF.fmtJ(bill) : '');
-      line = [collapsed ? 'you wake up in nova city hospital, wired to three machines.\nthey stopped beeping at you an hour ago.' : 'you wake up in nova city hospital.\na medic is already writing the bill.',
+      if (doc) line = [collapsed ? 'you wake up on a folding table in an alley.\nsomeone stitched you up. the stitches are crooked.' : 'you wake up on a folding table in an alley.\nthe street doc is counting your joules.',
+                       bill ? 'that\'s ' + MF.fmtJ(bill) + '. eat something.\nnext time, fall down somewhere cheaper.' : 'you had nothing. i did it anyway.\ndon\'t tell anyone.'];
+      else line = [collapsed ? 'you wake up in nova city hospital, wired to three machines.\nthey stopped beeping at you an hour ago.' : 'you wake up in nova city hospital.\na medic is already writing the bill.',
               bill ? 'treatment: ' + MF.fmtJ(bill) + '. eat something. drink something.\nwe\'d rather not see you again tonight.' : 'no charge. you didn\'t have anything.\neat something. please.'];
       collapsed = false;
     }
     warned = false;
     if (api.save) api.save();
     drawBody();
-    say(beat.concat(line), home ? '' : 'MEDIC');
+    say(beat.concat(line), home ? '' : doc ? 'STREET DOC' : 'MEDIC');
   }
 
   /* ── the phone: a quick tap of B (holding B still runs) ─────

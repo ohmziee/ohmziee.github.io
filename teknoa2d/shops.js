@@ -309,6 +309,9 @@
     'market-patties':{ kind: 'vendor', name: 'PATTY STALL', district: 'yucayeque', line: 'the good ones. tell them who sent you.', menu: ['patty', 'cocobread', 'sorrel'] },
     'market-mangoes':{ kind: 'vendor', name: 'MANGO STALL', district: 'yucayeque', line: 'three for a joule. two if you can carry a tune.', menu: ['mango', 'smoothie'] },
     'clinic':       { kind: 'clinic', name: 'NOVA CITY HOSPITAL', district: 'majinryu', line: 'reception. take a number. there are no numbers. you\'re next.', meds: ['medkit', 'bandage'] },
+    /* redrum's doctor: no licence, no hospital, a folding table in an alley.
+       dearer per point than the city. PLACEHOLDER words */
+    'street-doc':   { kind: 'clinic', name: 'STREET DOC', district: 'redrum', line: 'sit. do not bleed on the table, i eat off it.', meds: ['bandage', 'medkit'], treat: 3 },
     'noodle-bar':   { kind: 'restaurant', name: 'NO SIGN', district: 'worldwood', line: 'no sign. that\'s the sign. sit anywhere.', menu: ['ramen', 'wontons', 'icedbarley'] },
     'tea-house':    { kind: 'restaurant', name: 'THE TEA HOUSE', district: 'majinryu', line: 'two doors down. you found it. ask for the house blend.', menu: ['houseblend', 'bao', 'barley'] }
   };
@@ -537,7 +540,7 @@
     if (st.kind === 'stash') return stashRows(s, st.where, tab);
     if (tab === 'buy' && st.kind === 'clinic') {
       var missing = Math.ceil(MF.maxOf(s, 'hp') - MF.vital(s, 'hp'));
-      rows.push({ key: 'treat', label: missing ? 'treatment: back to full health (' + missing + ' points)' : 'treatment: you\'re fine. go home.', price: missing * TREAT, have: 0, here: true, treat: true });
+      rows.push({ key: 'treat', label: missing ? 'treatment: back to full health (' + missing + ' points)' : 'treatment: you\'re fine. go home.', price: missing * (st.treat || TREAT), have: 0, here: true, treat: true });
       st.meds.forEach(function (k) { rows.push({ key: k, label: MEDS[k].name, price: MEDS[k].price, have: items[k] || 0 }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price && (!r.treat || missing > 0); });
       return rows;
