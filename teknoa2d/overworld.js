@@ -2732,6 +2732,8 @@
       var mx = (m.x + m.w / 2) * TS - cx, my = m.y * TS - cy;
       if (m.fire) { var f = 1 + 0.12 * Math.sin(now / 90 + m.x) + 0.08 * Math.sin(now / 37 + m.y); add(mx, my + 8, 34 * f, 0.95, '#ff8a3a', 0.35 * f); return; }
       var col = MARK_GLOW[m.id] || pal(world.dist[m.y * world.W + m.x]).glow[0];
+      /* about a third of the signs have a bad tube: now and then they drop out */
+      if (hash(m.x * 3 + m.y, 11) < 0.35 && hash(m.x + m.y, Math.floor(now / 70)) < 0.12) return;
       add(mx, my + m.h * TS * 0.45, Math.max(m.w, m.h) * 11 + 10, 0.7, col, 0.22);
       if (m.room || m.home) { var dc = doorCols(m); add((dc[0] + dc.length / 2) * TS - cx, (m.y + m.h) * TS - cy - 2, 18, 0.8, '#ffe97c', 0.15); }
     });
@@ -2855,6 +2857,88 @@
     }
   }
 
+  /* ── ambient life: each district has something in the air. particles
+     live in world pixels; the glowing kinds draw over the night so they
+     shine, the rest under it so they darken with everything else ── */
+  var parts = [], partAt = 0, dustAt = 0;
+  var AMBIENT = { worldwood: 'steam', yucayeque: 'fly', vistadelsol: 'fly', naturia: 'spore', majinryu: 'petal', redrum: 'litter', haven: 'bird' };
+  var GLOWS = { fly: 1, spore: 1 };
+  function distId(di) { return di >= 0 ? D[di].id : di === -2 ? 'vistadelsol' : ''; }
+  function ambient(now, cx, cy, x0, y0, ppx, ppy) {
+    var dt = Math.min(0.05, (now - (partAt || now)) / 1000), dk = darkness(novaNow()); partAt = now;
+    function tileAt(id, ok) {
+      for (var n = 0; n < 8; n++) {
+        var tx = x0 + Math.floor(Math.random() * (VW + 1)), ty = y0 + Math.floor(Math.random() * (VH + 1));
+        if (tx >= world.W || ty >= world.H) continue;
+        var k = ty * world.W + tx;
+        if (distId(world.dist[k]) === id && ok(world.tile[k])) return [tx, ty];
+      }
+      return null;
+    }
+    function add(kind, x, y, vx, vy, life, col) { if (parts.length < 140) parts.push({ k: kind, x: x, y: y, vx: vx, vy: vy, t0: now, life: life, col: col, seed: Math.random() * 100 }); }
+    /* what's on screen: the district underfoot, plus a peek at the corners */
+    var near = {};
+    [[me.x, me.y], [x0, y0], [x0 + VW, y0], [x0, y0 + VH], [x0 + VW, y0 + VH]].forEach(function (c) {
+      if (c[0] < world.W && c[1] < world.H) near[distId(world.dist[c[1] * world.W + c[0]])] = 1;
+    });
+    Object.keys(near).forEach(function (id) {
+      var kind = AMBIENT[id], at;
+      if (kind === 'steam') {
+        /* a few fixed vents in the road, each breathing */
+        for (var y = y0; y <= y0 + VH && y < world.H; y++) for (var x = x0; x <= x0 + VW && x < world.W; x++) {
+          var k = y * world.W + x;
+          if (world.tile[k] === T.ROAD && distId(world.dist[k]) === id && hash(x + 7, y + 3) < 0.06 && Math.random() < dt * 5)
+            add('steam', x * TS + 6 + Math.random() * 4, y * TS + 9, (Math.random() - 0.5) * 3, -9 - Math.random() * 4, 1.6, null);
+        }
+      } else if (kind === 'fly' && dk > 0.25 && Math.random() < dt * 10) {
+        if ((at = tileAt(id, function (t) { return t === T.GRASS || t === T.TREE || t === T.MAINLAND; })))
+          add('fly', at[0] * TS + Math.random() * TS, at[1] * TS + Math.random() * TS, 0, 0, 4 + Math.random() * 3, '#ffe97c');
+      } else if (kind === 'spore' && Math.random() < dt * 9) {
+        if ((at = tileAt(id, function (t) { return t === T.GRASS || t === T.TREE || t === T.GROUND; })))
+          add('spore', at[0] * TS + Math.random() * TS, at[1] * TS + Math.random() * TS, 0, -3 - Math.random() * 3, 5, ['#3affc8', '#b28cff', '#7cf5ff'][Math.floor(Math.random() * 3)]);
+      } else if (kind === 'petal' && Math.random() < dt * 9) {
+        if ((at = tileAt(id, function () { return true; })))
+          add('petal', at[0] * TS + Math.random() * TS, at[1] * TS - 20, 5 + Math.random() * 4, 9 + Math.random() * 4, 4.5, Math.random() < 0.5 ? '#ffb7d0' : '#ff8fb8');
+      } else if (kind === 'litter' && Math.random() < dt * 0.8) {
+        if ((at = tileAt(id, function (t) { return t === T.ROAD; })))
+          add('litter', at[0] * TS, at[1] * TS + 4 + Math.random() * 8, 22 + Math.random() * 14, 0, 3, Math.random() < 0.6 ? '#d8d4c8' : '#c8a878');
+      } else if (kind === 'bird' && dk < 0.5 && Math.random() < dt * 0.25) {
+        add('bird', cx - 8, cy + 10 + Math.random() * (VH * TS * 0.6), 34 + Math.random() * 10, (Math.random() - 0.5) * 6, (VW * TS + 16) / 34, OUT);
+      }
+    });
+    /* dust off your heels when you run */
+    if (running() && now - dustAt > 110) {
+      dustAt = now;
+      var d = DIRS[me.dir];
+      for (var j = 0; j < 2; j++) add('dust', ppx + 8 - d[0] * 4 + (j ? 3 : -3), ppy + 14 - d[1] * 2, -d[0] * 6 + (Math.random() - 0.5) * 6, -4 - Math.random() * 4, 0.45, '#a89878');
+    }
+    parts = parts.filter(function (q) { return (now - q.t0) / 1000 < q.life; });
+    parts.forEach(function (q) {
+      var age = (now - q.t0) / 1000;
+      if (q.k === 'fly') { q.vx += (Math.random() - 0.5) * 40 * dt; q.vy += (Math.random() - 0.5) * 40 * dt; q.vx *= 0.96; q.vy *= 0.96; }
+      if (q.k === 'spore' || q.k === 'petal') q.vx += Math.sin(now / 500 + q.seed) * 6 * dt;
+      if (q.k === 'litter') q.vy = Math.sin(age * 9 + q.seed) * 6;
+      q.x += q.vx * dt; q.y += q.vy * dt;
+    });
+  }
+  function drawAmbient(now, cx, cy, glows) {
+    if (glows) ctx.globalCompositeOperation = 'lighter';
+    parts.forEach(function (q) {
+      if (!!GLOWS[q.k] !== glows) return;
+      var a = (now - q.t0) / 1000 / q.life, x = Math.round(q.x - cx), y = Math.round(q.y - cy);
+      if (x < -8 || y < -8 || x > VW * TS + 8 || y > VH * TS + 8) return;
+      var fade = Math.min(1, a * 5, (1 - a) * 4);
+      if (q.k === 'steam') { var r = 1 + Math.floor(a * 3); ctx.fillStyle = 'rgba(210,214,228,' + (0.5 * (1 - a)).toFixed(3) + ')'; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
+      else if (q.k === 'fly') { var bl = 0.5 + 0.5 * Math.sin(now / 180 + q.seed); ctx.fillStyle = rgba(q.col, (0.25 * bl * fade).toFixed(3)); ctx.fillRect(x - 1, y - 1, 3, 3); ctx.fillStyle = rgba(q.col, (0.9 * bl * fade).toFixed(3)); ctx.fillRect(x, y, 1, 1); }
+      else if (q.k === 'spore') { ctx.fillStyle = rgba(q.col, (0.3 * fade).toFixed(3)); ctx.fillRect(x - 1, y - 1, 3, 3); ctx.fillStyle = rgba(q.col, (0.95 * fade).toFixed(3)); ctx.fillRect(x, y, 1, 1); }
+      else if (q.k === 'petal') { ctx.globalAlpha = fade; var fl = Math.floor(now / 250 + q.seed) % 2; px(ctx, shade(q.col, 0.7), x, y + 1, fl ? 2 : 1, 1); px(ctx, q.col, x, y, fl ? 2 : 1, 1); ctx.globalAlpha = 1; }
+      else if (q.k === 'litter') { ctx.globalAlpha = fade; px(ctx, q.col, x, y, 2, Math.floor(now / 120 + q.seed) % 2 ? 2 : 1); ctx.globalAlpha = 1; }
+      else if (q.k === 'bird') { var up = Math.floor(now / 160 + q.seed) % 2 ? -1 : 1; px(ctx, q.col, x - 1, y, 3, 1); px(ctx, q.col, x - 2, y + up, 1, 1); px(ctx, q.col, x + 2, y + up, 1, 1); }
+      else if (q.k === 'dust') { ctx.fillStyle = 'rgba(190,176,146,' + (0.7 * (1 - a)).toFixed(3) + ')'; ctx.fillRect(x, y, a < 0.4 ? 1 : 2, a < 0.4 ? 1 : 2); }
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
   function draw(now) {
     var wave = Math.floor(now / 380) % 4;
     var ppx = (me.moving ? me.fx + (me.x - me.fx) * me.t : me.x) * TS, ppy = (me.moving ? me.fy + (me.y - me.fy) * me.t : me.y) * TS;
@@ -2975,9 +3059,12 @@
     /* the hour's light over everything (night lets the city's lights
        through), and the rain the main page has */
     if (inside) { ctx.fillStyle = 'rgba(5,6,11,.1)'; ctx.fillRect(0, 0, VW * TS, VH * TS); return; }
+    ambient(now, cx, cy, x0, y0, ppx, ppy);
+    drawAmbient(now, cx, cy, false);
     var nc = novaNow(), dk = darkness(nc);
     if (nc.phase === 'dawn' || nc.phase === 'dusk' || nc.phase === 'day') { ctx.fillStyle = LIGHT[nc.phase]; ctx.fillRect(0, 0, VW * TS, VH * TS); }
     if (dk > 0) night(dk, cx, cy, now, ppx, ppy);
+    drawAmbient(now, cx, cy, true);
     drawFight(cx, cy, now, ppx, ppy);
     ctx.fillStyle = 'rgba(159,140,255,.3)';
     var drops = Math.round(VW * VH / 10);
