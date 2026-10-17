@@ -56,6 +56,17 @@
      upper storey (the row over its front, on a block three deep or more),
      512 a front with a storey above it. */
   var OUT = '#0b0d1a';
+  /* at night the windows have lives of their own: every 25 nova minutes a
+     few go on or off, after one most of the lit ones go dark, and some
+     lit rooms are only a tv. 0 dark, 1 lit, 2 tv */
+  function winState(x, y, i, up, v, c) {
+    var baked = up ? upperOn(v, i) : !!((v >> (i + 2)) & 1 || (v & 3) === 1);
+    var id = x * 4 + i * 2 + (up ? 1 : 0), h = hash(id, y * 31 + Math.floor(c.mins / 25) * 977), late = c.hour >= 1 && c.hour < 5;
+    var on = baked;
+    if (late ? baked && h < 0.5 : h < 0.12) on = !on;
+    if (on && hash(id + 5, y + 11) < 0.1) return 2;
+    return on ? 1 : 0;
+  }
   function upperOn(v, i) { return !!((v >> (i * 2)) & 1) || (v & 7) === 3; }
   function drawTile(g, t, di, v, m, wave, rv, door) {
     var p = pal(di), i;
@@ -2823,7 +2834,7 @@
   }
   var lightCv = null;
   function night(dk, cx, cy, now, ppx, ppy) {
-    var W = VW * TS, Hh = VH * TS, lights = [];
+    var W = VW * TS, Hh = VH * TS, lights = [], nc = novaNow();
     if (!lightCv) lightCv = document.createElement('canvas');
     if (lightCv.width !== W || lightCv.height !== Hh) { lightCv.width = W; lightCv.height = Hh; }
     function add(x, y, r, a, col, ga) { if (x > -r && y > -r && x < W + r && y < Hh + r) lights.push({ x: x, y: y, r: r, a: a, col: col, ga: ga }); }
@@ -2835,10 +2846,27 @@
       var k = y * world.W + x;
       if (world.tile[k] !== T.BUILDING) continue;
       var p = pal(world.dist[k]), v = Math.floor(hash(x, y) * 32), tx = x * TS - cx, ty = y * TS - cy;
-      if (storey(x, y)) { for (var u = 0; u < 2; u++) if (upperOn(v, u)) add(tx + (u ? 11 : 4), ty + 7, 11, 0.6, p.glow[(v + u + 1) % p.glow.length], 0.3); continue; }
+      if (storey(x, y)) { for (var u = 0; u < 2; u++) lamp(x, y, tx, ty, u, true, v, p); continue; }
       if (y + 1 < world.H && world.tile[k + world.W] === T.BUILDING) continue;
       if (deco.door[k]) { add(tx + 8, ty + 12, 16, 0.75, p.glow[v % p.glow.length], 0.3); continue; }
-      for (var i = 0; i < 2; i++) if ((v >> (i + 2)) & 1 || (v & 3) === 1) add(tx + (i ? 11 : 4), ty + 9, 11, 0.6, p.glow[(v + i) % p.glow.length], 0.3);
+      for (var i = 0; i < 2; i++) lamp(x, y, tx, ty, i, false, v, p);
+    }
+    /* a window as the night has it: the tile art bakes one look, so any
+       window that's changed gets its glass repainted here, under the dark */
+    function lamp(x, y, tx, ty, i, up, v, p) {
+      var st = winState(x, y, i, up, v, nc), baked = up ? upperOn(v, i) : !!((v >> (i + 2)) & 1 || (v & 3) === 1);
+      var gx = tx + (i ? 9 : 2) + 1, gy = ty + (up ? 5 : 6), gh = up ? 5 : 4;
+      var col = up ? p.glow[(v + i + 1) % p.glow.length] : p.glow[(v + i) % p.glow.length], ga = 0.3, a = 0.6;
+      if (st === 2) {
+        /* a tv: cold light that jumps about */
+        var id = x * 4 + i * 2 + (up ? 1 : 0), fl = 0.55 + 0.45 * Math.abs(Math.sin(now / 110 + id) * Math.sin(now / 37 + id * 3));
+        col = Math.floor(now / 450 + id) % 3 ? '#7ab8ff' : '#dce3ff'; ga = 0.32 * fl; a = 0.45 + 0.2 * fl;
+      }
+      if (st !== (baked ? 1 : 0)) {
+        px(ctx, st ? col : '#141a2e', gx, gy, 3, gh);
+        if (up) px(ctx, OUT, gx, gy + 2, 3, 1); else px(ctx, OUT, gx + 1, gy, 1, gh);
+      }
+      if (st) add(tx + (i ? 11 : 4), ty + (up ? 7 : 9), 11, a, col, ga);
     }
     /* landmarks' neon, and fires that flicker */
     world.marks.forEach(function (m) {
