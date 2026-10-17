@@ -264,16 +264,18 @@
       b.drink = Math.max(0, b.drink - 100 * f * heat / DRINK_SECS);
     }
     if (b.buffT > 0) { b.buffT = Math.max(0, b.buffT - (+secs || 0)); if (!b.buffT) b.buff = ''; }
-    /* health: starving or parched wears it down, bitter cold or heat too;
-       eating well brings it back */
-    var mins = Math.max(0, +secs || 0) / 60, hp = b.health === undefined ? 100 : b.health;
+    /* health: starving or parched wears it down, bitter cold or heat too.
+       otherwise it mends on its own, slowly (faster well fed), but only up
+       to HP_MEND of the max: past that it takes meds, the clinic or a bed */
+    var mins = Math.max(0, +secs || 0) / 60, hp = b.health === undefined ? 100 : b.health, top = maxOf(s, 'hp');
     var exposed = temp !== undefined && (temp < (fx.cold ? COLD_AI : 14) || temp > 34);
     if (weak(s)) hp -= 2 * mins;
     if (exposed) hp -= mins;
-    else if (!weak(s) && b.food > 60 && b.drink > 60) hp += 3 * mins;
-    b.health = Math.max(0, Math.min(maxOf(s, 'hp'), hp));
-    /* brainpower: the mind tires slowly while you're up and about */
-    b.int = Math.max(0, num0(b.int, maxOf(s, 'int')) - 100 * (+secs || 0) / INT_SECS);
+    else if (!weak(s) && hp < top * HP_MEND) hp = Math.min(top * HP_MEND, hp + (b.food > 60 && b.drink > 60 ? 2 : 1) * HP_REGEN * mins);
+    b.health = Math.max(0, Math.min(top, hp));
+    /* brainpower: the mind comes back on its own, very slowly, all the way
+       (a night's sleep or caffeine is quicker) */
+    b.int = Math.min(maxOf(s, 'int'), num0(b.int, maxOf(s, 'int')) + 100 * (+secs || 0) / INT_SECS);
     return b.health <= 0 ? 'collapse' : b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) ? 'weak' : '';
   }
   function num0(v, d) { return v === undefined || !isFinite(+v) ? d : +v; }
@@ -327,7 +329,9 @@
 
   /* stamina: sprinting burns it, easing off brings it back. at 0 you're
      winded (overworld.js keeps you walking until it's back to RUN_AGAIN) */
-  var STA_RUN = 5, STA_BACK = 2.5, RUN_AGAIN = 25, INT_SECS = 90 * 60;
+  /* INT_SECS: empty to full brainpower on its own. HP_REGEN: health a minute
+     on its own (twice that well fed), never past HP_MEND of the max */
+  var STA_RUN = 5, STA_BACK = 2.5, RUN_AGAIN = 25, INT_SECS = 120 * 60, HP_REGEN = 0.5, HP_MEND = 0.75;
   function exert(s, secs, running) {
     var t = Math.max(0, +secs || 0), back = weak(s) ? STA_BACK / 2 : STA_BACK;
     return restore(s, 'sta', running ? -STA_RUN * t : back * t);
@@ -384,7 +388,7 @@
               ORIGINS: ORIGINS, POWER: POWER, SIDE: SIDE, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
               SAFE_SLOTS: SAFE_SLOTS, safeKeys: safeKeys, isSafe: isSafe, toggleSafe: toggleSafe,
               CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
-              STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
+              STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, HP_REGEN: HP_REGEN, HP_MEND: HP_MEND, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
               START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
               cleanHandle: cleanHandle, chippedIn: chippedIn, answer: answer, normalAnswer: normalAnswer,
               enter: enter, view: view, next: next, choose: choose,
