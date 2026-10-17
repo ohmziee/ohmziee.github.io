@@ -97,11 +97,28 @@
     if (t === T.MAINLAND) {
       /* vistadelsol's bush: too thick to walk through, palms poking out */
       px(g, '#14301c', 0, 0, TS, TS);
-      [[1, 1, 6], [8, 4, 7], [2, 9, 6], [10, 11, 5]].forEach(function (c, j) {
-        if ((v >> j) & 1 && j > 1) return;
-        px(g, OUT, c[0], c[1], c[2], c[2] - 1); px(g, j % 2 ? '#1f5a2e' : '#2a6a34', c[0] + 1, c[1] + 1, c[2] - 2, c[2] - 3);
-        px(g, '#7cd06a', c[0] + 1, c[1] + 1, 2, 1);
-      });
+      /* three to five round clumps, placed and sized by the variant, each
+         outlined and lit from the top left; now and then a palm */
+      var seed = v * 2654435761 >>> 0;
+      function rnd() { seed = (seed * 1103515245 + 12345) >>> 0; return (seed >>> 8) / 16777216; }
+      var clumps = 3 + Math.floor(rnd() * 3);
+      for (var cI = 0; cI < clumps; cI++) {
+        var cr = 2.5 + rnd() * 2, ccx = cr + 0.5 + rnd() * (TS - 2 * cr - 1), ccy = cr + 0.5 + rnd() * (TS - 2 * cr - 1);
+        var leafC = cI % 2 ? '#1f5a2e' : '#2a6a34';
+        for (var by2 = 0; by2 < TS; by2++) for (var bx2 = 0; bx2 < TS; bx2++) {
+          var ddx = bx2 + 0.5 - ccx, ddy = by2 + 0.5 - ccy, dd = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (dd > cr + 0.6) continue;
+          px(g, dd > cr - 0.4 ? OUT : ddx + ddy < -cr * 0.6 ? '#7cd06a' : ddx + ddy > cr * 0.5 ? '#174a26' : leafC, bx2, by2);
+        }
+      }
+      if (v % 6 === 0) {
+        /* a palm: a bent trunk and a star of fronds */
+        px(g, '#5a3a22', 7, 8, 1, 6); px(g, '#5a3a22', 8, 6, 1, 3);
+        [[-4, 0], [4, 0], [-3, -2], [3, -2], [-2, 2], [2, 2]].forEach(function (f) {
+          for (var q = 1; q <= 3; q++) px(g, q === 3 ? '#2a6a34' : '#3a8a44', 8 + Math.round(f[0] * q / 3), 5 + Math.round(f[1] * q / 3), 1, 1);
+        });
+        px(g, '#7cd06a', 8, 5, 1, 1);
+      }
       return;
     }
     if (t === T.SAND) {
@@ -3243,7 +3260,7 @@
         if (storey(x, y)) m = (m & 15) | 256;
         else if (y > 0 && !(m & 4) && storey(x, y - 1)) m |= 512;
       }
-      else if (t !== T.STALL && t !== T.ROAD && t !== T.GROUND && t !== T.SAND) v &= 7;
+      else if (t !== T.STALL && t !== T.ROAD && t !== T.GROUND && t !== T.SAND && t !== T.MAINLAND) v &= 7;
       var w = wet(t) ? wave : 0;
       var key = t + '.' + di + '.' + v + '.' + m + '.' + w + '.' + rv + dr;
       ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
