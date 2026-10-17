@@ -1194,7 +1194,7 @@
     if (!r) return;
     inside = { id: id, place: !!r.place };
     world = r; deco = decorate(r);
-    npcs = r.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
+    npcs = r.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; return c; });
     me.x = at ? at.x : r.spawn.x; me.y = at ? at.y : r.spawn.y; me.dir = at ? at.d || 'up' : r.spawn.dir;
     me.moving = false; held = {};
     /* an apartment is private: off the street's channel until they come back out */
@@ -2317,6 +2317,8 @@
       else if (!me.moving && !attackTap(now)) interact();
     }
     if (L) { L.step(dt, SPEED); online(now); }
+    /* the others finish any step they're in, even while you talk */
+    npcs.forEach(function (n) { if (n.moving) { n.t += dt * SPEED * 0.55; if (n.t >= 1) { n.moving = false; n.t = 0; } } });
     if (talkBox) return;
     if (me.moving) {
       var heavy = !me.sail && window.MFShops.load(s) > 1;
@@ -2342,12 +2344,12 @@
     if (now - npcTick > 900) {
       npcTick = now;
       npcs.forEach(function (n) {
-        if (n.still || Math.random() < 0.6) return;
+        if (n.still || n.moving || Math.random() < 0.6) return;
         var ks = Object.keys(DIRS), k = ks[Math.floor(Math.random() * 4)], d = DIRS[k];
         var nx = n.x + d[0], ny = n.y + d[1];
         n.dir = k;
         if (Math.abs(nx - n.hx) > n.roam || Math.abs(ny - n.hy) > n.roam || occupied(nx, ny)) return;
-        n.x = nx; n.y = ny; n.step ^= 1;
+        n.fx = n.x; n.fy = n.y; n.x = nx; n.y = ny; n.moving = true; n.t = 0;
       });
     }
   }
@@ -2681,7 +2683,10 @@
     });
     if (!inside) { drawLamps(cx, cy); drawLoose(cx, cy, now); drawPiles(cx, cy, now); }
     /* people, back to front */
-    var who = npcs.map(function (n) { return { x: n.x * TS, y: n.y * TS, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.step) }; });
+    var who = npcs.map(function (n) {
+      var nx = (n.moving ? n.fx + (n.x - n.fx) * n.t : n.x) * TS, ny = (n.moving ? n.fy + (n.y - n.fy) * n.t : n.y) * TS;
+      return { x: nx, y: ny, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.moving && n.t > 0.25 && n.t < 0.75 ? 1 : 0) };
+    });
     mobs.forEach(function (m) {
       var mx = (m.moving ? m.fx + (m.x - m.fx) * m.t : m.x) * TS, my = (m.moving ? m.fy + (m.y - m.fy) * m.t : m.y) * TS;
       if (now < m.lunge) { var ld = DIRS[m.dir]; mx += ld[0] * 3; my += ld[1] * 3; }
@@ -2802,7 +2807,7 @@
       canvas = $('wCanvas');
       fit();
       window.addEventListener('resize', function () { if (active) fit(); });
-      npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.step = 0; return c; });
+      npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; return c; });
       pad();
       counterButtons();
       tableButtons();
