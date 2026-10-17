@@ -1474,7 +1474,30 @@
     $('wCounterM').textContent = counter.msg;
   }
 
-  var LIGHT = { night: 'rgba(4,6,24,.42)', dawn: 'rgba(60,24,40,.18)', day: 'rgba(5,6,11,.04)', dusk: 'rgba(48,20,60,.22)' };
+  /* the sky's tint through the day, blended between these hours so it
+     never snaps: violet before dawn, rose, a gold sunrise, plain day, a
+     gold hour, violet dusk, then night's own dark takes over (night()) */
+  var SKY = [
+    [4.5, 20, 10, 40, 0.10], [5.5, 60, 24, 40, 0.18], [6.5, 255, 170, 90, 0.12], [8, 5, 6, 11, 0.04],
+    [16, 5, 6, 11, 0.04], [17.3, 255, 150, 60, 0.14], [18.5, 48, 20, 60, 0.22], [20, 20, 10, 50, 0.18], [21.5, 4, 6, 24, 0.10]
+  ];
+  function skyTint(c) {
+    var h = c.hour + c.minute / 60, a, b, f;
+    for (var i = 0; i < SKY.length; i++) {
+      a = SKY[i]; b = SKY[(i + 1) % SKY.length];
+      var start = a[0], end = b[0] > start ? b[0] : b[0] + 24, hh = h < start ? h + 24 : h;
+      if (hh >= start && hh < end) { f = (hh - start) / (end - start); break; }
+    }
+    f = f * f * (3 - 2 * f);
+    var mix = function (j) { return a[j] + (b[j] - a[j]) * f; };
+    return 'rgba(' + Math.round(mix(1)) + ',' + Math.round(mix(2)) + ',' + Math.round(mix(3)) + ',' + mix(4).toFixed(3) + ')';
+  }
+  /* shadows stretch when the sun is low: 1 at midday, nearly double at
+     the ends of the day */
+  function shadowLen(c) {
+    var h = c.hour + c.minute / 60, k = Math.min(1, Math.abs(h - 12.5) / 6.5);
+    return 1 + 0.8 * k * k;
+  }
 
   /* ── hunger and thirst (engine.js drain): the hud, tired, fainting ── */
   var tired = false, bodyT = 0, fainting = 0, warned = false, winded = false, staT = 0;
@@ -2703,7 +2726,7 @@
       px(ctx, 'rgba(0,0,0,.35)', bx - 1, by + 5, 5, 2);
       /* the pole's shadow, off to the bottom right with everything else's */
       var ps = 'rgba(0,0,0,' + (SHADE * (1 - darkness(novaNow()))).toFixed(3) + ')';
-      for (var i = 0; i < 7; i++) px(ctx, ps, bx + 3 + i, by + 5 + Math.floor(i * 0.75), 1, 1);
+      for (var i = 0; i < SH_X + 3; i++) px(ctx, ps, bx + 3 + i, by + 5 + Math.floor(i * 0.75), 1, 1);
       px(ctx, OUT, bx, by - 8, 3, 14); px(ctx, '#5a6070', bx + 1, by - 7, 1, 12);
       px(ctx, OUT, bx - 2, by - 10, 7, 4); px(ctx, lit ? '#fff3b0' : '#8a92a6', bx - 1, by - 9, 5, 2);
     });
@@ -2985,7 +3008,8 @@
       ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
     }
     if (!inside) shores(x0, y0, cx, cy, at, wet);
-    var sunUp = inside ? SHADE * 0.6 : SHADE * (1 - darkness(novaNow()));
+    var sunUp = inside ? SHADE * 0.6 : SHADE * (1 - darkness(novaNow())), sl = inside ? 1 : shadowLen(novaNow());
+    SH_X = Math.round(4 * sl); SH_Y = Math.round(3 * sl);
     shadows(x0, y0, cx, cy, at, sunUp);
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy < 0) return;
@@ -3062,7 +3086,7 @@
     ambient(now, cx, cy, x0, y0, ppx, ppy);
     drawAmbient(now, cx, cy, false);
     var nc = novaNow(), dk = darkness(nc);
-    if (nc.phase === 'dawn' || nc.phase === 'dusk' || nc.phase === 'day') { ctx.fillStyle = LIGHT[nc.phase]; ctx.fillRect(0, 0, VW * TS, VH * TS); }
+    ctx.fillStyle = skyTint(nc); ctx.fillRect(0, 0, VW * TS, VH * TS);
     if (dk > 0) night(dk, cx, cy, now, ppx, ppy);
     drawAmbient(now, cx, cy, true);
     drawFight(cx, cy, now, ppx, ppy);
