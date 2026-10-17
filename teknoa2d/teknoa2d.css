@@ -218,7 +218,7 @@ a{color:var(--lavender)}
 .wcard-t b{display:block;font:700 clamp(1.3rem,4vw,2.6rem)/1 var(--font-display);letter-spacing:.2em;color:var(--ice)}
 .wcard-t span{font-size:clamp(.6rem,1.4vw,.75rem);letter-spacing:.12em;color:var(--lavender)}
 /* the text box: a game boy box, double border, pixel font */
-.wtalk{position:absolute;left:.4rem;right:.4rem;bottom:.4rem;padding:.7rem .85rem .9rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;box-shadow:0 0 0 2px #0b0d1a;font:clamp(.5rem,1.5vw,.66rem)/2 var(--font-pixel);letter-spacing:.02em;color:#f4f6ff;white-space:pre-line}
+.wtalk{position:absolute;z-index:4;left:.4rem;right:.4rem;bottom:.4rem;padding:.7rem .85rem .9rem;border:4px double #dce3ff;border-radius:4px;background:#0b0d1a;box-shadow:0 0 0 2px #0b0d1a;font:clamp(.5rem,1.5vw,.66rem)/2 var(--font-pixel);letter-spacing:.02em;color:#f4f6ff;white-space:pre-line}
 .wtalk b{display:block;color:var(--glitch-a);font-size:.9em;letter-spacing:.08em;margin-bottom:.2rem}
 .wtalk b:empty{display:none}
 .wtalk p{margin:.15rem 0 0}

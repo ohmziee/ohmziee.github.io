@@ -1747,7 +1747,9 @@
   var bTap = { at: 0, moved: false, busy: false };
   function bEdge(down) {
     if (down) { bTap = { at: Date.now(), moved: false, busy: !!(talkBox || mini || counter || table || fainting) }; return; }
-    if (!bTap.busy && !bTap.moved && Date.now() - bTap.at < 260 && active) phoneTap();
+    /* out on the street a long press is running; in the phone there is no
+       running, so a press of any length is B (a finger on glass is slow) */
+    if (!bTap.busy && !bTap.moved && (phone || Date.now() - bTap.at < 260) && active) phoneTap();
   }
   var phone = null, pPrev = {}, pDrawn = 0;
   var APPS = [['id', 'ID', '#ff9de2', '◉'], ['inv', 'INV', '#7cc8ff', '▦'], ['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
@@ -2627,7 +2629,9 @@
     if (wiping(now)) { pressedA = false; return; }
     if (now < freezeUntil) return;
     if (fainting) return;
-    if (phone) { tickPhone(now); return; }
+    /* a line that turns up while the phone is out (a nudge, a warning) is
+       read first: the phone waits under it, or neither A nor B would reach it */
+    if (phone && !talkBox) { tickPhone(now); return; }
     if (mini) { tickMini(dt, now); return; }
     if (counter) { tickCounter(); return; }
     if (table) { tickTable(); return; }
