@@ -24,8 +24,8 @@
     yucayeque: { ground: '#3a2a22', road: '#4e3a2c', line: '#6d543e', roof: '#c4473a', roof2: '#e8b13a', wall: '#2f6f5e', glow: ['#ffd36a', '#ff8a6b', '#7cffb2', '#ffe97c'], tree: '#1f5a2e', leaf: '#5fd06a', grass: '#2a4a26' },
     naturia:   { ground: '#14261f', road: '#2a3a2a', line: '#3e5a3e', roof: '#3a5a3a', roof2: '#5a7a4a', wall: '#24402c', glow: ['#7cf5ff', '#b28cff', '#7cffb2', '#7cf5ff'], tree: '#123a2a', leaf: '#3affc8', grass: '#173a2a' },
     haven:     { ground: '#4a5260', road: '#6a7282', line: '#d8dce8', roof: '#c8ccd8', roof2: '#e6e8f0', wall: '#8a92a6', glow: ['#bfe4ff', '#ffffff', '#9fd0ff', '#ffffff'], tree: '#2a5a3a', leaf: '#6ad08a', grass: '#3a6a4a' },
-    majinryu:  { ground: '#2a1e22', road: '#3a2c30', line: '#5a3a3a', roof: '#7a2020', roof2: '#a83030', wall: '#2a2a30', glow: ['#ff6a3a', '#ffd36a', '#7cffb2', '#ff4f6a'], tree: '#2a3a2a', leaf: '#6aa060', grass: '#24302a' },
-    redrum:    { ground: '#2a1014', road: '#3a161c', line: '#5a1a24', roof: '#3a1218', roof2: '#4a1820', wall: '#1a080c', glow: ['#ff2a4a', '#ff4fd8', '#ff6a3a', '#ff2a4a'], tree: '#2a1a1a', leaf: '#6a2a2a', grass: '#2a1418' },
+    majinryu:  { ground: '#2a1e22', road: '#46363a', line: '#7a4e4a', roof: '#7a2020', roof2: '#a83030', wall: '#2a2a30', glow: ['#ff6a3a', '#ffd36a', '#7cffb2', '#ff4f6a'], tree: '#2a3a2a', leaf: '#6aa060', grass: '#24302a' },
+    redrum:    { ground: '#2a1014', road: '#4a2026', line: '#7a2e3a', roof: '#3a1218', roof2: '#4a1820', wall: '#1a080c', glow: ['#ff2a4a', '#ff4fd8', '#ff6a3a', '#ff2a4a'], tree: '#2a1a1a', leaf: '#6a2a2a', grass: '#2a1418' },
     vistadelsol: { ground: '#3a3a26', road: '#4a4630', line: '#6a6440', roof: '#4a6a3a', roof2: '#5a7a4a', wall: '#3a4a2a', glow: ['#ffd36a', '#7cffb2', '#ff8a6b', '#ffe97c'], tree: '#1f5a2e', leaf: '#7cd06a', grass: '#25452a' },
     none:      { ground: '#20283a', road: '#2a3248', line: '#3a4460', roof: '#2a3248', roof2: '#3a4460', wall: '#1a2030', glow: ['#9f8cff'], tree: '#1a3a30', leaf: '#3a8a6a', grass: '#1a3a2a' }
   };
@@ -52,8 +52,11 @@
      more of the same; for water and bridges, the sides that are land or
      water. 16/32/64/128 (NE, SE, SW, NW) mark an inside corner: both
      sides next to it match but the diagonal doesn't, so the kerb, roof
-     outline or grass edge has a notch to close. */
+     outline or grass edge has a notch to close. 256 is a building's
+     upper storey (the row over its front, on a block three deep or more),
+     512 a front with a storey above it. */
   var OUT = '#0b0d1a';
+  function upperOn(v, i) { return !!((v >> (i * 2)) & 1) || (v & 7) === 3; }
   function drawTile(g, t, di, v, m, wave, rv, door) {
     var p = pal(di), i;
     var N = m & 1, E = m & 2, S = m & 4, Wd = m & 8;
@@ -61,9 +64,9 @@
       var deep = t === T.DEEP, crest = deep ? '#1d4378' : '#2f69a0';
       px(g, deep ? '#0a1834' : '#123563', 0, 0, TS, TS);
       /* two crests in a fixed pattern, rocking a pixel with the tide */
-      var o = wave ? 1 : 0;
-      px(g, crest, 2 + o, 4, 3, 1); px(g, crest, 5 + o, 3, 2, 1);
-      if (v & 1) { px(g, crest, 9 - o, 11, 3, 1); px(g, crest, 12 - o, 10, 2, 1); }
+      var o = wave ? 1 : 0, c1x = 1 + (v & 3) * 2, c1y = 3 + ((v >> 1) & 3), c2x = 8 - (v & 1) * 3, c2y = 9 + ((v >> 2) & 1) * 3;
+      px(g, crest, c1x + o, c1y + 1, 3, 1); px(g, crest, c1x + 3 + o, c1y, 2, 1);
+      if (v & 1 || v === 6) { px(g, crest, c2x - o, c2y + 1, 3, 1); px(g, crest, c2x + 3 - o, c2y, 2, 1); }
       /* foam where it meets land */
       var foam = '#6fb4e0';
       if (N) px(g, foam, 0, 0, TS, 1); if (S) px(g, foam, 0, 15, TS, 1);
@@ -82,8 +85,26 @@
     }
     if (t === T.SAND) {
       px(g, '#76664a', 0, 0, TS, TS);
-      var dots = v & 1 ? [[3, 3], [11, 6], [6, 12]] : [[12, 2], [4, 9], [10, 13]];
-      dots.forEach(function (d) { px(g, '#8f7c5a', d[0], d[1], 2, 1); });
+      var sk = v & 7, sLt = '#8f7c5a', sDk = '#665840';
+      if (sk === 2 || sk === 3 || sk === 6) {
+        /* ripples the wind left */
+        var ry = sk === 3 ? 4 : 2;
+        [[2, ry], [8, ry + 5], [3, ry + 9]].forEach(function (r) { px(g, sDk, r[0], r[1] + 1, 2, 1); px(g, sDk, r[0] + 2, r[1], 3, 1); px(g, sDk, r[0] + 5, r[1] + 1, 2, 1); px(g, sLt, r[0] + 2, r[1] - 1, 3, 1); });
+      } else {
+        var dots = v & 1 ? [[3, 3], [11, 6], [6, 12]] : [[12, 2], [4, 9], [10, 13]];
+        dots.forEach(function (d) { px(g, sLt, d[0], d[1], 2, 1); });
+      }
+      if (v === 4 || v === 20) { px(g, '#f2d6c8', 9, 9, 2, 1); px(g, '#d8a898', 9, 10, 3, 1); px(g, '#f4f6ff', 9, 9, 1, 1); }     /* a shell */
+      if (v === 31) { px(g, OUT, 4, 7, 8, 3); px(g, '#8a6a48', 5, 8, 6, 1); px(g, '#5a3a22', 6, 8, 2, 1); }            /* driftwood */
+      /* wet sand where the water reaches, its edge uneven */
+      var wetC = '#5e523c';
+      for (i = 0; i < TS; i++) {
+        var dep = 2 + ((i + v) % 5 === 0 ? 1 : 0) + ((i + v * 3) % 7 === 0 ? -1 : 0);
+        if (N) px(g, wetC, i, 0, 1, dep);
+        if (S) px(g, wetC, i, TS - dep, 1, dep);
+        if (Wd) px(g, wetC, 0, i, dep, 1);
+        if (E) px(g, wetC, TS - dep, i, dep, 1);
+      }
       return;
     }
     if (t === T.GROUND || t === T.STALL) {
@@ -148,9 +169,14 @@
     if (t === T.GRASS) {
       px(g, p.grass, 0, 0, TS, TS);
       /* a shadow line wherever the grass gives way */
-      var gEdge = shade(p.grass, 0.65);
+      var gEdge = shade(p.grass, 0.65), gMid = shade(p.grass, 0.82);
       if (N) px(g, gEdge, 0, 0, TS, 1); if (S) px(g, gEdge, 0, 15, TS, 1);
       if (E) px(g, gEdge, 15, 0, 1, TS); if (Wd) px(g, gEdge, 0, 0, 1, TS);
+      /* a second, broken row in a middle shade, so the edge isn't a ruled line */
+      for (i = (v & 1) * 2; i < TS; i += 4) {
+        if (N) px(g, gMid, i, 1, 2, 1); if (S) px(g, gMid, i, 14, 2, 1);
+        if (E) px(g, gMid, 14, i, 1, 2); if (Wd) px(g, gMid, 1, i, 1, 2);
+      }
       if (m & 16) px(g, gEdge, 15, 0); if (m & 32) px(g, gEdge, 15, 15);
       if (m & 64) px(g, gEdge, 0, 15); if (m & 128) px(g, gEdge, 0, 0);
       /* tufts: little ^^ pairs on a grid, the way the old games did it */
@@ -180,6 +206,21 @@
     }
     if (t === T.BUILDING) {
       var roof = [p.roof, p.roof2, shade(p.roof, 1.2)][rv || 0], rDark = shade(roof, 0.7), rLit = shade(roof, 1.3);
+      if (m & 256) {
+        /* an upper storey: wall, a sill under two windows, the eave over them */
+        px(g, p.wall, 0, 0, TS, TS);
+        px(g, rDark, 0, 0, TS, 2); px(g, shade(p.wall, 0.75), 0, 13, TS, 1); px(g, shade(p.wall, 1.15), 0, 14, TS, 1);
+        if (!E) px(g, OUT, 15, 0, 1, TS);
+        if (!Wd) px(g, OUT, 0, 0, 1, TS);
+        for (i = 0; i < 2; i++) {
+          var ux = i ? 9 : 2, uOn = upperOn(v, i);
+          px(g, OUT, ux, 4, 5, 7);
+          var ug = uOn ? p.glow[(v + i + 1) % p.glow.length] : '#141a2e';
+          px(g, ug, ux + 1, 5, 3, 5); px(g, uOn ? shade(ug, 1.35) : '#232b48', ux + 1, 5, 1, 1);
+          px(g, OUT, ux + 1, 7, 3, 1); px(g, shade(p.wall, 1.2), ux, 11, 5, 1);
+        }
+        return;
+      }
       if (S) {
         /* the roof: shingle rows, an outline where the building ends */
         px(g, roof, 0, 0, TS, TS);
@@ -197,7 +238,8 @@
       /* the front: eave shadow, windows in frames, maybe the door */
       px(g, p.wall, 0, 0, TS, TS);
       if (!N) { px(g, OUT, 0, 0, TS, 1); px(g, roof, 0, 1, TS, 2); }
-      px(g, rDark, 0, N ? 0 : 3, TS, 2);
+      if (m & 512) px(g, shade(p.wall, 0.75), 0, 0, TS, 1);        /* the floor line under the storey */
+      else px(g, rDark, 0, N ? 0 : 3, TS, 2);
       px(g, shade(p.wall, 0.75), 0, 14, TS, 1); px(g, OUT, 0, 15, TS, 1);
       if (!E) px(g, OUT, 15, 0, 1, TS);
       if (!Wd) px(g, OUT, 0, 0, 1, TS);
@@ -2662,8 +2704,10 @@
     var x0 = Math.max(0, Math.floor(cx / TS) - 1), y0 = Math.max(0, Math.floor(cy / TS) - 1);
     for (var y = y0; y <= y0 + VH + 1 && y < world.H; y++) for (var x = x0; x <= x0 + VW + 1 && x < world.W; x++) {
       var k = y * world.W + x;
-      if (world.tile[k] !== T.BUILDING || (y + 1 < world.H && world.tile[k + world.W] === T.BUILDING)) continue;
+      if (world.tile[k] !== T.BUILDING) continue;
       var p = pal(world.dist[k]), v = Math.floor(hash(x, y) * 32), tx = x * TS - cx, ty = y * TS - cy;
+      if (storey(x, y)) { for (var u = 0; u < 2; u++) if (upperOn(v, u)) add(tx + (u ? 11 : 4), ty + 7, 11, 0.6, p.glow[(v + u + 1) % p.glow.length], 0.3); continue; }
+      if (y + 1 < world.H && world.tile[k + world.W] === T.BUILDING) continue;
       if (deco.door[k]) { add(tx + 8, ty + 12, 16, 0.75, p.glow[v % p.glow.length], 0.3); continue; }
       for (var i = 0; i < 2; i++) if ((v >> (i + 2)) & 1 || (v & 3) === 1) add(tx + (i ? 11 : 4), ty + 9, 11, 0.6, p.glow[(v + i) % p.glow.length], 0.3);
     }
@@ -2728,6 +2772,12 @@
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  /* a block three or more deep stands two storeys at the front */
+  function storey(x, y) {
+    var B = T.BUILDING, W = world.W;
+    return y > 0 && y + 1 < world.H && world.tile[y * W + x] === B && world.tile[(y + 1) * W + x] === B && world.tile[(y - 1) * W + x] === B
+      && (y + 2 >= world.H || world.tile[(y + 2) * W + x] !== B);
+  }
   /* ── the shoreline, rounded: tiles meet the water on a grid, so the coast
      comes out in stair steps. land jutting into the water gets its corner
      washed away, and water tucked into the land gets its corner filled in,
@@ -2736,7 +2786,7 @@
   var SIDE = [[0, -1], [1, 0], [0, 1], [-1, 0]];
   function landBase(t, di) {
     var p = pal(di);
-    return t === T.SAND ? '#76664a' : t === T.GRASS || t === T.TREE ? p.grass : t === T.GROUND || t === T.STALL ? p.ground : t === T.MAINLAND ? '#14301c' : t === T.ROAD ? p.road : null;
+    return t === T.SAND ? '#5e523c' : t === T.GRASS || t === T.TREE ? p.grass : t === T.GROUND || t === T.STALL ? p.ground : t === T.MAINLAND ? '#14301c' : t === T.ROAD ? p.road : null;
   }
   function seaOf(t) { return t === T.DEEP ? '#0a1834' : '#123563'; }
   /* a triangle in corner c of the tile at (sx, sy): pixels within n of the corner */
@@ -2795,6 +2845,7 @@
         else if (t === T.GRASS) hit = !inside && o !== T.GRASS && o !== T.TREE && !wet(o) && o !== T.DEEP;
         else if (wet(t)) hit = !wet(o) && o !== T.BRIDGE;
         else if (t === T.BRIDGE) hit = wet(o);
+        else if (t === T.SAND) hit = wet(o);
         if (hit) m |= 1 << b;
       }
       if (t === T.BUILDING || t === T.ROAD || t === T.GRASS) {
@@ -2806,8 +2857,12 @@
           if (dHit) m |= 16 << c;
         }
       }
-      if (t === T.BUILDING) { rv = deco.roof[k]; dr = deco.door[k]; }
-      else if (t !== T.STALL && t !== T.ROAD && t !== T.GROUND) v &= 7;
+      if (t === T.BUILDING) {
+        rv = deco.roof[k]; dr = deco.door[k];
+        if (storey(x, y)) m = (m & 15) | 256;
+        else if (y > 0 && !(m & 4) && storey(x, y - 1)) m |= 512;
+      }
+      else if (t !== T.STALL && t !== T.ROAD && t !== T.GROUND && t !== T.SAND) v &= 7;
       var w = wet(t) ? wave : 0;
       var key = t + '.' + di + '.' + v + '.' + m + '.' + w + '.' + rv + dr;
       ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
@@ -2855,7 +2910,11 @@
     who.forEach(function (p) {
       if (p.tree) { ctx.drawImage(p.tree, Math.round(p.x - cx) - 2, Math.round(p.y + 0.5 - cy) + TS - TREE_H + 1); return; }
       var bob = p.boat ? Math.floor(now / 450) % 2 : 0;
-      if (!p.boat) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(Math.round(p.x - cx) + 4, Math.round(p.y - cy) + 14, 8, 2); }
+      if (!p.boat) {
+        /* a small oval under the feet */
+        var fx = Math.round(p.x - cx), fy = Math.round(p.y - cy);
+        ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(fx + 5, fy + 13, 6, 1); ctx.fillRect(fx + 4, fy + 14, 8, 1); ctx.fillRect(fx + 5, fy + 15, 6, 1);
+      }
       if (p.mob && now < p.mob.hurt && Math.floor(now / 60) % 2) ctx.globalAlpha = 0.35;
       ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2 - (p.boat ? 3 : 0) + bob);
       ctx.globalAlpha = 1;
