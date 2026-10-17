@@ -683,6 +683,39 @@
     return (markArt[m.id] = c);
   }
 
+  /* ── cast shadows: the light comes from the top left, so everything
+     standing drops a flat shadow SH_X right and SH_Y down. a landmark's
+     is its own silhouette; a block of buildings' is worked out per tile
+     (a pixel is shaded when the pixel up-left of it is a building) ── */
+  var SH_X = 4, SH_Y = 3, SHADE = 0.3, markShade = {};
+  function markShadow(m) {
+    if (markShade[m.id]) return markShade[m.id];
+    var src = markCanvas(m), c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+    var g = c.getContext('2d'); g.drawImage(src, 0, 0);
+    g.globalCompositeOperation = 'source-in'; g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+    return (markShade[m.id] = c);
+  }
+  function shadows(x0, y0, cx, cy, at, a) {
+    if (a <= 0.01) return;
+    if (!inside) {
+      ctx.fillStyle = 'rgba(0,0,0,' + a.toFixed(3) + ')';
+      for (var y = y0; y <= y0 + VH && y < world.H; y++) for (var x = x0; x <= x0 + VW && x < world.W; x++) {
+        var t = world.tile[y * world.W + x];
+        if (t === T.BUILDING || t === T.LANDMARK) continue;
+        var sx = x * TS - cx, sy = y * TS - cy, B = T.BUILDING;
+        if (at(x - 1, y - 1) === B) ctx.fillRect(sx, sy, SH_X, SH_Y);
+        if (at(x - 1, y) === B) ctx.fillRect(sx, sy + SH_Y, SH_X, TS - SH_Y);
+        if (at(x, y - 1) === B) ctx.fillRect(sx + SH_X, sy, TS - SH_X, SH_Y);
+      }
+    }
+    ctx.globalAlpha = a;
+    world.marks.forEach(function (m) {
+      if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx + SH_X < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy + SH_Y < 0) return;
+      ctx.drawImage(markShadow(m), m.x * TS - cx + SH_X, m.y * TS - cy + SH_Y);
+    });
+    ctx.globalAlpha = 1;
+  }
+
   /* the boat, drawn over the lower half of whoever is in it */
   var hullCanvas = null;
   function hull() {
@@ -2610,6 +2643,9 @@
       if (sx < -TS || sy < -2 * TS || sx > VW * TS || sy > VH * TS + TS) return;
       var o = LAMP_AT[l.side], bx = sx + o[0], by = sy + o[1];
       px(ctx, 'rgba(0,0,0,.35)', bx - 1, by + 5, 5, 2);
+      /* the pole's shadow, off to the bottom right with everything else's */
+      var ps = 'rgba(0,0,0,' + (SHADE * (1 - darkness(novaNow()))).toFixed(3) + ')';
+      for (var i = 0; i < 7; i++) px(ctx, ps, bx + 3 + i, by + 5 + Math.floor(i * 0.75), 1, 1);
       px(ctx, OUT, bx, by - 8, 3, 14); px(ctx, '#5a6070', bx + 1, by - 7, 1, 12);
       px(ctx, OUT, bx - 2, by - 10, 7, 4); px(ctx, lit ? '#fff3b0' : '#8a92a6', bx - 1, by - 9, 5, 2);
     });
@@ -2777,6 +2813,8 @@
       ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
     }
     if (!inside) shores(x0, y0, cx, cy, at, wet);
+    var sunUp = inside ? SHADE * 0.6 : SHADE * (1 - darkness(novaNow()));
+    shadows(x0, y0, cx, cy, at, sunUp);
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy < 0) return;
       ctx.drawImage(markCanvas(m), m.x * TS - cx, m.y * TS - cy);
@@ -2784,6 +2822,7 @@
     world.signs.forEach(function (sg) {
       var sx = sg.x * TS - cx, sy = sg.y * TS - cy;
       if (sx < -TS || sy < -TS || sx > VW * TS || sy > VH * TS) return;
+      px(ctx, 'rgba(0,0,0,' + (SHADE * (1 - darkness(novaNow()))).toFixed(3) + ')', sx + 2 + SH_X, sy + 2 + SH_Y, 12, 8);
       px(ctx, OUT, sx + 6, sy + 8, 4, 8); px(ctx, '#5a3a22', sx + 7, sy + 9, 2, 6);
       px(ctx, OUT, sx + 2, sy + 2, 12, 8); px(ctx, '#c8a878', sx + 3, sy + 3, 10, 6);
       px(ctx, '#8a6a48', sx + 4, sy + 5, 8, 1); px(ctx, '#8a6a48', sx + 4, sy + 7, 6, 1);
