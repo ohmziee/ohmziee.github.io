@@ -1751,11 +1751,9 @@
   }
   var phone = null, pPrev = {}, pDrawn = 0;
   var APPS = [['id', 'ID', '#ff9de2', '◉'], ['inv', 'INV', '#7cc8ff', '▦'], ['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
-  var MAP_LAYERS = ['terranova', 'nova sea', 'nova city'], ZOOM_MAX = [6, 6, 16];
-  var MAPIMG = {
-    biomes: { src: 'maps/biomes.png', here: [0.629, 0.797] }, states: { src: 'maps/states.png', here: [0.629, 0.797] },
-    nova: { src: 'maps/nova.png', here: [0.5, 0.36] }
-  };
+  /* MAP: vista del sol (region.js draws it from the canon map) and the
+     streets you walk, close up */
+  var MAP_LAYERS = ['vista del sol', 'nova city'], ZOOM_MAX = [6, 16];
   function phoneTap() {
     if (!phone) { if (talkBox || mini || counter || table || fainting) return; openPhone(); return; }
     if (phone.app === 'inv' && phone.act >= 0) { phone.act = -1; drawPhone(); return; }
@@ -1764,7 +1762,7 @@
     closePhone();
   }
   function openPhone() {
-    phone = { app: 'home', sel: 0, tab: 'id', isel: 0, layer: 2, view: 'biomes', zoom: [1, 1, 3], c: [null, null, null] };
+    phone = { app: 'home', sel: 0, tab: 'id', isel: 0, layer: 1, zoom: [1, 3], c: [null, null] };
     pPrev = { up: !!held.up, down: !!held.down, left: !!held.left, right: !!held.right };
     pressedA = false; me.moving = me.moving; held.b = false;
     $('wPhone').hidden = false; $('wPhone').classList.remove('lifted');
@@ -1820,7 +1818,7 @@
       var px = (held.right ? 1 : 0) - (held.left ? 1 : 0), py = (held.down ? 1 : 0) - (held.up ? 1 : 0);
       if (px || py) panMap(px * 9, py * 9);
       if (a) zoomMap(1.25);
-      if (phone.layer === 2 && now - pDrawn > 500) { pDrawn = now; drawOverlay(); }
+      if (phone.layer === 1 && now - pDrawn > 500) { pDrawn = now; drawOverlay(); }
     }
     if (now - pDrawn > 1000 && phone.app !== 'map') { pDrawn = now; drawPhoneBar(); if (phone.app === 'clock' || (phone.app === 'id' && phone.tab === 'vitals')) drawPhone(); }
   }
@@ -2185,12 +2183,11 @@
   /* ── the map app: three layers, each one draggable and zoomable ──
      drag / hold the arrows to pan, wheel / pinch / A / + to zoom in, - out,
      ◎ ME back to you. nova city zooms all the way to the street */
-  var mapImgs = {};
   function mapContent(layer) {
-    if (layer === 2) { var at = mapPos(); return { w: city.W, h: city.H, here: [at.x + 0.5, at.y + 0.5] }; }
-    var m = MAPIMG[layer === 0 ? phone.view : 'nova'], im = mapImgs[m.src];
-    if (!im || !im.naturalWidth) return null;
-    return { w: im.naturalWidth, h: im.naturalHeight, here: [m.here[0] * im.naturalWidth, m.here[1] * im.naturalHeight] };
+    var at = mapPos();
+    if (layer === 1) return { w: city.W, h: city.H, here: [at.x + 0.5, at.y + 0.5] };
+    var G = window.MFRegion;
+    return { w: G.W, h: G.H, here: G.toPx(window.MFWorldMap.toMap(at.x + 0.5, at.y + 0.5)) };
   }
   function drawMap() {
     var scr = $('wPhoneScreen'), wrap = document.createElement('div'); wrap.className = 'pmap';
@@ -2202,11 +2199,6 @@
       b.addEventListener('click', function (e) { e.preventDefault(); setLayer(i); });
       tabs.appendChild(b);
     });
-    if (phone.layer === 0) {
-      var vb = document.createElement('button'); vb.type = 'button'; vb.textContent = phone.view === 'biomes' ? 'STATES' : 'BIOMES';
-      vb.addEventListener('click', function (e) { e.preventDefault(); phone.view = phone.view === 'biomes' ? 'states' : 'biomes'; phone.c[0] = null; drawPhone(); });
-      tabs.appendChild(vb);
-    }
     var zoom = document.createElement('span'); zoom.className = 'zoom';
     [['−', function () { zoomMap(0.8); }], ['+', function () { zoomMap(1.25); }], ['◎ ME', function () { phone.c[phone.layer] = null; layoutMap(); }]].forEach(function (z) {
       var b = document.createElement('button'); b.type = 'button'; b.textContent = z[0];
@@ -2218,19 +2210,16 @@
     var stage = document.createElement('div'); stage.className = 'stage'; stage.id = 'wMapStage'; view.appendChild(stage);
     wrap.appendChild(view);
     scr.appendChild(wrap);
-    if (phone.layer === 2) {
+    if (phone.layer === 1) {
       stage.appendChild(cityCanvas());
       var ov = document.createElement('canvas'); ov.id = 'wMapOverlay'; ov.width = city.W; ov.height = city.H; stage.appendChild(ov);
     } else {
-      var m = MAPIMG[phone.layer === 0 ? phone.view : 'nova'], img = mapImgs[m.src] || (mapImgs[m.src] = new Image());
-      if (!img.src) img.src = m.src;
-      var shown = img.cloneNode(); shown.alt = 'map: ' + MAP_LAYERS[phone.layer]; stage.appendChild(shown);
-      if (!img.complete) img.onload = function () { if (phone && phone.app === 'map') layoutMap(); };
+      stage.appendChild(regionCanvas());
     }
     var dot = document.createElement('span'); dot.className = 'pin'; dot.id = 'wMapDot'; dot.appendChild(document.createElement('span')).className = 'here'; stage.appendChild(dot);
     mapGestures(view);
     layoutMap(); setTimeout(layoutMap, 300);
-    if (phone.layer === 2) drawOverlay();
+    if (phone.layer === 1) drawOverlay();
     $('wPhoneHint').textContent = 'drag or arrows: move · wheel, pinch, A or +: zoom · ◎ ME: you · tap B: back';
   }
   function setLayer(i) { phone.layer = i; drawPhone(); }
@@ -2296,7 +2285,7 @@
     if (!phone || phone.app !== 'map') return;
     if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomMap(1.25); }
     else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomMap(0.8); }
-    else if (e.key === '1' || e.key === '2' || e.key === '3') { e.preventDefault(); setLayer(+e.key - 1); }
+    else if (e.key === '1' || e.key === '2') { e.preventDefault(); setLayer(+e.key - 1); }
   });
   /* close in on the city: who's about (shopkeepers green, players violet) */
   function drawOverlay() {
@@ -2316,7 +2305,13 @@
       : t === T.BUILDING ? p.roof2 : t === T.ROAD ? p.road : t === T.GRASS ? p.grass : t === T.TREE ? p.tree : t === T.LANDMARK ? '#ffd36a'
       : t === T.WALL ? p.wall : t === T.FLOOR || t === T.CHECK ? p.road : t === T.MAT ? '#7a2e54' : p.ground;
   }
-  var cityCv = null;
+  var cityCv = null, regionCv = null;
+  /* drawn once, the first time it is opened (the font has loaded by then) */
+  function regionCanvas() {
+    if (!regionCv) { regionCv = document.createElement('canvas'); window.MFRegion.draw(regionCv); }
+    var copy = document.createElement('canvas'); copy.width = regionCv.width; copy.height = regionCv.height; copy.getContext('2d').drawImage(regionCv, 0, 0);
+    return copy;
+  }
   function cityCanvas() {
     if (!cityCv) {
       cityCv = document.createElement('canvas'); cityCv.width = city.W; cityCv.height = city.H;

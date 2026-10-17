@@ -34,6 +34,18 @@
     return p.map(function (q) { var gx = grow ? mx + (q[0] - mx) * grow : q[0], gy = grow ? my + (q[1] - my) * grow : q[1]; return [(gx - GEO.win[0]) * S, (gy - GEO.win[1]) * S]; });
   }
   function toTile(m) { return [Math.round((m[0] - GEO.win[0]) * S), Math.round((m[1] - GEO.win[1]) * S)]; }
+  /* a tile back to map units, for the phone's region map: on (or just off)
+     an island drawn bigger, the spot shrinks back to the island's real size */
+  function centre(str) { var p = pts(str), mx = 0, my = 0; p.forEach(function (q) { mx += q[0]; my += q[1]; }); return [mx / p.length, my / p.length]; }
+  var GROWN = [[GEO.nova, EN], [GEO.redrum, E]].map(function (g) { return { c: centre(g[0]), grow: g[1], b: bbox(tiles(g[0], g[1])) }; });
+  function toMap(x, y) {
+    var m = [x / S + GEO.win[0], y / S + GEO.win[1]];
+    for (var i = 0; i < GROWN.length; i++) {
+      var g = GROWN[i], b = g.b;
+      if (x >= b.x0 - 8 && x <= b.x1 + 8 && y >= b.y0 - 8 && y <= b.y1 + 8) return [g.c[0] + (m[0] - g.c[0]) / g.grow, g.c[1] + (m[1] - g.c[1]) / g.grow];
+    }
+    return m;
+  }
   function bbox(p) { var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 }; p.forEach(function (q) { b.x0 = Math.min(b.x0, q[0]); b.y0 = Math.min(b.y0, q[1]); b.x1 = Math.max(b.x1, q[0]); b.y1 = Math.max(b.y1, q[1]); }); return b; }
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
@@ -1559,5 +1571,5 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, ORIGIN_TALK: ORIGIN_TALK, KOGA_ORIGIN: KOGA_ORIGIN, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, reachAll: reachAll, loose: loose };
+  root.MFWorldMap = { V: VERSION, toMap: toMap, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, ORIGIN_TALK: ORIGIN_TALK, KOGA_ORIGIN: KOGA_ORIGIN, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, reachAll: reachAll, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);
