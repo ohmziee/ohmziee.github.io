@@ -36,7 +36,7 @@
   function bbox(p) { var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 }; p.forEach(function (q) { b.x0 = Math.min(b.x0, q[0]); b.y0 = Math.min(b.y0, q[1]); b.x1 = Math.max(b.x1, q[0]); b.y1 = Math.max(b.y1, q[1]); }); return b; }
   /* bump when the map changes shape: a saved position from an older map
      means nothing on this one, so that player starts at the spawn */
-  var VERSION = 6;
+  var VERSION = 7;
   var T = { DEEP: 0, SHALLOW: 1, SAND: 2, GROUND: 3, ROAD: 4, BUILDING: 5, TREE: 6, BRIDGE: 7,
             GRASS: 8, LANDMARK: 9, MAINLAND: 10, STALL: 11, FLOOR: 12, WALL: 13, MAT: 14, CHECK: 15 };
   var SOLID = {}; SOLID[T.DEEP] = SOLID[T.SHALLOW] = SOLID[T.BUILDING] = SOLID[T.TREE] = SOLID[T.LANDMARK] = SOLID[T.MAINLAND] = SOLID[T.STALL] = SOLID[T.WALL] = 1;
@@ -53,7 +53,7 @@
     { id: 'naturia', name: 'NATURIA', sub: 'district 3 // the glowing wild', km: 139, seat: [0.25, 0.22], style: 'wild', block: 6, seed: 37 },
     { id: 'haven', name: 'HAVEN', sub: 'district 4 // where the council sits', km: 88, seat: [0.72, 0.82], style: 'civic', block: 7, seed: 41 },
     { id: 'majinryu', name: 'MAJINRYŪ', sub: 'district 5 // lanterns and labs', km: 72, seat: [0.28, 0.8], style: 'grid', block: 4, seed: 53 },
-    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, style: 'alleys', block: 3, seed: 67 }
+    { id: 'redrum', name: 'REDRUM', sub: 'district 6 // unofficially', km: 13, style: 'island', block: 3, seed: 67 }
   ];
   /* hand-placed offsets (landmarks, shops, people) were laid out at the
      first draft's scale; F spreads them out to the district sizes we keep */
@@ -153,8 +153,11 @@
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(function (o) { var t = get(xx + o[0], yy + o[1]); return t === T.DEEP || t === T.SHALLOW; })) tile[i] = T.SAND;
     }
 
-    /* streets, by district style. inner = land that is not beach */
+    /* streets, by district style. inner = land that is not beach.
+       redrum is laid by hand-written rule of its own (redrumStreets) */
+    var LANE = 4, RSPOT = {};
     DISTRICTS.forEach(function (d) {
+      if (d.style === 'island') return redrumStreets(d);
       var R = Math.ceil(d.r * 1.4);
       for (var y = d.cy - R; y <= d.cy + R; y++) for (var x = d.cx - R; x <= d.cx + R; x++) {
         if (!inside(x, y) || dist[at(x, y)] !== d.index || get(x, y) !== T.GROUND) continue;
@@ -193,6 +196,234 @@
         }
       }
     });
+
+    /* ── redrum: a town on an island, not a grid. a ring road inside the
+       coast, two avenues crossing in the middle, a few side streets, every
+       road LANE tiles wide (two lanes, a car's width each way) with a
+       pavement down both sides. between them, blocks cut into lots of every
+       size with alleys through: walk-ups, yards, a paved lot, a tree. outside
+       the ring a palm-lined seafront walk, a beach on the south shore, a park
+       round the lighthouse; a park in the big block south-east. the arcade
+       faces a plaza at the crossroads (RSPOT: where it and the walk-up go) ── */
+    function redrumStreets(d) {
+      var di = d.index, n = W * H, k, x, y, ox, oy, rs = 0;
+      function mine(x, y) { return inside(x, y) && dist[at(x, y)] === di; }
+      function rnd() { return hash(d.seed * 131 + rs++, 977); }
+      /* how far each tile is from the sea (8-way steps; the beach is 1) */
+      var dc = new Uint8Array(n), q = [];
+      for (k = 0; k < n; k++) if (dist[k] === di) {
+        x = k % W; y = (k / W) | 0;
+        for (oy = -1; oy <= 1 && !dc[k]; oy++) for (ox = -1; ox <= 1; ox++) if (!mine(x + ox, y + oy)) { dc[k] = 1; q.push(k); break; }
+      }
+      for (var qi = 0; qi < q.length; qi++) {
+        var c = q[qi], cx0 = c % W, cy0 = (c / W) | 0;
+        for (oy = -1; oy <= 1; oy++) for (ox = -1; ox <= 1; ox++) {
+          if (!mine(cx0 + ox, cy0 + oy) || dc[at(cx0 + ox, cy0 + oy)]) continue;
+          dc[at(cx0 + ox, cy0 + oy)] = dc[c] + 1; q.push(at(cx0 + ox, cy0 + oy));
+        }
+      }
+      function DC(x, y) { return mine(x, y) ? dc[at(x, y)] : 0; }
+      /* the ring: as big a square as fits with its outer pavement 5 tiles
+         in from the sea (beach, palms, the seafront walk, a verge) */
+      function fits(l, r, t, b) {
+        for (var i = l - 1; i <= r + 1; i++) if (DC(i, t - 1) < 5 || DC(i, b + 1) < 5) return false;
+        for (var j = t - 1; j <= b + 1; j++) if (DC(l - 1, j) < 5 || DC(r + 1, j) < 5) return false;
+        return true;
+      }
+      function grow(r, sides) {
+        for (var grew = true; grew;) {
+          grew = false;
+          if (sides.indexOf('w') >= 0 && fits(r[0] - 1, r[1], r[2], r[3])) { r[0]--; grew = true; }
+          if (sides.indexOf('e') >= 0 && fits(r[0], r[1] + 1, r[2], r[3])) { r[1]++; grew = true; }
+          if (sides.indexOf('n') >= 0 && fits(r[0], r[1], r[2] - 1, r[3])) { r[2]--; grew = true; }
+          if (sides.indexOf('s') >= 0 && fits(r[0], r[1], r[2], r[3] + 1)) { r[3]++; grew = true; }
+        }
+        return r;
+      }
+      /* the biggest square first, then a wide and a tall arm through it, each
+         pushed out as far as the coast allows: the ring runs round the two
+         arms, a cross with its corners cut, so it follows a round island */
+      var sq = grow([d.cx - 8, d.cx + 7, d.cy - 8, d.cy + 7], 'wens'), cut = Math.round((sq[1] - sq[0]) * 0.22);
+      var armW = grow([sq[0], sq[1], sq[2] + cut, sq[3] - cut], 'we'), armT = grow([sq[0] + cut, sq[1] - cut, sq[2], sq[3]], 'ns');
+      var L = armW[0], R = armW[1], T0 = armT[2], B = armT[3];
+      var inArm = function (r, x, y) { return x >= r[0] && x <= r[1] && y >= r[2] && y <= r[3]; };
+      var U = function (x, y) { return inArm(armW, x, y) || inArm(armT, x, y); };
+      /* the ring: every tile of the cross within LANE of its edge */
+      function ringAt(x, y) {
+        if (!U(x, y)) return false;
+        for (var j = -LANE; j <= LANE; j++) for (var i = -LANE; i <= LANE; i++) if (!U(x + i, y + j)) return true;
+        return false;
+      }
+      /* the lighthouse's tip (as noorborj finds it, below) */
+      var top = d.cy, tipX = d.cx;
+      for (y = 0; y < H && top === d.cy; y++) for (x = 0; x < W; x++) if (dist[at(x, y)] === di) { top = y; tipX = x; break; }
+      /* the ground first: beach, palms, the seafront walk, a verge; the rest
+         is open for lots (free). the south shore is all beach */
+      var free = new Uint8Array(n), beachY = d.cy + (B - d.cy) * 0.45;
+      for (k = 0; k < n; k++) if (dist[k] === di) {
+        x = k % W; y = (k / W) | 0;
+        var e = dc[k];
+        if (U(x, y) || e >= 5) { tile[k] = T.GROUND; free[k] = 1; }
+        else if (e === 1 || (y > beachY && e <= 3)) tile[k] = T.SAND;
+        else if (e === 2) tile[k] = (x + y) % 4 === 0 && hash(x, y + 71) < 0.8 ? T.TREE : T.GRASS;
+        else if (e === 3) tile[k] = T.GROUND;
+        else tile[k] = T.GRASS;
+      }
+      /* the roads: the ring; the avenues through it to the shore (not north,
+         where the headland is the lighthouse's); side streets, two of them
+         stopping at an avenue so the corners aren't all the same */
+      var ax = d.cx - (LANE >> 1), ay = d.cy - (LANE >> 1), ys = B, xw = L, xe = R;
+      function lanesOk(fn) { for (var i = 0; i < LANE; i++) if (fn(i) < 3) return false; return true; }
+      while (lanesOk(function (i) { return DC(ax + i, ys + 1); })) ys++;
+      while (lanesOk(function (i) { return DC(xw - 1, ay + i); })) xw--;
+      while (lanesOk(function (i) { return DC(xe + 1, ay + i); })) xe++;
+      var jit = function (s) { return Math.round(hash(d.seed, s) * 2) - 1; };
+      var vw = Math.round((L + LANE + ax) / 2) - (LANE >> 1) + jit(1), ve = Math.round((ax + LANE + R - LANE + 1) / 2) - (LANE >> 1) + jit(2);
+      var hn = Math.round((T0 + LANE + ay) / 2) - (LANE >> 1) + jit(3), hs = Math.round((ay + LANE + B - LANE + 1) / 2) - (LANE >> 1) + jit(4);
+      var roads = [[ax, T0, ax + LANE - 1, ys], [xw, ay, xe, ay + LANE - 1],
+                   [vw, T0, vw + LANE - 1, B], [ve, T0, ve + LANE - 1, ay], [L, hn, R, hn + LANE - 1], [L, hs, ax, hs + LANE - 1]];
+      function road(xx, yy) { if (mine(xx, yy)) { tile[at(xx, yy)] = T.ROAD; free[at(xx, yy)] = 0; } }
+      for (y = T0; y <= B; y++) for (x = L; x <= R; x++) if (ringAt(x, y)) road(x, y);
+      roads.forEach(function (r, i) {
+        /* the side streets stay inside the ring; the avenues run on out */
+        for (var yy = r[1]; yy <= r[3]; yy++) for (var xx = r[0]; xx <= r[2]; xx++) if (i < 2 || U(xx, yy)) road(xx, yy);
+      });
+      /* a pavement along every road */
+      for (k = 0; k < n; k++) {
+        if (dist[k] !== di || tile[k] === T.ROAD) continue;
+        x = k % W; y = (k / W) | 0;
+        for (oy = -1; oy <= 1; oy++) for (ox = -1; ox <= 1; ox++) if (get(x + ox, y + oy) === T.ROAD) { tile[k] = T.GROUND; free[k] = 0; }
+      }
+      /* the headland: lawn and trees round noorborj, a wide path up to its door */
+      for (y = top; y < T0 - 1; y++) for (x = tipX - 10; x <= tipX + 10; x++) {
+        if (!mine(x, y) || !free[at(x, y)]) continue;
+        free[at(x, y)] = 0;
+        tile[at(x, y)] = Math.abs(x - tipX) <= 1 && y >= top + 5 ? T.GROUND : hash(x * 5, y) < 0.12 && Math.abs(x - tipX) > 2 ? T.TREE : T.GRASS;
+      }
+      /* the plaza: the block north-west of the crossroads, paved, trees down
+         both sides and a stall under each; the arcade on it facing south,
+         the walk-up behind */
+      var px0 = vw + LANE + 1, px1 = ax - 2, py0 = hn + LANE + 1, py1 = ay - 2;
+      if (px1 - px0 >= 7 && py1 - py0 >= 8) {
+        for (y = py0; y <= py1; y++) for (x = px0; x <= px1; x++) if (mine(x, y)) { free[at(x, y)] = 0; tile[at(x, y)] = T.GROUND; }
+        var arcX = ((px0 + px1) >> 1) - 1, arcY = py1 - 5;
+        for (y = py1; y >= arcY; y -= 2) { set(px0, y, T.TREE); set(px1, y, T.TREE); }
+        if (px1 - px0 >= 10) { set(px0 + 2, py1 - 2, T.STALL); set(px1 - 2, py1 - 2, T.STALL); }
+        RSPOT.arcade = [arcX - d.cx, arcY - d.cy];
+        RSPOT.apt = [arcX - 2 - d.cx, arcY - 3 - d.cy];
+        /* buildings round the back of the plaza, if there's room */
+        for (y = py0; y <= arcY - 5; y++) for (x = px0; x <= px1; x++) if ((x - px0) % 5 !== 4) set(x, y, T.BUILDING);
+      }
+      /* the rest is lots: each open patch cut in two again and again, an
+         alley down every cut, until the pieces are house-sized */
+      var lots = [];
+      var rectP = true;
+      function split(r, depth, park) {
+        var w = r[2] - r[0] + 1, h = r[3] - r[1] + 1;
+        if (w < 3 || h < 2) { alley(r); return; }
+        if (w <= 7 && h <= 6) { lots.push({ r: r, park: park }); return; }
+        var vert = w > h * 1.2 ? true : h > w * 1.2 ? false : rnd() < 0.5;
+        if (vert && w < 8) vert = false; else if (!vert && h < 7) vert = true;
+        var span = vert ? w : h, cut = Math.max(3, Math.min(span - 4, Math.floor(span * (0.35 + rnd() * 0.3))));
+        /* one big piece of the biggest block is a park */
+        var pk = depth === 0 && rectP && w * h === parkArea ? (rnd() < 0.5 ? 1 : 2) : 0;
+        var a = vert ? [r[0], r[1], r[0] + cut - 1, r[3]] : [r[0], r[1], r[2], r[1] + cut - 1];
+        var b = vert ? [r[0] + cut + 1, r[1], r[2], r[3]] : [r[0], r[1] + cut + 1, r[2], r[3]];
+        alley(vert ? [r[0] + cut, r[1], r[0] + cut, r[3]] : [r[0], r[1] + cut, r[2], r[1] + cut]);
+        if (pk === 1) parkIn(a); else split(a, depth + 1, park);
+        if (pk === 2) parkIn(b); else split(b, depth + 1, park);
+      }
+      function each(r, fn) { for (var yy = r[1]; yy <= r[3]; yy++) for (var xx = r[0]; xx <= r[2]; xx++) if (mine(xx, yy) && free[at(xx, yy)]) fn(xx, yy); }
+      function alley(r) { if (rectP) each(r, function (xx, yy) { tile[at(xx, yy)] = T.GROUND; free[at(xx, yy)] = 0; }); }
+      function parkIn(r) {
+        var mx = (r[0] + r[2]) >> 1, my = (r[1] + r[3]) >> 1;
+        each(r, function (xx, yy) {
+          free[at(xx, yy)] = 0;
+          tile[at(xx, yy)] = Math.abs(xx - mx) <= 0 || Math.abs(yy - my) <= 0 ? T.GROUND
+            : (xx - r[0]) % 3 === 1 && (yy - r[1]) % 3 === 1 && hash(xx, yy * 3) < 0.7 ? T.TREE : T.GRASS;
+        });
+      }
+      /* each open patch: its bounding box, cut up; a lot that strays off
+         the patch is trimmed back onto it */
+      var seenP = new Uint8Array(n), patches = [], parkArea = 0;
+      for (k = 0; k < n; k++) {
+        if (!free[k] || seenP[k]) continue;
+        var st = [k], bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1; seenP[k] = 1;
+        while (st.length) {
+          var cc = st.pop(), xx = cc % W, yy = (cc / W) | 0;
+          bx0 = Math.min(bx0, xx); bx1 = Math.max(bx1, xx); by0 = Math.min(by0, yy); by1 = Math.max(by1, yy);
+          [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (o) { var nk = at(xx + o[0], yy + o[1]); if (inside(xx + o[0], yy + o[1]) && free[nk] && !seenP[nk]) { seenP[nk] = 1; st.push(nk); } });
+        }
+        /* a patch that isn't a plain block (the shore side of the ring) gets
+           no alleys: the gaps between its lots stay green */
+        var area = 0; for (var ay2 = by0; ay2 <= by1; ay2++) for (var ax2 = bx0; ax2 <= bx1; ax2++) if (seenP[at(ax2, ay2)] && free[at(ax2, ay2)]) area++;
+        patches.push({ r: [bx0, by0, bx1, by1], rect: area === (bx1 - bx0 + 1) * (by1 - by0 + 1) });
+      }
+      patches.forEach(function (pt) { var a2 = (pt.r[2] - pt.r[0] + 1) * (pt.r[3] - pt.r[1] + 1); if (pt.rect && a2 > parkArea) parkArea = a2; });
+      patches.forEach(function (pt) { rectP = pt.rect; split(pt.r, 0, false); });
+      function bad(r) { var nb = 0; for (var yy = r[1]; yy <= r[3]; yy++) for (var xx = r[0]; xx <= r[2]; xx++) if (!mine(xx, yy) || !free[at(xx, yy)]) nb++; return nb; }
+      function edgeBad(r, side) {
+        var e2 = side === 0 ? [r[0], r[1], r[2], r[1]] : side === 1 ? [r[2], r[1], r[2], r[3]] : side === 2 ? [r[0], r[3], r[2], r[3]] : [r[0], r[1], r[0], r[3]];
+        return bad(e2);
+      }
+      lots.forEach(function (lot) {
+        var r = lot.r.slice();
+        while (bad(r) && r[2] - r[0] >= 2 && r[3] - r[1] >= 1) {
+          var worst = [0, 1, 2, 3].sort(function (p, q2) { return edgeBad(r, q2) - edgeBad(r, p); })[0];
+          if (worst === 0) r[1]++; else if (worst === 1) r[2]--; else if (worst === 2) r[3]--; else r[0]++;
+        }
+        var w = r[2] - r[0] + 1, h = r[3] - r[1] + 1, roll = rnd();
+        if (bad(r) || w < 3 || h < 2) return;
+        if (roll < 0.7) {
+          /* a building: sometimes a step of pavement out front, a yard to one side */
+          var b = r.slice();
+          if (h >= 4 && rnd() < 0.5) { each([b[0], b[3], b[2], b[3]], function (xx, yy) { tile[at(xx, yy)] = T.GROUND; free[at(xx, yy)] = 0; }); b[3]--; }
+          if (w >= 5 && rnd() < 0.35) {
+            var yardX = rnd() < 0.5 ? b[0] : b[2];
+            each([yardX, b[1], yardX, b[3]], function (xx, yy) { tile[at(xx, yy)] = T.GRASS; free[at(xx, yy)] = 0; });
+            if (yardX === b[0]) b[0]++; else b[2]--;
+          }
+          each(b, function (xx, yy) { tile[at(xx, yy)] = T.BUILDING; free[at(xx, yy)] = 0; });
+        } else if (roll < 0.84) {
+          /* a yard, a tree in it */
+          var tx = r[0] + 1 + Math.floor(rnd() * Math.max(1, w - 2)), ty = r[1] + Math.floor(rnd() * h);
+          each(r, function (xx, yy) { tile[at(xx, yy)] = xx === tx && yy === ty ? T.TREE : T.GRASS; free[at(xx, yy)] = 0; });
+        } else if (roll < 0.94) {
+          /* a paved lot */
+          each(r, function (xx, yy) { tile[at(xx, yy)] = T.GROUND; free[at(xx, yy)] = 0; });
+        } else {
+          /* a garden: trees at its corners */
+          each(r, function (xx, yy) { var cn = (xx === r[0] || xx === r[2]) && (yy === r[1] || yy === r[3]); tile[at(xx, yy)] = cn ? T.TREE : T.GRASS; free[at(xx, yy)] = 0; });
+        }
+      });
+      /* whatever's left: verge inside the ring is pavement, outside it grass */
+      for (k = 0; k < n; k++) if (free[k]) {
+        x = k % W; y = (k / W) | 0;
+        tile[k] = !U(x, y) ? (hash(x, y * 7) < 0.06 ? T.TREE : T.GRASS) : T.GROUND;
+      }
+    }
+    /* how the street is paved where a building, path or pocket is joined up:
+       road in the city, pavement on redrum (its roads are only the wide ones) */
+    function paveOf(d) { return d && d.style === 'island' ? T.GROUND : T.ROAD; }
+    var KEEP_ROAD = { 4: 1, 9: 1 };
+    /* redrum: a building's spot on a lot near (dx, dy): its footprint all
+       building, its door onto pavement, nothing of the road under it */
+    function lotFor(d, w, h, dx0, dy0) {
+      for (var r = 0; r < 30; r++) for (var oy = -r; oy <= r; oy++) for (var ox = -r; ox <= r; ox++) {
+        if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
+        var x0 = d.cx + Math.round(dx0 * F) + ox, y0 = d.cy + Math.round(dy0 * F) + oy, ok = true;
+        if (get(x0 - 1, y0) === T.BUILDING) continue;
+        for (var y = y0 - 1; y <= y0 + h && ok; y++) for (var x = x0 - 1; x <= x0 + w && ok; x++) {
+          var t = get(x, y), foot = y >= y0 && y < y0 + h && x >= x0 && x < x0 + w;
+          if (dist[at(x, y)] !== d.index || (foot ? t !== T.BUILDING : (t === T.ROAD || t === T.LANDMARK || t === T.BRIDGE || t === T.STALL))) ok = false;
+        }
+        var dx = x0 + (w >> 1);
+        if (!ok || get(dx, y0 + h) !== T.GROUND) continue;
+        if (npcs.some(function (nn) { return nn.x >= x0 - 2 && nn.x <= x0 + w + 1 && nn.y >= y0 - 2 && nn.y <= y0 + h + 1; })) continue;
+        return [x0 - d.cx, y0 - d.cy];
+      }
+      return null;
+    }
 
     /* a walkable line, x first then y, so it is always 4-connected */
     function carve(x0, y0, x1, y1, t, keep) {
@@ -243,10 +474,11 @@
       var x0 = d.cx + dx, y0 = d.cy + dy, x, y;
       for (y = y0 - 1; y <= y0 + h; y++) for (x = x0 - 1; x <= x0 + w; x++) {
         if (dist[at(x, y)] !== d.index) continue;
-        set(x, y, (y >= y0 && y < y0 + h && x >= x0 && x < x0 + w) ? T.LANDMARK : T.ROAD);
+        set(x, y, (y >= y0 && y < y0 + h && x >= x0 && x < x0 + w) ? T.LANDMARK : paveOf(d));
       }
       var door = { x: x0 + (w >> 1), y: y0 + h };
-      carve(door.x, door.y, d.cx, d.cy, T.ROAD, { 9: 1 });
+      /* redrum's buildings stand on lots that open onto the pavement already */
+      if (d.style !== 'island') carve(door.x, door.y, d.cx, d.cy, T.ROAD, { 9: 1 });
       marks.push({ id: id, name: name, x: x0, y: y0, w: w, h: h, d: d.id });
       signs.push({ x: door.x - 1, y: door.y, text: text });
       return door;
@@ -264,7 +496,7 @@
     landmark(M0, 'pagoda', 'pagoda', 4, 1, 3, 3, 'an old gate. older than the hospital,\nor built to look it.'); walkIn('pagoda');
     var treeDoor = landmark(N0, 'greattree', 'the great tree', -2, -6, 4, 4, 'NOVA CITY PARK\nthe tree is warm to the touch.'); walkIn('greattree');
     landmark(Y0, 'market', 'the market hall', -3, -3, 6, 2, 'the market. fruit, records, gossip.\neverything is a little cheaper if you smile.'); walkIn('market');
-    var arcadeDoor = landmark(R0, 'arcade', 'arcade', -3, -1, 4, 2, 'ARCADE\nthe sign is a knife. the high score is "HEX".'); walkIn('arcade');
+    var arcadeDoor = landmark(R0, 'arcade', 'arcade', RSPOT.arcade ? RSPOT.arcade[0] : -3, RSPOT.arcade ? RSPOT.arcade[1] : -1, 4, 2, 'ARCADE\nthe sign is a knife. the high score is "HEX".', !!RSPOT.arcade); walkIn('arcade');
 
     /* noorborj: the lighthouse on redrum's northern tip */
     /* the tip is wherever redrum reaches furthest north, not always above its centre */
@@ -284,8 +516,9 @@
     var shopKeepers = [];
     SHOP_AT.forEach(function (sp) {
       var info = root.MFShops && root.MFShops.SHOPS[sp.id], kind = info && root.MFShops.KINDS[info.kind];
-      var door = landmark(sp.d, sp.art, info ? info.name : sp.id, sp.dx, sp.dy, 3, 2,
-        (info ? info.name : sp.id.toUpperCase()) + '\n' + (kind ? kind.what : 'open') + '. talk to the one out front.');
+      var lot = sp.d.style === 'island' && lotFor(sp.d, 3, 2, sp.dx, sp.dy);
+      var door = landmark(sp.d, sp.art, info ? info.name : sp.id, lot ? lot[0] : sp.dx, lot ? lot[1] : sp.dy, 3, 2,
+        (info ? info.name : sp.id.toUpperCase()) + '\n' + (kind ? kind.what : 'open') + '. talk to the one out front.', !!lot);
       marks[marks.length - 1].shop = sp.id;
       shopKeepers.push({ id: 'shop-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art === 'threads' ? 'tailor' : sp.art, shop: sp.id, still: true });
     });
@@ -296,8 +529,9 @@
                    { d: N0, dx: -6, dy: 3 }, { d: H0, dx: -6, dy: 1 }, { d: M0, dx: -6, dy: 2 }];
     HOME_AT.forEach(function (h) {
       var info = root.MFShops && root.MFShops.HOMES[h.d.id];
-      landmark(h.d, 'apt', info ? info.name : 'apartments', h.dx, h.dy, 3, 2,
-        (info ? info.name.toUpperCase() + '\n' + info.sign : 'APARTMENTS') + '\nthe door is for sale. face it and press A.');
+      var exact = h.d === R0 && !!RSPOT.apt;
+      landmark(h.d, 'apt', info ? info.name : 'apartments', exact ? RSPOT.apt[0] : h.dx, exact ? RSPOT.apt[1] : h.dy, 3, 2,
+        (info ? info.name.toUpperCase() + '\n' + info.sign : 'APARTMENTS') + '\nthe door is for sale. face it and press A.', exact);
       marks[marks.length - 1].home = h.d.id;
     });
 
@@ -305,6 +539,7 @@
        district, the keeper at the door. the spot is searched for, so the
        store never lands on another building */
     function clearSpot(d, w, h, dx0, dy0) {
+      if (d.style === 'island') return lotFor(d, w, h, dx0, dy0);
       for (var r = 0; r < 14; r++) for (var oy = -r; oy <= r; oy++) for (var ox = -r; ox <= r; ox++) {
         if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue;
         var x0 = d.cx + Math.round(dx0 * F) + ox, y0 = d.cy + Math.round(dy0 * F) + oy, ok = true;
@@ -402,10 +637,10 @@
        or sells you one outright. PLACEHOLDER lines */
     var sx0 = R0.cx, sy0 = R0.cy;
     while (dist[at(sx0 + 1, sy0)] === R0.index) sx0++;
-    carve(sx0, sy0, R0.cx, R0.cy, T.ROAD, { 9: 1 });
+    carve(sx0, sy0, R0.cx, R0.cy, paveOf(R0), KEEP_ROAD);
     for (var px2 = sx0 + 1; px2 <= sx0 + 4; px2++) { set(px2, sy0, T.BRIDGE); set(px2, sy0 + 1, T.BRIDGE); }
     npcs.push({ id: 'scrapper', x: sx0 + 1, y: sy0 + 1, dir: 'up', look: 'merc', name: 'SCRAPPER', wright: 'slip', still: true });
-    if (get(sx0, sy0 - 1) !== T.LANDMARK) { set(sx0, sy0 - 1, T.ROAD); signs.push({ x: sx0, y: sy0 - 1, text: 'THE SLIP\nskiffs out of scrap. no refunds.\nthe city is east, past the strait. you\'ll need a boat.' }); }
+    if (get(sx0, sy0 - 1) !== T.LANDMARK) { set(sx0, sy0 - 1, paveOf(R0)); signs.push({ x: sx0, y: sy0 - 1, text: 'THE SLIP\nskiffs out of scrap. no refunds.\nthe city is east, past the strait. you\'ll need a boat.' }); }
     var slipEnd = { x: sx0 + 4, y: sy0 };
 
     /* the landings round the coast, named for vistadelsol's towns on the
@@ -492,12 +727,12 @@
 
     /* who is out tonight */
     var spawn = { x: arcadeDoor.x, y: arcadeDoor.y + 3, dir: 'up' };
-    carve(spawn.x, spawn.y, arcadeDoor.x, arcadeDoor.y, T.ROAD);
+    carve(spawn.x, spawn.y, arcadeDoor.x, arcadeDoor.y, paveOf(R0), KEEP_ROAD);
     npcs.push({ id: 'hex', x: arcadeDoor.x, y: arcadeDoor.y, dir: 'down', look: 'hex', scene: 'hex', still: true });
     shopKeepers.forEach(function (k) { npcs.push(k); });
     function person(d, dx, dy, look, lines) {
       var x = d.cx + Math.round(dx * F), y = d.cy + Math.round(dy * F);
-      if (SOLID[get(x, y)]) carve(x, y, d.cx, d.cy, T.ROAD);
+      if (SOLID[get(x, y)]) carve(x, y, d.cx, d.cy, paveOf(d), d.style === 'island' ? KEEP_ROAD : null);
       npcs.push({ id: d.id + npcs.length, x: x, y: y, dir: 'down', look: look, lines: lines, roam: 3 });
     }
     person(W0, 2, 6, 'reveler', ['the replica tower? they tuned it to a song.\nnobody agrees which one.', 'worldwood never sleeps. i tried once.']);
@@ -519,7 +754,7 @@
       if (seen[p] || SOLID[tile[p]] || dist[p] < 0) continue;
       var comp = flood(p), d0 = DISTRICTS[dist[p]];
       if (comp.length < 4) { comp.forEach(function (q) { tile[q] = d0.style === 'wild' || d0.style === 'village' ? T.TREE : T.BUILDING; }); continue; }
-      carve(p % W, (p / W) | 0, d0.cx, d0.cy, T.ROAD, { 9: 1 });
+      carve(p % W, (p / W) | 0, d0.cx, d0.cy, paveOf(d0), d0.style === 'island' ? KEEP_ROAD : { 9: 1 });
       seen = reachFrom(spawn.x, spawn.y);
     }
     function reachFrom(x, y) { return reachAll({ W: W, H: H, tile: tile, spawn: { x: x, y: y }, hub: { x: W0.cx, y: W0.cy } }); }

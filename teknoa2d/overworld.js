@@ -177,18 +177,25 @@
       /* asphalt grain: a few fixed flecks per variant */
       for (i = 0; i < 6; i++) px(g, i % 2 ? rDk : rLt, (v * 7 + i * 13) % TS, (v * 11 + i * 5) % TS, 1, 1);
       var rk = v % 16;
-      if (rk === 3 && all4) {
+      /* (16384: a stretch of wide road kept plain, or it's all manholes) */
+      if (rk === 3 && all4 && !(m & 16384)) {
         /* a manhole cover */
         px(g, OUT, 5, 4, 6, 8); px(g, OUT, 4, 5, 8, 6); px(g, rDk, 5, 5, 6, 6);
         px(g, rLt, 6, 6, 4, 1); px(g, rLt, 6, 8, 4, 1); px(g, rLt, 6, 10, 4, 1);
       } else if (rk === 7 || rk === 12) {
         /* a crack */
         px(g, rDk, 3, 9, 3, 1); px(g, rDk, 6, 8, 2, 1); px(g, rDk, 8, 9, 1, 2); px(g, rDk, 9, 11, 3, 1);
-      } else if ((rk === 5 || rk === 14) && all4) {
+      } else if ((rk === 5 || rk === 14) && all4 && !(m & 16384)) {
         /* a puddle with the neon in it */
         var pud = shade(p.road, 0.6), glint = p.glow[v % p.glow.length];
         px(g, pud, 4, 8, 8, 3); px(g, pud, 3, 9, 10, 1); px(g, glint, 6, 9, 3, 1); px(g, shade(glint, 0.6), 9, 9, 2, 1);
       }
+      /* the wide roads: dashes between the lanes, zebra bars at a junction */
+      var cLine = '#b8923a', zebra = '#b9b2a6';
+      if (m & 1024) { px(g, cLine, 1, 0, 6, 1); px(g, cLine, 9, 0, 6, 1); }
+      if (m & 2048) { px(g, cLine, 0, 1, 1, 6); px(g, cLine, 0, 9, 1, 6); }
+      if (m & 4096) for (i = 1; i < TS; i += 4) px(g, zebra, 2, i, 12, 2);
+      if (m & 8192) for (i = 1; i < TS; i += 4) px(g, zebra, i, 2, 2, 12);
       /* lane dashes down the middle of a single-lane street */
       if (!N && !S) { px(g, shade(p.line, 1.3), 1, 7, 5, 1); px(g, shade(p.line, 1.3), 9, 7, 5, 1); }
       else if (!E && !Wd) { px(g, shade(p.line, 1.3), 7, 1, 1, 5); px(g, shade(p.line, 1.3), 7, 9, 1, 5); }
@@ -3480,6 +3487,29 @@
   }
 
   /* a block three or more deep stands two storeys at the front */
+  /* how far the road runs from (x, y): [up, down, left, right], up to 6 */
+  function roadRun(x, y, at) {
+    var r = [0, 0, 0, 0], o = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (var i = 0; i < 4; i++) while (r[i] < 6 && at(x + o[i][0] * (r[i] + 1), y + o[i][1] * (r[i] + 1)) === T.ROAD) r[i]++;
+    return r;
+  }
+  /* 1024 centre line along the top (an east-west road), 2048 down the left
+     (north-south); 4096 / 8192 a zebra across an east-west / north-south road */
+  var LANES = 4;
+  function laneMarks(x, y, at) {
+    var r = roadRun(x, y, at), m = 0;
+    if (r[0] + r[1] + 1 === LANES) {
+      var a = roadRun(x - 1, y, at), b = roadRun(x + 1, y, at);
+      if ((at(x - 1, y) === T.ROAD && a[0] + a[1] + 1 > LANES) || (at(x + 1, y) === T.ROAD && b[0] + b[1] + 1 > LANES)) m |= 4096;
+      else if (r[0] === LANES >> 1) m |= 1024;
+    }
+    if (r[2] + r[3] + 1 === LANES) {
+      var c = roadRun(x, y - 1, at), e = roadRun(x, y + 1, at);
+      if ((at(x, y - 1) === T.ROAD && c[2] + c[3] + 1 > LANES) || (at(x, y + 1) === T.ROAD && e[2] + e[3] + 1 > LANES)) m |= 8192;
+      else if (r[2] === LANES >> 1) m |= 2048;
+    }
+    return m;
+  }
   function storey(x, y) {
     var B = T.BUILDING, W = world.W;
     return y > 0 && y + 1 < world.H && world.tile[y * W + x] === B && world.tile[(y + 1) * W + x] === B && world.tile[(y - 1) * W + x] === B
@@ -3772,6 +3802,9 @@
           if (dHit) m |= 16 << c;
         }
       }
+      /* redrum's wide roads: a centre line between the lanes, a zebra
+         crossing where a road meets a junction */
+      if (t === T.ROAD && di >= 0 && D[di].style === 'island') m |= laneMarks(x, y, at) | (hash(x * 5 + 1, y * 3) > 0.25 ? 16384 : 0);
       if (t === T.BUILDING) {
         rv = deco.roof[k]; dr = deco.door[k];
         if (storey(x, y)) m = (m & 15) | 256;
