@@ -173,10 +173,10 @@
     lighter:   { name: 'a scratched zippo', what: 'the lid has a knife engraved on it. the hinge squeaks.', price: 80 }
   };
   var STORES = {
-    'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 }, tools: ['rod', 'tuned', 'jormun'], gear: ['flashlight'], foods: ['water', 'bar', 'electro'] },
-    'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 }, tools: ['rod'], gear: ['flashlight'], foods: ['water', 'bar'], arms: ['pipe'] },
-    'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 }, tools: ['rod'], gear: ['flashlight'], foods: ['water', 'bar', 'electro'], arms: ['baton'] },
-    'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'], tools: ['rod'], gear: ['flashlight'], arms: ['pipe', 'knife', 'bat'] },
+    'neon-mart':        { kind: 'general', name: 'NEON MART', district: 'worldwood', line: 'open all night. the lights never flicker. we fixed that.', sells: { timber: 30, fibre: 25, scrap: 40, fruit: 12 }, tools: ['rod', 'tuned', 'jormun'], gear: ['flashlight', 'thermal', 'parka', 'coolvest', 'sunhat'], foods: ['water', 'bar', 'electro'] },
+    'la-bodega':        { kind: 'general', name: 'LA BODEGA', district: 'yucayeque', line: 'the cat runs the place. i just work the till.', sells: { fibre: 18, fruit: 8, timber: 34 }, tools: ['rod'], gear: ['flashlight', 'coolvest', 'sunhat'], foods: ['water', 'bar'], arms: ['pipe'] },
+    'haven-provisions': { kind: 'general', name: 'HAVEN PROVISIONS', district: 'haven', line: 'all goods inspected. twice. in triplicate.', sells: { timber: 36, fibre: 28, scrap: 44, fruit: 15 }, tools: ['rod'], gear: ['flashlight', 'thermal', 'parka', 'sunhat'], foods: ['water', 'bar', 'electro'], arms: ['baton'] },
+    'redrum-pawn':      { kind: 'pawn', name: 'REDRUM PAWN', district: 'redrum', line: 'we buy anything. we don\'t ask where from.', buys: { timber: 8, fibre: 6, scrap: 14, fruit: 5 }, curios: ['pager', 'lighter', 'cassette', 'snowglobe'], tools: ['rod'], gear: ['flashlight', 'thermal', 'sunhat'], arms: ['pipe', 'knife', 'bat'] },
     'lantern-loans':    { kind: 'pawn', name: 'LANTERN LOANS', district: 'majinryu', line: 'everything here was somebody\'s once. now it\'s nobody\'s. could be yours.', buys: { timber: 9, fibre: 7, scrap: 12, fruit: 6 }, curios: ['compass', 'cassette', 'shell'], arms: ['knife', 'bat'] }
   };
   /* fishing (overworld.js casts, minigames.js reels): rods are tools sold at
@@ -243,7 +243,13 @@
   /* gear: things you carry that aren't rods. secs: battery, full, in seconds
      of use; it runs only while it's needed and charges in a bed. PLACEHOLDER price */
   var GEAR = {
-    flashlight: { name: 'a flashlight', what: 'for the dark past the city lights. switch it on or off (F, or the 🔦 up top); while it is on it shines whenever it is dark outside. a night in bed charges it.', price: 120, secs: 600 }
+    flashlight: { name: 'a flashlight', what: 'for the dark past the city lights. switch it on or off (F, or the 🔦 up top); while it is on it shines whenever it is dark outside. a night in bed charges it.', price: 120, secs: 600 },
+    /* layers against the weather: wear one at a time from INV (engine.js
+       LAYERS has how warm or cool). PLACEHOLDER words and prices */
+    thermal:  { name: 'a thermal layer', what: 'goes under anything. you can stand the cold a good deal longer. wear it from INV.', price: 90 },
+    parka:    { name: 'an insulated parka', what: 'for the open sea at night and worse. far too much for a city afternoon. wear it from INV.', price: 380 },
+    coolvest: { name: 'a cooling vest', what: 'gel packs that stay cold for no reason anyone explains. the heat lets go of you. wear it from INV.', price: 160 },
+    sunhat:   { name: 'a wide sun hat', what: 'shade you carry. a little cooler, and nobody can see your face. wear it from INV.', price: 30 }
   };
   function bestRod(s) { var it = s.items || {}; return it.jormun ? 'jormun' : it.tuned ? 'tuned' : it.rod ? 'rod' : ''; }
   /* every cast wears the rod: a clean catch 1, a spooked or missed bite 2, a
@@ -403,7 +409,7 @@
   var CARRY = 40, FROZEN = 1.5, STASH_CAP = 200, HOLD_CAP = 40;
   var RES_KG = { timber: 2, fibre: 0.5, scrap: 1.5, fruit: 0.3 };
   var TIER_KG = { junk: 0.6, common: 0.4, uncommon: 1, rare: 2.5, legendary: 7 };
-  var KG = { pipe: 1.2, knife: 0.3, bat: 1, baton: 0.8, boot: 1, can: 0.1, sardine: 0.2, grouper: 9, glassfish: 4, rod: 1.5, tuned: 2, jormun: 4, snowglobe: 1, flashlight: 0.4, compass: 0.3, pager: 0.2, cassette: 0.1, shell: 0.5, lighter: 0.1 };
+  var KG = { pipe: 1.2, knife: 0.3, bat: 1, baton: 0.8, boot: 1, can: 0.1, sardine: 0.2, grouper: 9, glassfish: 4, rod: 1.5, tuned: 2, jormun: 4, snowglobe: 1, flashlight: 0.4, thermal: 0.4, parka: 2, coolvest: 0.8, sunhat: 0.2, compass: 0.3, pager: 0.2, cassette: 0.1, shell: 0.5, lighter: 0.1 };
   function weightOf(key) {
     if (KG[key] !== undefined) return KG[key];
     if (RES_KG[key] !== undefined) return RES_KG[key];

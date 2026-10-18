@@ -33,13 +33,14 @@
              torchOff: 0,                                    /* 1 when the flashlight is switched off */
              safe: [],                                       /* the inventory's safe slots: item kinds a mugger can't take */
              equip: '',                                      /* the weapon in hand (combat.js WEAPONS); '' is fists */
+             worn: '',                                       /* the layer you have on against the weather (LAYERS); '' is none */
              dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
              stash: {}, hold: { items: {}, res: {} },        /* each apartment's chest, the boat's hold */
              treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
              inbox: [],                                      /* letters on the phone: { id, from, day, title, body, read } */
              lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
              law: { siren: 0, heat: 0, fine: 0, cool: 0, crimes: {}, jail: { until: 0, bail: 0, room: '' } },  /* how badly the law wants you, and any cell you're in (law.js) */
-             body: { food: 100, drink: 100, health: 100, sta: 100, int: 100, buff: '', buffT: 0, rested: -1 },  /* hunger, thirst, health, stamina, intelligence, a dish's perk and its seconds left, the nova day you last slept */
+             body: { food: 100, drink: 100, health: 100, sta: 100, int: 100, buff: '', buffT: 0, rested: -1, temp: 37 },  /* hunger, thirst, health, stamina, intelligence, a dish's perk and its seconds left, the nova day you last slept, body temperature °C */
              core: { hp: 0, sta: 0, int: 0 },                /* level-up picks: each one raises that maximum by CORE_STEP */
              xp: { total: 0, by: {} },                       /* experience, and how much came from each source (level.js) */
              skills: {},                                     /* exp in each trait: atk, def, stl ... (level.js TRAITS) */
@@ -205,7 +206,8 @@
     var b = s.body, num = function (v, d, top) { v = +v; return isFinite(v) ? Math.max(0, Math.min(top || 100, v)) : d; };
     s.body = { food: num(b.food, 100), drink: num(b.drink, 100), health: num(b.health, maxOf(s, 'hp'), maxOf(s, 'hp')),
                sta: num(b.sta, maxOf(s, 'sta'), maxOf(s, 'sta')), int: num(b.int, maxOf(s, 'int'), maxOf(s, 'int')),
-               buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0), rested: isFinite(+b.rested) ? Math.floor(+b.rested) : -1 };
+               buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0), rested: isFinite(+b.rested) ? Math.floor(+b.rested) : -1,
+               temp: isFinite(+b.temp) ? Math.max(CORE_MIN, Math.min(CORE_MAX, +b.temp)) : NORMAL_C };
     s.skills = counts(s.skills);
     s.perks = {}; Object.keys(o.perks && typeof o.perks === 'object' ? o.perks : {}).forEach(function (k) { if (o.perks[k]) s.perks[k] = 1; });
     /* sources this build doesn't know are kept: a newer build may */
@@ -257,10 +259,13 @@
      drain with the seconds that passed). running drains faster. under WEAK
      you can't run and the games get harder; at 0 you faint */
   var FOOD_SECS = 45 * 60, DRINK_SECS = 30 * 60, WEAK = 20, WAKE = 40;
-  /* temp (°C), if given: heat dries you out, cold makes you hungry */
+  /* temp (°C), if given: what it feels like on you (feels below). your body
+     temperature moves with it, and its stage (STAGES) makes you hungrier,
+     thirstier, slower, and at the far ends costs health */
   function drain(s, secs, factor, temp) {
-    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0), heat = 1, cold = 1, fx = originFx(s), chill = fx.cold ? COLD_AI : 20;
-    if (temp !== undefined) { heat = 1 + Math.max(0, temp - 28) * 0.08; cold = 1 + Math.max(0, chill - temp) * 0.06; }
+    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0);
+    if (temp !== undefined) warmTo(s, temp, Math.max(0, +secs || 0) / 60);
+    var st = stage(s) || {}, cold = st.hunger || 1, heat = st.thirst || 1;
     if (ibc(s)) {
       /* a battery core: one charge, no hunger or thirst. the starter lasts as
          long as a full stomach; a bigger core lasts its cap times longer */
@@ -274,15 +279,77 @@
        otherwise it mends on its own, slowly (faster well fed), but only up
        to HP_MEND of the max: past that it takes meds, the clinic or a bed */
     var mins = Math.max(0, +secs || 0) / 60, hp = b.health === undefined ? 100 : b.health, top = maxOf(s, 'hp');
-    var exposed = temp !== undefined && (temp < (fx.cold ? COLD_AI : 14) || temp > 34);
     if (weak(s)) hp -= 2 * mins;
-    if (exposed) hp -= mins;
+    if (st.hp) hp -= st.hp * mins;
+    if (st.hp || st.noregen) { /* too hot or too cold to mend */ }
     else if (!weak(s) && hp < top * HP_MEND) hp = Math.min(top * HP_MEND, hp + (b.food > 60 && b.drink > 60 ? 2 : 1) * HP_REGEN * mins);
     b.health = Math.max(0, Math.min(top, hp));
     /* brainpower: the mind comes back on its own, very slowly, all the way
        (a night's sleep or caffeine is quicker) */
     b.int = Math.min(maxOf(s, 'int'), num0(b.int, maxOf(s, 'int')) + 100 * (+secs || 0) / INT_SECS);
-    return b.health <= 0 ? 'collapse' : b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) ? 'weak' : '';
+    return b.health <= 0 ? 'collapse' : b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) || st.severe ? 'weak' : '';
+  }
+
+  /* ── heat and cold ───────────────────────────────────────────
+     feels(): what the air feels like on you. the air, then wet weather
+     chills (WX_C), the midday sun warms (SUN_C), a fire beside you warms a
+     lot (FIRE_C); indoors is just the room. band(): what you can stand
+     without your body noticing, COMFORT moved by your origin (an AI shrugs
+     off cold) and by what you wear (wear(): warm lets you bear the cold,
+     and makes heat worse by half as much; cool the other way round).
+     body.temp starts at NORMAL_C. outside the band it moves CORE_RATE °C a
+     minute for every degree out; inside it, back towards normal by
+     CORE_BACK a minute. STAGES read off it, the worst first.
+     PLACEHOLDER numbers, all of them */
+  var NORMAL_C = 37, COMFORT = [16, 31], CORE_RATE = 0.025, CORE_BACK = 0.3, CORE_MIN = 30, CORE_MAX = 43;
+  var WX_C = { clear: 0, drizzle: -2, rain: -4, storm: -6, fog: -1 }, SUN_C = 3, FIRE_C = 10, AI_COLD = 20;
+  var STAGES = [
+    { id: 'hypothermic', below: 34,   name: 'hypothermic', hunger: 1.5,  hp: 2, slow: 1, severe: 1, say: 'you can\'t feel your hands. you can\'t stop shaking.\nget warm now: inside, or by a fire.' },
+    { id: 'cold',        below: 35.5, name: 'cold',        hunger: 1.5,  noregen: 1, slow: 1, say: 'your teeth won\'t stop.\nyou need somewhere warm, or something warmer on.' },
+    { id: 'chilly',      below: 36.5, name: 'chilly',      hunger: 1.25, say: 'a chill gets under your clothes.' },
+    { id: 'heatstroke',  above: 40,   name: 'heatstroke',  thirst: 1.75, hp: 2, slow: 1, severe: 1, say: 'your head is pounding. the street tilts.\nget out of the heat now: inside, or in the water.' },
+    { id: 'hot',         above: 38.5, name: 'overheating', thirst: 1.5,  noregen: 1, slow: 1, say: 'sweat in your eyes. your heart is going.\nfind shade, or shed a layer.' },
+    { id: 'warm',        above: 37.5, name: 'warm',        thirst: 1.25, say: 'the heat sits on you.' }];
+  /* what you wear against the weather, in °C: the top from your look
+     (CLOTHES, by avatar.js top), plus one layer you've put on (LAYERS, sold
+     as shops.js GEAR, s.worn). an ape's fur counts too (ORIGINS warm).
+     PLACEHOLDER numbers */
+  var CLOTHES = { tee: {}, tank: { cool: 3 }, hoodie: { warm: 3 }, jacket: { warm: 4 }, turtleneck: { warm: 2 }, coat: { warm: 6 } };
+  var LAYERS = { thermal: { warm: 6 }, parka: { warm: 12 }, coolvest: { cool: 8 }, sunhat: { cool: 3 } };
+  function worn(s) { var k = s.worn; return LAYERS[k] && s.items && s.items[k] > 0 ? k : ''; }
+  function putOn(s, k) {
+    if (!k) { s.worn = ''; return { ok: true }; }
+    if (!LAYERS[k]) return { ok: false, why: 'you can\'t wear that' };
+    if (!(s.items && s.items[k] > 0)) return { ok: false, why: 'you don\'t have one' };
+    s.worn = k; return { ok: true };
+  }
+  function wear(s) {
+    var top = CLOTHES[s.player && s.player.look && s.player.look.top] || {}, l = LAYERS[worn(s)] || {}, fx = originFx(s);
+    return { warm: (top.warm || 0) + (l.warm || 0) + (fx.warm || 0), cool: (top.cool || 0) + (l.cool || 0) };
+  }
+  function band(s) {
+    var w = wear(s), fx = originFx(s);
+    return [COMFORT[0] - (fx.cold ? AI_COLD : 0) - w.warm + w.cool / 2, COMFORT[1] + w.cool - w.warm / 2];
+  }
+  /* ctx: { indoors, weather, sun (clear and midday, outdoors), fire (one beside you) } */
+  function feels(air, ctx) {
+    ctx = ctx || {};
+    if (ctx.indoors) return air;
+    return air + (WX_C[ctx.weather] || 0) + (ctx.sun ? SUN_C : 0) + (ctx.fire ? FIRE_C : 0);
+  }
+  function bodyTemp(s) { var t = +s.body.temp; return isFinite(t) ? t : NORMAL_C; }
+  function warmTo(s, felt, mins) {
+    var t = bodyTemp(s), bd = band(s);
+    if (felt < bd[0]) t -= CORE_RATE * (bd[0] - felt) * mins;
+    else if (felt > bd[1]) t += CORE_RATE * (felt - bd[1]) * mins;
+    else t = t < NORMAL_C ? Math.min(NORMAL_C, t + CORE_BACK * mins) : Math.max(NORMAL_C, t - CORE_BACK * mins);
+    s.body.temp = Math.max(CORE_MIN, Math.min(CORE_MAX, t));
+    return s.body.temp;
+  }
+  function stage(s) {
+    var t = bodyTemp(s);
+    for (var i = 0; i < STAGES.length; i++) { var g = STAGES[i]; if (g.below !== undefined ? t < g.below : t >= g.above) return g; }
+    return null;
   }
   function num0(v, d) { return v === undefined || !isFinite(+v) ? d : +v; }
   function hurt(s, n) { s.body.health = Math.max(0, num0(s.body.health, maxOf(s, 'hp')) - n); return s.body.health; }
@@ -298,7 +365,7 @@
     /* start: traits at that level from day one; train: those traits'
        exp comes in that much faster (level.js award) */
     sapien:    { start: { def: 5, crf: 5 }, train: { def: 1.25, crf: 1.25 } },
-    simian:    { start: { atk: 5 }, carry: 15 },
+    simian:    { start: { atk: 5 }, carry: 15, warm: 3 },
     ai:        { cold: 1, max: { int: 10 }, power: ['ade', 'ibc'] },
     novan:     { start: { stl: 5, prs: 10 }, train: { stl: 1.25, prs: 1.25 } },
     product:   { max: { hp: -20 }, joules: 600, side: ['defector', 'loyal'] }
@@ -370,7 +437,7 @@
      on its own (twice that well fed), never past HP_MEND of the max */
   var STA_RUN = 5, STA_BACK = 2.5, RUN_AGAIN = 25, INT_SECS = 120 * 60, HP_REGEN = 0.5, HP_MEND = 0.75;
   function exert(s, secs, running) {
-    var t = Math.max(0, +secs || 0), back = weak(s) ? STA_BACK / 2 : STA_BACK;
+    var t = Math.max(0, +secs || 0), back = weak(s) || (stage(s) || {}).slow ? STA_BACK / 2 : STA_BACK;
     return restore(s, 'sta', running ? -STA_RUN * t : back * t);
   }
   /* a physical feat that costs stamina up front: false, and nothing spent, if they can't */
@@ -384,10 +451,10 @@
     return true;
   }
   /* a night's sleep: stamina and the mind come back in full */
-  function rest(s) { restore(s, 'sta', maxOf(s, 'sta')); restore(s, 'int', maxOf(s, 'int')); }
+  function rest(s) { restore(s, 'sta', maxOf(s, 'sta')); restore(s, 'int', maxOf(s, 'int')); s.body.temp = NORMAL_C; }
   function weak(s) { return s.body.food < WEAK || s.body.drink < WEAK; }
   /* after a faint: back on your feet, not full */
-  function revive(s) { s.body.food = Math.max(s.body.food, WAKE); s.body.drink = Math.max(s.body.drink, WAKE); s.body.buff = ''; s.body.buffT = 0; }
+  function revive(s) { s.body.food = Math.max(s.body.food, WAKE); s.body.drink = Math.max(s.body.drink, WAKE); s.body.buff = ''; s.body.buffT = 0; s.body.temp = NORMAL_C; }
   /* eating or drinking: food/drink points, and maybe a perk for some seconds.
      mind: intelligence back (caffeine and the like) */
   function consume(s, food, drink, buff, secs, mind) {
@@ -421,6 +488,8 @@
 
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
+              NORMAL_C: NORMAL_C, COMFORT: COMFORT, CORE_RATE: CORE_RATE, CORE_BACK: CORE_BACK, WX_C: WX_C, SUN_C: SUN_C, FIRE_C: FIRE_C, AI_COLD: AI_COLD, STAGES: STAGES,
+              CLOTHES: CLOTHES, LAYERS: LAYERS, worn: worn, putOn: putOn, wear: wear, band: band, feels: feels, bodyTemp: bodyTemp, warmTo: warmTo, stage: stage,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
               ORIGINS: ORIGINS, POWER: POWER, SIDE: SIDE, COLD_AI: COLD_AI, IBC_CORES: IBC_CORES, IBC_FULL: IBC_FULL, ibcCore: ibcCore, charge: charge, upgradeCore: upgradeCore, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
               SAFE_SLOTS: SAFE_SLOTS, safeKeys: safeKeys, isSafe: isSafe, toggleSafe: toggleSafe,

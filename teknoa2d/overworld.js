@@ -1616,12 +1616,14 @@
     if (now - staT > 100) { staT = now; drawSta(run); }
     torchTick(dt);
     if (charging() && s.body.food < 100 && !MF.charge(s, 100 * dt / CHARGE_SECS) && !MF.joules(s)) sayLater('broke', ['the socket clicks off.\nno joules, no charge. you\'ll have to earn some.']);
-    var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, run ? 1.5 : 1, tempNow());
+    var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, run ? 1.5 : 1, feltNow());
     tired = state !== '';
     if (state === 'collapse') return faint(now, true);
     if (state === 'faint') return faint(now);
-    if (tired && !warned) { warned = true; sayLater('tired', [MF.ibc(s) ? 'core at ' + Math.round(s.body.food) + '%. you\'re running on fumes.\ncharge at home, the hospital or the police. no running till then.' : s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
-    if (!tired) warned = false;
+    /* weak from heat or cold, not hunger: climate() says so instead */
+    if (MF.weak(s) && !warned) { warned = true; sayLater('tired', [MF.ibc(s) ? 'core at ' + Math.round(s.body.food) + '%. you\'re running on fumes.\ncharge at home, the hospital or the police. no running till then.' : s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
+    if (!MF.weak(s)) warned = false;
+    climate();
     if (now - bodyT > 400) { bodyT = now; drawBody(); weekly(); }
   }
   /* the time and the weather where you stand */
@@ -1632,12 +1634,32 @@
     var di = world.dist[me.y * world.W + me.x];
     return di === -2 ? 'vistadelsol' : di >= 0 ? D[di].id : 'bay';
   }
-  function tempNow() { return window.MF.temperature(novaNow(), whereNow()); }
+  function tempNow() {
+    if (!inside && s.dev && typeof s.dev.temp === 'number') return s.dev.temp;
+    return window.MF.temperature(novaNow(), inside ? 'indoors' : whereNow());
+  }
+  /* what it feels like where you stand (engine.js feels): the weather, the
+     midday sun, a fire within FIRE_NEAR tiles */
+  var FIRE_NEAR = 2;
+  function feltNow() {
+    var c = novaNow(), wx = weatherAt(c);
+    var fire = !inside && world.marks.some(function (m) { return m.fire && Math.abs(m.x - me.x) + Math.abs(m.y - me.y) <= FIRE_NEAR; });
+    return Math.round(window.MF.feels(tempNow(), { indoors: !!inside, weather: wx, sun: wx === 'clear' && c.hour >= 11 && c.hour < 16, fire: fire }));
+  }
+  /* a line when your body crosses into a worse stage, never when it's getting better */
+  var climateWas = '';
+  function climate() {
+    var MF = window.MF, g = MF.stage(s), id = g ? g.id : '', i = MF.STAGES.indexOf(g), j = MF.STAGES.map(function (x) { return x.id; }).indexOf(climateWas);
+    var side = function (x) { return x && x.below !== undefined ? 'cold' : 'hot'; };
+    if (id && id !== climateWas && (j < 0 || side(g) !== side(MF.STAGES[j]) || i < j)) sayLater('climate', [g.say]);
+    climateWas = id;
+  }
   /* the hud keeps to the time, a dish's perk, stamina while you run, and a
      warning when something's low. the full picture is the phone's ID › VITALS */
   function drawBody() {
     var b = s.body, c = novaNow();
-    $('wTime').textContent = c.text + ' · ' + WEATHER[weatherAt(c)].icon + ' ' + tempNow() + '°C';
+    var fl = feltNow(), air = tempNow();
+    $('wTime').textContent = c.text + ' · ' + WEATHER[weatherAt(c)].icon + ' ' + air + '°C' + (Math.abs(fl - air) >= 2 ? ' (feels ' + fl + '°)' : '');
     var left = jailLeft();
     $('wBuff').textContent = left ? '⛓ ' + mmss(left) : b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
     drawSiren();
@@ -1663,6 +1685,8 @@
     if (MF.ibc(s)) part('CHARGE', b.food, 100, MF.WEAK / 100, 0.08);
     else { part('FOOD', b.food, 100, MF.WEAK / 100, 0.08); part('DRINK', b.drink, 100, MF.WEAK / 100, 0.08); }
     part('BRAINPOWER', MF.vital(s, 'int'), MF.maxOf(s, 'int'), 0.2, 0.08);
+    var cg = MF.stage(s);
+    if (cg && (cg.slow || cg.severe)) out.push({ name: cg.name.toUpperCase(), crit: !!cg.severe });
     var ld = SH.load(s);
     if (ld > 1) out.push({ name: 'LOAD', crit: ld > SH.FROZEN });
     if (torchLit && s.torch < 0.2 * SH.GEAR.flashlight.secs) out.push({ name: 'BATTERY', crit: s.torch < 0.08 * SH.GEAR.flashlight.secs });
@@ -2012,15 +2036,18 @@
     if (s.boat) out.push({ key: '@boat' });
     return out;
   }
+  /* a layer's or an outfit's worth against the weather, in words */
+  function layerNote(w) { return [w.warm ? 'warm +' + w.warm + '°' : '', w.cool ? 'cool +' + w.cool + '°' : ''].filter(Boolean).join(' · '); }
   function invInfo(e) {
     var MF = window.MF, SH = window.MFShops, k = e.key;
     if (e.home) { var h = SH.HOMES[e.home]; return { name: 'key: ' + h.name, what: h.where + (s.wake === e.home ? '. you wake up here.' : '.'), acts: [] }; }
     if (k === '@boat') return { name: 'a boat', what: 'moored wherever you left the water. face the sea and press A to sail.', acts: [] };
     var g = SH.goods(k), n = ((s.items || {})[k] || 0) + ((s.res || {})[k] || 0), acts = [];
     var C = window.MFCombat, arm = C && C.isWeapon(k);
-    var note = arm ? C.usesLeft(s, k) + '/' + C.WEAPONS[k].dur + ' uses left' + (C.wielded(s) === k ? ' · in hand' : '') : SH.TOOLS[k] ? SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses left' : SH.GEAR[k] && SH.GEAR[k].secs ? 'battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%' : '';
+    var note = arm ? C.usesLeft(s, k) + '/' + C.WEAPONS[k].dur + ' uses left' + (C.wielded(s) === k ? ' · in hand' : '') : SH.TOOLS[k] ? SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses left' : SH.GEAR[k] && SH.GEAR[k].secs ? 'battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%' : MF.LAYERS[k] ? layerNote(MF.LAYERS[k]) + (MF.worn(s) === k ? ' · wearing it' : '') : '';
     if (SH.FOODS[k]) acts.push([SH.FOODS[k].food ? 'EAT' : 'DRINK', function () { var r = SH.eat(MF, s, k); return r.ok ? 'down it goes.' : r.why; }]);
     if (arm) acts.push([C.wielded(s) === k ? 'UNEQUIP' : 'EQUIP', function () { var on = C.wielded(s) !== k, r = C.equip(s, on ? k : 'fists'); return !r.ok ? r.why : on ? 'in hand: ' + C.WEAPONS[k].name + '.' : 'back to your fists.'; }]);
+    if (MF.LAYERS[k]) acts.push([MF.worn(s) === k ? 'TAKE OFF' : 'WEAR', function () { var on = MF.worn(s) !== k, r = MF.putOn(s, on ? k : ''); return !r.ok ? r.why : on ? 'you put on ' + SH.GEAR[k].name + '.' : 'you take it off.'; }]);
     if (k === 'flashlight') acts.push([s.torchOff ? 'TURN ON' : 'TURN OFF', function () { toggleTorch(); return s.torchOff ? 'flashlight off.' : 'flashlight on. it shines whenever it\'s dark outside.'; }]);
     if (SH.MEDS[k]) acts.push(['USE', function () { var r = SH.useMed(MF, s, k); return r.ok ? 'patched up. health ' + Math.round(MF.vital(s, 'hp')) + '/' + MF.maxOf(s, 'hp') + '.' : r.why; }]);
     acts.push([MF.isSafe(s, k) ? 'TAKE OUT' : 'SAFE', function () { var r = MF.toggleSafe(s, k); return !r.ok ? r.why : r.safe ? 'locked in a safe slot. muggers can\'t touch it.' : 'out of the safe slot.'; }]);
@@ -2199,6 +2226,10 @@
       Object.keys(MF.CORE).forEach(function (k) { var c = MF.CORE[k]; gauge(c.icon, c.pool, MF.vital(s, k), MF.maxOf(s, k), k); });
       if (MF.ibc(s)) gauge('🔋', MF.ibcCore(s).name + (charging() ? ' · charging' : ''), b.food, 100, 'sta');
       else { gauge('🍞', 'food', b.food, 100, 'food'); gauge('💧', 'drink', b.drink, 100, 'drink'); }
+      var cg = MF.stage(s), bt = MF.bodyTemp(s);
+      line('vrow', '🌡 body ' + bt.toFixed(1) + '°C' + (cg ? ' · ' + cg.name : ' · fine') + ' · feels ' + feltNow() + '° here');
+      var bd = MF.band(s), wl = MF.worn(s);
+      line('vrow', '🧥 ' + ((s.player.look && s.player.look.top) || 'tee') + (wl ? ' + ' + SH.GEAR[wl].name.replace(/^(a|an) /, '') : '') + ' · fine from ' + Math.round(bd[0]) + '° to ' + Math.round(bd[1]) + '°');
       line('vrow', '🎒 load ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg');
       if (s.items && s.items.flashlight) line('vrow', '🔦 flashlight ' + Math.round(100 * s.torch / SH.GEAR.flashlight.secs) + '%' + (s.torchOff ? ' · off' : torchLit ? ' · lit' : ' · on'));
       if (b.buff && b.buffT > 0) line('buff', b.buff + ' · ' + Math.ceil(b.buffT / 60) + 'm left');

@@ -482,6 +482,9 @@
     else if (act === 'h1' || act === 'h6') s.dev.shift = (s.dev.shift || 0) + (act === 'h1' ? 60 : 360);
     else if (act === 'noon' || act === 'midnight') { var c0 = MF.clock(Date.now(), 0); s.dev.shift = ((act === 'noon' ? 720 : 1440) - (c0.hour * 60 + c0.minute) + 1440) % 1440; }
     else if (act === 'real') s.dev.shift = 0;
+    else if (act === 'air-5' || act === 'air45') s.dev.temp = act === 'air45' ? 45 : -5;
+    else if (act === 'airreal') delete s.dev.temp;
+    else if (act === 'body37') s.body.temp = MF.NORMAL_C;
     else if (act === 'bill') { if (!s.treasury) s.treasury = { week: -1, spent: 0, arrears: 0 }; s.treasury.week = Math.max(0, Math.floor(MF.clock(Date.now(), s.dev.shift || 0).day / 7) - 1); }
     else if (act === 'piles') s.gathered = { day: '', got: {} };
     else if (act === 'lotto') (s.lotto || []).forEach(function (t) { t.day = '2000-01-01'; });
@@ -508,6 +511,7 @@
     $('devNoHunger').textContent = 'HUNGER: ' + (s.dev.nohunger ? 'OFF' : 'ON');
     $('devPeace').textContent = 'FOES: ' + (s.dev.peace ? 'OFF' : 'ON');
     $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev.noweight ? 'OFF' : 'ON');
+    $('devAir').textContent = 'AIR: ' + (typeof s.dev.temp === 'number' ? s.dev.temp + '°C' : 'REAL');
     if (store) MF.save(s, store);
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.refresh();
     devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString() + (window.MFLevel ? ' · LVL ' + window.MFLevel.level(s) : '') + ' · nova city ' + MF.clock(Date.now(), s.dev.shift || 0).text);
