@@ -4241,7 +4241,7 @@
   function fit() {
     var scr = canvas.parentNode, main = $('world'), dpr = window.devicePixelRatio || 1;
     var availW = Math.min(main.clientWidth - 16, 1100);
-    var top = scr.getBoundingClientRect().top, padH = $('wPad').offsetHeight;
+    var top = scr.getBoundingClientRect().top, padH = $('wPad').offsetHeight + $('wHud').offsetHeight;
     var availH = Math.max(160, window.innerHeight - Math.max(0, top) - (padH ? padH + 40 : 40));
     var dw = availW * dpr, dh = availH * dpr;
     /* the canvas is ART times finer than a game unit (art.js), and every
@@ -4267,6 +4267,14 @@
       canvas = $('wCanvas');
       fit();
       window.addEventListener('resize', function () { if (active) fit(); });
+      /* a touchscreen: the joules and clock go under the screen, out of the way */
+      var mq = window.matchMedia && window.matchMedia('(pointer:coarse),(hover:none)');
+      function placeHud() {
+        var bar = $('wHud'), scr = canvas.parentNode, j = scr.querySelector('.wj') || bar.querySelector('.wj'), b = $('wBody');
+        if (mq && mq.matches) { bar.appendChild(j); bar.appendChild(b); } else { scr.insertBefore(b, $('wCard')); scr.insertBefore(j, $('wOn')); }
+        if (active) fit();
+      }
+      if (mq) { placeHud(); if (mq.addEventListener) mq.addEventListener('change', placeHud); }
       npcs = cityNpcs = world.npcs.map(function (n) { var c = {}; for (var k in n) c[k] = n[k]; c.hx = n.x; c.hy = n.y; c.moving = false; c.t = 0; c.step = 0; return c; });
       pad();
       counterButtons();

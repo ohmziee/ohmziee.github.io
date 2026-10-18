@@ -226,6 +226,13 @@ a{color:var(--lavender)}
 .whelp{margin:0;font-size:.66rem;color:var(--rain);letter-spacing:.06em;text-align:center}
 .wpad{display:none;width:min(100%,520px);justify-content:space-between;align-items:center;padding:0 .4rem;user-select:none;-webkit-user-select:none;touch-action:none}
 @media (pointer:coarse),(hover:none){.wpad{display:flex}.whelp{display:none}}
+/* on a phone the joules and the clock sit in a strip under the screen, off the street */
+.whud{display:none;width:min(100%,960px);justify-content:space-between;align-items:flex-start;gap:.4rem}
+.whud:not(:empty){display:flex}
+.whud .wj,.whud .wbody{position:relative;top:auto;right:auto;left:auto}
+.whud .wbody{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.whud .wj .gain{top:auto;bottom:calc(100% + .2rem);right:0}
+.whud .wj .gain.xp{top:auto;bottom:calc(100% + 1.3em)}
 .dpad{display:grid;grid-template-columns:repeat(3,3.3rem);grid-template-rows:repeat(3,3.3rem)}
 .dpad [data-k=up]{grid-column:2;grid-row:1}
 .dpad [data-k=left]{grid-column:1;grid-row:2}
