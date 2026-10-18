@@ -12,7 +12,8 @@
 (function () {
   var M = window.MFWorldMap, A = window.MFAvatar, L = window.MFLobby;
   if (!M) return;
-  var TS = 16, VW = 20, VH = 12;                       /* tile size, view in tiles */
+  var TS = 16, VW = 20, VH = 12;                       /* tile size in game units, view in tiles */
+  var ART = window.MFArt ? window.MFArt.ART : 1;        /* canvas pixels per game unit (art.js) */
   var T = M.T, D = M.DISTRICTS;
   var world = null, ctx = null, canvas = null, tiles = {}, frame = 0;
   var api = null, s = null, active = false, raf = 0;
@@ -813,6 +814,7 @@
     ctx.globalAlpha = a;
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx + SH_X < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy + SH_Y < 0) return;
+      if (window.MFArt && window.MFArt.has('mark:' + m.id)) return;   /* sheet art paints its own ground shadow */
       ctx.drawImage(markShadow(m), m.x * TS - cx + SH_X, m.y * TS - cy + SH_Y);
     });
     ctx.globalAlpha = 1;
@@ -1424,7 +1426,7 @@
     var e = now - wipe.t0, half = WIPE_MS / 2, R = Math.hypot(VW * TS, VH * TS);
     if (e >= WIPE_MS) { wipe = null; return; }
     if (e < half) {
-      ctx.drawImage(wipe.snap, 0, 0);
+      ctx.drawImage(wipe.snap, 0, 0, VW * TS, VH * TS);
       iris(wipe.ox, wipe.oy, R * Math.pow(1 - e / half, 1.6));
     } else iris(me.x * TS - lastCam[0] + 8, me.y * TS - lastCam[1] + 8, R * Math.pow((e - half) / half, 1.6));
   }
@@ -4019,6 +4021,7 @@
     shadows(x0, y0, cx, cy, at, sunUp);
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy < 0) return;
+      if (window.MFArt && window.MFArt.draw(ctx, 'mark:' + m.id, m.x * TS - cx, m.y * TS - cy)) return;
       ctx.drawImage(markCanvas(m), m.x * TS - cx, m.y * TS - cy);
     });
     world.signs.forEach(function (sg) {
@@ -4158,13 +4161,16 @@
     var top = scr.getBoundingClientRect().top, padH = $('wPad').offsetHeight;
     var availH = Math.max(160, window.innerHeight - Math.max(0, top) - (padH ? padH + 40 : 40));
     var dw = availW * dpr, dh = availH * dpr;
-    var sc = Math.max(1, Math.floor(dw / (TS * 12)));
-    while (sc > 1 && Math.floor(dh / (TS * sc)) < 8) sc--;
-    VW = Math.max(10, Math.min(24, Math.floor(dw / (TS * sc))));
-    VH = Math.max(7, Math.min(Math.floor(dh / (TS * sc)), Math.round(VW * 0.75)));
-    if (canvas.width !== VW * TS || canvas.height !== VH * TS) { canvas.width = VW * TS; canvas.height = VH * TS; }
-    ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
-    var cw = VW * TS * sc / dpr, ch = VH * TS * sc / dpr;
+    /* the canvas is ART times finer than a game unit (art.js), and every
+       canvas pixel a whole number of screen pixels: sc is screen pixels per
+       canvas pixel, so a game unit is ART * sc of them */
+    var A = ART, sc = Math.max(1, Math.floor(dw / (TS * A * 12)));
+    while (sc > 1 && Math.floor(dh / (TS * A * sc)) < 8) sc--;
+    VW = Math.max(10, Math.min(24, Math.floor(dw / (TS * A * sc))));
+    VH = Math.max(7, Math.min(Math.floor(dh / (TS * A * sc)), Math.round(VW * 0.75)));
+    if (canvas.width !== VW * TS * A || canvas.height !== VH * TS * A) { canvas.width = VW * TS * A; canvas.height = VH * TS * A; }
+    ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.setTransform(A, 0, 0, A, 0, 0);
+    var cw = VW * TS * A * sc / dpr, ch = VH * TS * A * sc / dpr;
     scr.style.width = cw + 'px'; scr.style.height = ch + 'px';
     scr.setAttribute('data-scale', sc);
   }
