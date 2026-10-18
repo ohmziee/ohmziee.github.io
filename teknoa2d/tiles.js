@@ -23,14 +23,21 @@
   function tone(h, f) { return hex(rgb(h).map(function (v) { return f > 1 ? v + (255 - v) * (f - 1) : v * f; })); }
   function ramp(h) { return [tone(h, 0.55), tone(h, 0.75), h, tone(h, 1.18), tone(h, 1.38)]; }
 
+  /* wall: brick | glass | stucco | timber | concrete | wood (brick is its
+     colour, whatever the kind); roofKind: tar (strips and a parapet) or tile */
   var MATS = {
-    redrum: { road: '#272639', pave: '#433d5e', wall: 'brick', brick: '#661f2e', roof: '#221d42', grass: '#2a1a24', trim: '#9c4646', door: '#3e2618' }
+    redrum:    { road: '#272639', pave: '#433d5e', wall: 'brick', brick: '#661f2e', roof: '#221d42', grass: '#2a1a24', trim: '#9c4646', door: '#3e2618' },
+    worldwood: { road: '#232236', pave: '#3a3656', wall: 'glass', brick: '#2a3a6a', roof: '#1c1a34', grass: '#1d3a34', trim: '#7cf5ff', door: '#2a2f4a' },
+    yucayeque: { road: '#4a3a30', pave: '#8a6a52', wall: 'stucco', brick: '#d8a85a', roof: '#c4573a', roofKind: 'tile', grass: '#3a5a2a', trim: '#f4f6ff', door: '#2f6f5e' },
+    majinryu:  { road: '#2e2630', pave: '#4a3c42', wall: 'timber', brick: '#3a2420', roof: '#8a2424', roofKind: 'tile', grass: '#2a3a2a', trim: '#c4473a', door: '#5a1414' },
+    haven:     { road: '#5a6272', pave: '#9aa0b0', wall: 'concrete', brick: '#d8dce8', roof: '#8a92a6', grass: '#3a6a4a', trim: '#7cb8ff', door: '#4a5266' },
+    naturia:   { road: '#3a3a2a', pave: '#4a4a36', wall: 'wood', brick: '#5a4a2a', roof: '#3a5a3a', roofKind: 'tile', grass: '#1f4a32', trim: '#8ad07a', door: '#3e2a18' }
   };
   var mats = {};
   function matsOf(id, p) {
     if (mats[id]) return mats[id];
     var m = MATS[id] || { road: p.road, pave: p.ground, wall: 'plain', brick: p.wall, roof: p.roof, grass: p.grass, trim: tone(p.wall, 1.3), door: '#3e2618' };
-    return (mats[id] = { road: ramp(m.road), pave: ramp(m.pave), wall: m.wall, brick: ramp(m.brick), roof: ramp(m.roof), grass: ramp(m.grass), trim: m.trim, door: ramp(m.door) });
+    return (mats[id] = { road: ramp(m.road), pave: ramp(m.pave), wall: m.wall, brick: ramp(m.brick), roof: ramp(m.roof), roofKind: m.roofKind || 'tar', grass: ramp(m.grass), trim: m.trim, door: ramp(m.door) });
   }
   function hash(a, b) { var h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 
@@ -233,9 +240,26 @@
             var row = (y - y0) >> 2, joint = (y - y0) % 4 === 3 || (x + (row % 2) * 4) % 8 === 7, br = hash((x + (row % 2) * 4) >> 3, row * 7 + v);
             px(joint ? B[0] : br < 0.18 ? B[1] : br > 0.88 ? B[3] : B[2], x, y);
           }
-        } else {
+        } else if (M.wall === 'glass') {
+          /* a curtain wall: mullions, panes catching the sky in a stripe */
+          px(B[1], 0, y0, C, y1 - y0);
+          for (y = y0; y < y1; y += 8) for (x = 0; x < C; x += 8) { px(B[2], x + 1, y + 1, 6, 6); px(B[3], x + 1, y + 1, 2, 1); if ((x + y + v) % 24 === 0) px(B[4], x + 2, y + 2, 1, 3); }
+          px(tone(M.trim, 0.5), 0, y0, C, 1);
+        } else if (M.wall === 'timber') {
+          /* dark boards between posts, a rail across */
           px(B[2], 0, y0, C, y1 - y0);
-          for (y = y0 + 7; y < y1; y += 8) px(B[1], 0, y, C, 1);
+          for (x = 0; x < C; x += 4) px(x % 16 ? B[1] : B[0], x, y0, 1, y1 - y0);
+          px(B[0], 0, y0, 2, y1 - y0); px(B[3], 2, y0, 1, y1 - y0); px(B[0], 0, y0 + 13, C, 2);
+        } else if (M.wall === 'wood') {
+          /* log courses, rounded, knots here and there */
+          for (y = y0; y < y1; y++) px([B[3], B[2], B[2], B[1], B[0]][(y - y0) % 5], 0, y, C, 1);
+          for (i = 0; i < 4; i++) px(B[0], (hash(v, i) * 30) | 0, y0 + 2 + ((hash(i, v) * (y1 - y0 - 4)) | 0), 2, 1);
+        } else {
+          /* stucco or concrete: flat with a fine grain; concrete in panels */
+          px(B[2], 0, y0, C, y1 - y0);
+          for (i = 0; i < 22; i++) px(hash(i, v + 5) < 0.5 ? B[1] : B[3], (hash(v, i * 3) * C) | 0, y0 + ((hash(i * 7, v) * (y1 - y0)) | 0));
+          if (M.wall === 'concrete') { for (y = y0 + 15; y < y1; y += 16) px(B[1], 0, y, C, 1); px(B[1], 15, y0, 1, y1 - y0); }
+          else { px(B[1], 0, y1 - 3, C, 1); }
         }
       }
       function windowAt(gx, gy, gh, lit, col) {
@@ -261,8 +285,13 @@
         /* the roof, from above: tar in long strips, gravel, a parapet round
            the edge (lit cap on the far side, its dark face on the right) */
         px(R[2], 0, 0, C, C);
-        for (y = 5; y < C; y += 9) { px(R[1], 0, y, C, 1); px(R[3], 0, y + 1, C, 1); }
-        for (i = 0; i < 26; i++) px(hash(i, v + 2) < 0.6 ? R[1] : R[3], (hash(v * 3, i) * C) | 0, (hash(i * 7, v) * C) | 0);
+        if (M.roofKind === 'tile') {
+          /* clay tiles in scalloped rows running down the slope */
+          for (y = 0; y < C; y += 5) for (x = ((y / 5) % 2) ? 0 : 3; x < C; x += 6) { px(R[3], x, y, 5, 1); px(R[1], x, y + 3, 6, 1); px(R[0], x + 5, y, 1, 4); }
+        } else {
+          for (y = 5; y < C; y += 9) { px(R[1], 0, y, C, 1); px(R[3], 0, y + 1, C, 1); }
+          for (i = 0; i < 26; i++) px(hash(i, v + 2) < 0.6 ? R[1] : R[3], (hash(v * 3, i) * C) | 0, (hash(i * 7, v) * C) | 0);
+        }
         if (!N) { px(OUT, 0, 0, C, 1); px(R[4], 0, 1, C, 2); px(R[1], 0, 3, C, 2); }
         if (!E) { px(R[0], 27, 0, 4, C); px(OUT, 31, 0, 1, C); }
         if (!W) { px(R[4], 1, 0, 3, C); px(OUT, 0, 0, 1, C); }
@@ -271,7 +300,7 @@
         if (m & 64) { px(R[4], 0, 27, 4, 5); px(OUT, 0, 31, 1, 1); }
         if (m & 128) { px(R[4], 0, 0, 4, 4); px(OUT, 0, 0, 1, 1); }
         /* something up there, on a roof tile with room round it */
-        if (N && E && W) {
+        if (N && E && W && M.roofKind !== 'tile') {
           var pk = v % 12;
           if (pk === 3) { px(OUT, 8, 9, 16, 13); px('#6e7890', 9, 10, 14, 11); px('#a3aec4', 9, 10, 14, 2); px('#343b4e', 11, 14, 10, 1); px('#343b4e', 11, 17, 10, 1); px('rgba(0,0,0,.35)', 24, 12, 3, 10); }   /* an ac unit */
           else if (pk === 6) { px(OUT, 13, 6, 6, 16); px('#a3aec4', 14, 6, 3, 16); px('#727e98', 17, 6, 1, 16); px('#c8ccd8', 12, 5, 8, 2); px('rgba(0,0,0,.35)', 19, 9, 3, 13); }   /* a vent stack */
