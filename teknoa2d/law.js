@@ -104,6 +104,10 @@
      you until you're out of its sight for LOSE seconds. right next to it,
      you're seen */
   var SPOT_EVERY = 0.5, LOSE = 3;
+  /* you behind it (it faces away): this much of the chance. a blow it
+     didn't see coming lands SNEAK times as hard, and it may not even
+     place where it came from */
+  var BEHIND = 0.25, SNEAK = 2;
   var HELIS = [0, 0, 0, 0, 1, 2];
   var HELI = { speed: 7, spotSpeed: 6, spot: 1.6, gun: 8, every: 3.2, burst: 3, call: 4 };   /* tiles a second, tiles of light, seconds */
   var AUTO_AT = 5, AUTO = { burst: 3, gap: 0.09, rest: 1.9 };
@@ -185,9 +189,9 @@
   }
   /* the chance one look picks you out: likelier the closer you are, and
      stealth (its trait level) cuts it: half by level 11, a sixth by 51 */
-  function spotChance(stl, d) {
+  function spotChance(stl, d, behind) {
     var near = 1 - Math.min(1, Math.max(0, d - 1) / SIGHT);
-    return (0.15 + 0.65 * near) / (1 + Math.max(0, (+stl || 1) - 1) / 10);
+    return (0.15 + 0.65 * near) / (1 + Math.max(0, (+stl || 1) - 1) / 10) * (behind ? BEHIND : 1);
   }
   /* a save's s.law, whatever state it's in */
   function tidy(o) {
@@ -223,7 +227,7 @@
   root.MFLaw = { CIV: CIV, POCKET: POCKET, DOWN_SECS: DOWN_SECS, BODY_SECS: BODY_SECS, RESPAWN_SECS: RESPAWN_SECS, MAX_FIGHTERS: MAX_FIGHTERS, SEEN: SEEN, BRAVE: BRAVE, FLEE: FLEE,
                  civ: civ, dies: dies, fall: fall, preys: preys, brave: brave,
                  CRIMES: CRIMES, HEAT_STEP: HEAT_STEP, WITNESS: WITNESS, COOL: COOL, HIDE: HIDE, JAIL: JAIL, JAILS: JAILS,
-                 ENFORCERS: ENFORCERS, SQUAD: SQUAD, SIGHT: SIGHT, RANGE: RANGE, GUN_AT: GUN_AT, GRAB: GRAB, CALL_EVERY: CALL_EVERY, LAW_SPEED: LAW_SPEED, SPOT_EVERY: SPOT_EVERY, LOSE: LOSE, spotChance: spotChance,
+                 ENFORCERS: ENFORCERS, SQUAD: SQUAD, SIGHT: SIGHT, RANGE: RANGE, GUN_AT: GUN_AT, GRAB: GRAB, CALL_EVERY: CALL_EVERY, LAW_SPEED: LAW_SPEED, SPOT_EVERY: SPOT_EVERY, LOSE: LOSE, BEHIND: BEHIND, SNEAK: SNEAK, spotChance: spotChance,
                  HELIS: HELIS, HELI: HELI, AUTO_AT: AUTO_AT, AUTO: AUTO, BLAST: BLAST,
                  force: force, enforcer: enforcer, clearShot: clearShot, inBlast: inBlast,
                  law: law, commit: commit, cool: cool, caught: caught, jailed: jailed, served: served, bail: bail, release: release, tidy: tidy, pockets: pockets, empty: empty, loot: loot, attackable: attackable };

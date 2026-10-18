@@ -289,16 +289,16 @@
   /* ── origins: where the player comes from (content/origins.scene has the
      words). each can: scale exp (xp), start traits at a level (start),
      shift a vital's maximum (max), add carry kg (carry), shrug off cold
-     (cold), discount street food (street), start with more joules
+     (cold), train some traits faster (train), start with more joules
      (joules), offer a power source (power). level.js start() applies
      the one-off parts at Chippin' In ───────────────────────────────── */
-  /* sapien learns fast while it's all new (xp until level xpTo), then
-     only a little faster: the easy start, without outgrowing everyone */
   var ORIGINS = {
-    sapien:    { xp: 1.2, xpTo: 10, xpAfter: 1.05 },
+    /* start: traits at that level from day one; train: those traits'
+       exp comes in that much faster (level.js award) */
+    sapien:    { start: { def: 5, crf: 5 }, train: { def: 1.25, crf: 1.25 } },
     simian:    { start: { atk: 5 }, carry: 15 },
     ai:        { cold: 1, max: { int: 10 }, power: ['ade', 'ibc'] },
-    novan:     { start: { stl: 5 }, street: 0.8 },
+    novan:     { start: { stl: 5, prs: 10 }, train: { stl: 1.25, prs: 1.25 } },
     product:   { max: { hp: -20 }, joules: 600, side: ['defector', 'loyal'] }
   };
   /* an AI's power: an artificial digestive engine eats like anyone, an

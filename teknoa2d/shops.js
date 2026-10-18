@@ -532,8 +532,27 @@
   function armsPrice(s, k) { var C = root.MFCombat, w = C.WEAPONS[k]; return Math.max(1, Math.floor(w.price / 2 * C.usesLeft(s, k) / w.dur)); }
   function goods(key) { return RES[key] || CURIOS[key] || TOOLS[key] || GEAR[key] || FISH[key] || FOODS[key] || MEDS[key] || ARMS()[key] || null; }
   function nameOf(key) { var g = goods(key); return g ? g.name : key; }
+  /* persuasion at the till (the PRS trait): a street cart knocks the most
+     off, any other counter a little, and a pawn pays a little more.
+     n: PRS levels past the first */
+  var HAGGLE = { street: [0.015, 0.3], shop: [0.005, 0.15], sell: [0.005, 0.15] };
+  function haggle(s, kind) {
+    var LV = root.MFLevel, n = LV ? LV.traitLevel(s, 'prs') - 1 : 0, h = HAGGLE[kind], off = Math.min(h[1], n * h[0]);
+    return kind === 'sell' ? 1 + off : 1 - off;
+  }
   /* the counter's rows for a tab: what you can buy here, or what they'll buy off you */
   function storeRows(MF, s, id, tab) {
+    var rows = storeRowsAt(MF, s, id, tab), st = place(id);
+    if (!st || st.kind === 'cook' || st.kind === 'stash') return rows;
+    var m = tab === 'buy' ? haggle(s, st.kind === 'vendor' ? 'street' : 'shop') : haggle(s, 'sell');
+    rows.forEach(function (r) {
+      if (!r.price) return;
+      r.price = Math.max(1, tab === 'buy' ? Math.round(r.price * m) : Math.floor(r.price * m));
+      if (tab === 'buy') r.ok = MF.joules(s) >= r.price;
+    });
+    return rows;
+  }
+  function storeRowsAt(MF, s, id, tab) {
     var st = place(id), rows = [], res = s.res || {}, items = s.items || {};
     if (!st) return rows;
     if (st.kind === 'cook') return tab === 'buy' ? cookRows(s, st.where) : rows;
@@ -546,9 +565,7 @@
       return rows;
     }
     if (tab === 'buy' && st.menu) {
-      /* a novan knows the carts: street food for less */
-      var street = st.kind === 'vendor' ? MF.originFx(s).street || 1 : 1;
-      st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : '') + (f.mind ? ' · +' + f.mind + ' brainpower' : ''), price: Math.max(1, Math.round(f.price * street)), have: 0, here: true }); });
+      st.menu.forEach(function (k) { var f = FOODS[k]; rows.push({ key: k, label: f.name + (f.buff ? ' · ' + f.buff : '') + (f.mind ? ' · +' + f.mind + ' brainpower' : ''), price: f.price, have: 0, here: true }); });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price; });
     } else if (tab === 'buy') {
       if (st.foods) st.foods.forEach(function (k) { rows.push({ key: k, label: nameOf(k), price: FOODS[k].price, have: items[k] || 0 }); });
@@ -613,5 +630,5 @@
                    WEAR: WEAR, rodLeft: rodLeft, wearRod: wearRod,
                    UPKEEP: UPKEEP, LEVY: LEVY, levy: levy, bill: bill, treasury: treasury,
                    CARRY: CARRY, cap: cap, FROZEN: FROZEN, STASH_CAP: STASH_CAP, HOLD_CAP: HOLD_CAP, weightOf: weightOf, weighs: weighs, carried: carried, load: load, stashOf: stashOf, drop: drop,
-                   price: price, quote: quote, allowed: allowed, buy: buy };
+                   price: price, quote: quote, HAGGLE: HAGGLE, haggle: haggle, allowed: allowed, buy: buy };
 })(typeof window !== 'undefined' ? window : globalThis);

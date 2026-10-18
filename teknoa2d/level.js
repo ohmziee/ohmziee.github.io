@@ -33,7 +33,12 @@
     gather: { name: 'gathering', trait: 'crf', xp: function (d) { return d.perfect ? 6 : 4; } },
     craft:  { name: 'crafting',  trait: 'crf', xp: function (d) { return Math.max(1, Math.floor(+d.xp || 10)); } },
     sell:   { name: 'trading',   trait: 'prs', xp: function (d) { return Math.max(1, Math.floor((+d.price || 0) / 10)); } },
-    combat: { name: 'combat',    trait: 'atk', xp: function (d) { return Math.max(1, Math.floor(+d.xp || 15)); } }
+    combat: { name: 'combat',    trait: 'atk', xp: function (d) { return Math.max(1, Math.floor(+d.xp || 15)); } },
+    /* stealth: most from a foe put down without the eye ever opening, then
+       from stealing (double with no witnesses), a little from any win */
+    unseen: { name: 'unseen takedowns', trait: 'stl', xp: function (d) { return Math.max(1, Math.floor(1.5 * (+d.xp || 15))); } },
+    steal:  { name: 'stealing',  trait: 'stl', xp: function (d) { return (4 + Math.floor((+d.joules || 0) / 25)) * (d.unseen ? 2 : 1); } },
+    fight:  { name: 'fighting',  trait: 'stl', xp: function (d) { return Math.max(1, Math.floor(0.15 * (+d.xp || 15))); } }
   };
 
   /* the trees. need: the trait level it opens at; after: a perk it needs
@@ -95,7 +100,7 @@
     if (!TRAITS[t]) throw new Error('unknown trait: ' + t);
     ready(s);
     var fx = root.MF && root.MF.originFx ? root.MF.originFx(s) : {};
-    var rate = root.MFLevel ? root.MFLevel.EXP_RATE : EXP_RATE, raw = src.xp(d) * (fx.xpTo && level(s) >= fx.xpTo ? fx.xpAfter || 1 : fx.xp || 1), n = raw > 0 ? Math.max(1, Math.floor(raw * rate)) : 0, before = level(s), tb = traitLevel(s, t);
+    var rate = root.MFLevel ? root.MFLevel.EXP_RATE : EXP_RATE, raw = src.xp(d) * (fx.xpTo && level(s) >= fx.xpTo ? fx.xpAfter || 1 : fx.xp || 1) * ((fx.train || {})[t] || 1), n = raw > 0 ? Math.max(1, Math.floor(raw * rate)) : 0, before = level(s), tb = traitLevel(s, t);
     s.xp.total = Math.max(0, Math.floor(+s.xp.total || 0)) + n;
     s.xp.by[source] = (Math.floor(+s.xp.by[source]) || 0) + n;
     s.skills[t] = (Math.floor(+s.skills[t]) || 0) + n;

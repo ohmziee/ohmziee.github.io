@@ -2816,10 +2816,16 @@
   }
   function swingAt(m, now) {
     if (now < swingFx + SWING_CD) return;
-    var C = window.MFCombat, LV = window.MFLevel, MF = window.MF, P = C.player(s, LV), r = C.strike(P, m.f), w = C.swing(s);
+    var C = window.MFCombat, LV = window.MFLevel, MF = window.MF, LAW = window.MFLaw, P = C.player(s, LV), r = C.strike(P, m.f), w = C.swing(s);
     swingFx = now;
+    /* unseen, a landed blow hits twice as hard; it has a chance to place
+       you (a point-blank look), else it knows exactly where you are */
+    var sneak = unaware(m) && !seen() && r.hit;
+    if (sneak) r.dmg *= LAW.SNEAK;
+    m.hits = (m.hits || 0) + 1;
     /* hit a passer-by who was busy with someone else: now it's you */
-    m.foe = null; m.spot = true;
+    m.foe = null;
+    if (!sneak || Math.random() < LAW.spotChance(LV ? LV.traitLevel(s, 'stl') : 1, 1)) m.spot = true;
     if (m.civ && !m.struck) { m.struck = true; crime('assault', m.x, m.y, m.civ); }
     if (m.law && !m.struck) { m.struck = true; crime('officer', m.x, m.y, null, true); }
     if (w.broke) float(me.x * TS + 2, me.y * TS - 12, C.WEAPONS[w.key].name.replace(/^an? /, '') + ' breaks!', '#ffb02e');
@@ -2829,22 +2835,29 @@
     if (r.crit) jolt(140, 1);
     var hd = DIRS[me.dir];
     burst(me.x * TS + 8 + hd[0] * 10, me.y * TS + 7 + hd[1] * 10, r.crit ? 9 : 5, r.crit ? ['#ffe97c', '#fff3b0', '#ffffff'] : ['#ffffff', '#dce3ff'], r.crit ? 70 : 50);
-    float(m.x * TS + 3, m.y * TS - 6, (r.crit ? 'CRIT ' : '') + r.dmg, r.crit ? '#ffe97c' : '#fff');
-    if (m.f.hp <= 0) return beaten(m, w.key);
+    float(m.x * TS + 3, m.y * TS - 6, (sneak ? 'SNEAK ' : r.crit ? 'CRIT ' : '') + r.dmg, sneak ? '#b9a8ff' : r.crit ? '#ffe97c' : '#fff');
+    if (m.f.hp <= 0) return beaten(m, w.key, sneak);
     /* knocked back a tile, if there's room */
     var kx = m.x + Math.sign(m.x - me.x), ky = m.y + Math.sign(m.y - me.y);
     if ((kx !== m.x) !== (ky !== m.y) && !occupied(kx, ky)) { m.fx = m.x; m.fy = m.y; m.x = kx; m.y = ky; m.moving = true; m.t = 0.5; }
   }
-  function beaten(m, weapon) {
+  /* a win trains ATK; STL a little, or a lot when the eye never opened */
+  function wonExp(m, unseen) {
+    exp(unseen ? 'combat' : 'fight', { xp: m.f.xp });
+    exp(unseen ? 'unseen' : 'combat', { xp: m.f.xp });
+    if (unseen) float(me.x * TS - 4, me.y * TS - 16, 'unseen', '#b9a8ff');
+  }
+  function beaten(m, weapon, quiet) {
     var MF = window.MF;
     wonAt = performance.now();
     mobs = mobs.filter(function (o) { return o !== m; });
-    if (m.civ) return civFalls(m, weapon);
+    var unseen = !!quiet && !seen();
+    if (m.civ) return civFalls(m, weapon, unseen);
     if (m.law) crime(window.MFLaw.fall(weapon, Math.random) === 'dead' ? 'murder' : 'officer', m.x, m.y, null, true);
     downs.push({ x: m.x * TS, y: m.y * TS, img: sprite(m.look, m.dir, 0), t0: performance.now() });
     freezeUntil = performance.now() + 120; jolt(180, 1);
     if (m.f.joules > 0) { MF.earn(s, m.f.joules); wallet('+' + MF.fmtJ(m.f.joules)); }
-    exp('combat', { xp: m.f.xp });
+    wonExp(m, unseen);
     float(m.x * TS, m.y * TS - 8, m.f.name + ' down', '#7cffb2');
     if (api.save) api.save();
   }
@@ -2908,7 +2921,8 @@
      you out before they come for you; your stealth makes that harder. one
      that has you keeps you until you've been out of its sight a while, then
      goes to where it saw you last. the eye on the hud says if anyone has
-     you. a passer-by you squared up to always knows where you are ── */
+     you. behind one (it faces away) you're much harder to pick out. a
+     passer-by you squared up to always knows where you are ── */
   var sightT = 0;
   function watcher(m) { return !m.civ && !m.foe && !m.leaving; }
   function tickSight(dt) {
@@ -2919,13 +2933,17 @@
     mobs.forEach(function (m) {
       if (!watcher(m)) return;
       var d = Math.abs(m.x - me.x) + Math.abs(m.y - me.y), can = !inside && d <= LAW.SIGHT && LAW.clearShot(solid, m.x, m.y, me.x, me.y);
-      if (d <= 1 || (can && !m.spot && look && Math.random() < LAW.spotChance(stl, d))) m.spot = true;
+      var fd = DIRS[m.dir] || [0, 0], behind = fd[0] * (me.x - m.x) + fd[1] * (me.y - m.y) < 0;
+      if (can && !m.spot && look && Math.random() < LAW.spotChance(stl, d, behind)) m.spot = true;
       if (!m.spot) return;
       m.lost = can ? 0 : (m.lost || 0) + dt;
       if (m.lost > LAW.LOSE) { m.spot = false; m.lost = 0; return; }
       m.lx = me.x; m.ly = me.y;
     });
   }
+  /* didn't see it coming: a hostile or the law that hasn't picked you out,
+     or a passer-by before the first blow */
+  function unaware(m) { return watcher(m) ? !m.spot : !m.hits; }
   function seen() { return !inside && (helis.some(heliSees) || mobs.some(function (m) { return watcher(m) && m.spot; })); }
   /* not seen: head for where it saw you last, else drift about */
   function search(m, dt) {
@@ -3096,6 +3114,7 @@
     else if (now > was) { float(me.x * TS - 2, me.y * TS - 16, 'SIREN ' + now, '#ff3a4a'); jolt(160, 1); }
     drawSiren();
     if (api.save) api.save();
+    return seen;
   }
   var lawT = 0;
   function tickLaw(dt, now) {
@@ -3353,13 +3372,13 @@
   /* they gave up, or you went somewhere they can't follow: back in the crowd where they stand */
   function backToCrowd(m) { var n = m.civ; n.f = m.f; n.x = m.x; n.y = m.y; n.fx = m.x; n.fy = m.y; n.moving = false; n.t = 0; n.dir = m.dir; cityNpcs.push(n); }
   function dropMobs() { mobs.forEach(function (m) { if (m.civ) backToCrowd(m); }); mobs = []; helis = []; charges = []; }
-  function civFalls(m, weapon) {
+  function civFalls(m, weapon, unseen) {
     var LAW = window.MFLaw, now = performance.now();
     var dead = LAW.fall(weapon, Math.random) === 'dead';
     layBody(m.civ, m.x, m.y, m.look, dead);
     crime(dead ? 'murder' : 'knockout', m.x, m.y, m.civ);
     freezeUntil = now + 120; jolt(180, 1);
-    exp('combat', { xp: m.f.xp });
+    wonExp(m, unseen);
     if (api.save) api.save();
   }
   function bodyAt(x, y) { for (var i = bodies.length - 1; i >= 0; i--) if (bodies[i].x === x && bodies[i].y === y) return bodies[i]; return null; }
@@ -3372,7 +3391,8 @@
     ask([state + '\nin their pockets: ' + what.join(', ') + '.', 'take it?'], function () {
       var r = LAW.loot(s, MF, p);
       if (!r.ok) return;
-      crime('theft', b.x, b.y, b.n);
+      var saw = crime('theft', b.x, b.y, b.n);
+      exp('steal', { joules: r.got.joules, unseen: !saw });
       if (r.got.joules) wallet('+' + MF.fmtJ(r.got.joules));
       if (api.save) api.save();
     });

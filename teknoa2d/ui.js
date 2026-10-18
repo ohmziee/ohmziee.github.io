@@ -18,12 +18,16 @@
   /* ── Chippin' In ────────────────────────────────────────────
      Before anything else the player says who they are: a handle, a look,
      where they come from. Nothing is saved until they chip in. */
-  var look = null, origin = '', power = '', side = '';
+  /* dealt: the look as dealt, untouched; an origin picked over it deals a
+     fresh one for that body instead of bending this one to fit */
+  var look = null, origin = '', power = '', side = '', dealt = '';
   function showChip() {
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
     $('stage').hidden = true; $('shop').hidden = true; $('chip').hidden = false;
-    origin = D.origins[s.player.origin] ? s.player.origin : '';
+    /* a newcomer starts as a sapien: the easy start; any other is one tap */
+    origin = D.origins[s.player.origin] ? s.player.origin : D.origins.sapien ? 'sapien' : '';
     look = Object.keys(s.player.look).length ? A.normalize(s.player.look, origin || undefined) : A.random(null, origin || undefined);
+    dealt = Object.keys(s.player.look).length ? '' : JSON.stringify(look);
     power = s.player.power || ''; side = s.player.side || '';
     var carried = '';
     try { carried = store.getItem('exiled.handle') || ''; } catch (e) {}
@@ -77,11 +81,13 @@
       b.setAttribute('aria-checked', String(origin === id));
       t.textContent = o.title; d.textContent = o.blurb; b.appendChild(t); b.appendChild(d);
       b.addEventListener('click', function () {
-        var was = origin; origin = id;
+        var was = origin, untouched = JSON.stringify(look) === dealt;
+        origin = id;
         /* the origin decides the body: an ape, an android, a human; a product comes stamped */
-        /* the first pick deals a fresh look for that body; after that, a
-           change of origin keeps what it can of the one they made */
-        look = was ? A.normalize(look, id) : A.random(null, id);
+        /* a look nobody touched yet is dealt fresh for that body; after
+           that, a change of origin keeps what it can of the one they made */
+        look = was && !untouched ? A.normalize(look, id) : A.random(null, id);
+        if (untouched) dealt = JSON.stringify(look);
         if (id === 'product' && was !== 'product' && look.marks === 'none') look.marks = 'barcode';
         drawOrigins(); drawSlots(); drawFace();
       });
