@@ -3790,10 +3790,11 @@
   var CORNER = [[1, -1, 0, 1], [1, 1, 1, 2], [-1, 1, 2, 3], [-1, -1, 3, 0]];  /* NE SE SW NW: diagonal, the two sides */
   var SIDE = [[0, -1], [1, 0], [0, 1], [-1, 0]];
   function landBase(t, di) {
+    if (ART > 1 && window.MFTiles) { if (!TILE_X) TILE_X = { T: T, D: D, pal: pal, OUT: OUT, upperOn: upperOn }; if (t === T.DEEP || t === T.SHALLOW) return null; return window.MFTiles.base(t, di, TILE_X); }
     var p = pal(di);
     return t === T.SAND ? '#5e523c' : t === T.GRASS || t === T.TREE ? p.grass : t === T.GROUND || t === T.STALL ? p.ground : t === T.MAINLAND ? '#14301c' : t === T.ROAD ? p.road : null;
   }
-  function seaOf(t) { return t === T.DEEP ? '#0a1834' : '#123563'; }
+  function seaOf(t) { if (ART > 1 && window.MFTiles) return window.MFTiles.base(t, -1, TILE_X || (TILE_X = { T: T, D: D, pal: pal, OUT: OUT, upperOn: upperOn })); return t === T.DEEP ? '#0a1834' : '#123563'; }
   /* a triangle in corner c of the tile at (sx, sy): pixels within n of the corner */
   function wedge(sx, sy, c, n, col, edge) {
     for (var i = 0; i <= n; i++) {
@@ -3803,7 +3804,7 @@
       if (edge) px(ctx, edge, rx, ey ? ry - 1 : sy + len, 1, 1);
     }
   }
-  var FOAM = '#6fb4e0', CUT = 4;
+  var FOAM = '#7fc4ec', CUT = 4;
   function shores(x0, y0, cx, cy, at, wet) {
     for (var y = y0; y <= y0 + VH && y < world.H; y++) for (var x = x0; x <= x0 + VW && x < world.W; x++) {
       var k = y * world.W + x, t = world.tile[k], sx = x * TS - cx, sy = y * TS - cy;

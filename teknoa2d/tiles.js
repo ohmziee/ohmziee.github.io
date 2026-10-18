@@ -100,9 +100,103 @@
       return true;
     }
 
+    /* ── the coast ── */
+    if (t === T.DEEP || t === T.SHALLOW) {
+      /* the mask here means the side that meets land */
+      var deep = t === T.DEEP, Wt = ramp(deep ? '#0d1d3c' : '#14396a'), o = [0, 2, 4, 2][wave];
+      px(Wt[2], 0, 0, C, C);
+      /* depth: a loose dither of the darker tone, more of it out deep */
+      for (y = 0; y < C; y += 2) for (x = (y >> 1) & 1; x < C; x += 2) if (hash(x + v * 31, y) < (deep ? 0.22 : 0.12)) px(Wt[1], x, y);
+      /* crests: short curved strokes, rocking with the tide over four frames */
+      [[2 + (v & 3) * 3, 6 + ((v >> 1) & 3) * 2, 1], [14 - (v & 1) * 5, 19 + ((v >> 2) & 1) * 4, -1], [20, 9 + (v & 3), 1]].forEach(function (c, j) {
+        if (j === 2 && !(v & 2)) return;
+        var cx = c[0] + o * c[2];
+        px(Wt[3], cx, c[1] + 1, 5, 1); px(Wt[3], cx + 5, c[1], 3, 1); px(Wt[4], cx + 5, c[1], 1, 1); px(Wt[1], cx, c[1] + 2, 5, 1);
+      });
+      /* in the shallows, light rippling on the bottom */
+      if (!deep) for (i = 0; i < 3; i++) { var lx = (hash(v, i) * 24) | 0, ly = (hash(i, v + wave) * 28) | 0; px(tone(Wt[2], 1.25), lx, ly, 4, 1); px(tone(Wt[2], 1.25), lx + 4, ly + 1, 2, 1); }
+      /* foam where it meets land: a lace line, froth running along it, and a
+         broken second row washing in and out */
+      var foam = '#7fc4ec', froth = '#e4f6ff', wash = deep ? '#2c5e96' : '#4f92ca';
+      for (i = 0; i < C; i++) {
+        var hi = (i + wave * 4 + v * 2) % 14 < 3, in2 = (i + wave * 2) % 8 < 4 && wave !== 3, lace = hash(i, v + wave) < 0.5 ? 2 : 3;
+        if (N) { px(foam, i, 0, 1, lace); if (hi) px(froth, i, 0, 1, 2); if (in2) px(wash, i, lace + 1, 1, 1); }
+        if (S) { px(foam, i, C - lace, 1, lace); if (hi) px(froth, C - 1 - i, C - 2, 1, 2); if (in2) px(wash, i, C - lace - 2, 1, 1); }
+        if (E) { px(foam, C - lace, i, lace, 1); if (hi) px(froth, C - 2, i, 2, 1); if (in2) px(wash, C - lace - 2, i, 1, 1); }
+        if (W) { px(foam, 0, i, lace, 1); if (hi) px(froth, 0, C - 1 - i, 2, 1); if (in2) px(wash, lace + 1, i, 1, 1); }
+      }
+      return true;
+    }
+    if (t === T.SAND) {
+      /* the mask here means the side that meets water */
+      var sd = ramp('#7a6a4c');
+      px(sd[2], 0, 0, C, C);
+      for (i = 0; i < 40; i++) px(hash(v, i * 3) < 0.5 ? sd[3] : sd[1], (hash(i, v * 7) * C) | 0, (hash(v * 5, i) * C) | 0);
+      var sk = v & 7;
+      if (sk === 2 || sk === 3 || sk === 6) {
+        /* ripples the wind left: shallow S curves, lit on the windward side */
+        var ry = sk === 3 ? 7 : 4;
+        [[3, ry], [14, ry + 10], [5, ry + 19]].forEach(function (r) { px(sd[1], r[0], r[1] + 2, 4, 1); px(sd[1], r[0] + 4, r[1] + 1, 5, 1); px(sd[1], r[0] + 9, r[1] + 2, 4, 1); px(sd[4], r[0] + 4, r[1], 5, 1); });
+      }
+      if (v === 4 || v === 20) { px(OUT, 17, 17, 7, 4); px('#f2d6c8', 18, 17, 5, 2); px('#d8a898', 18, 19, 5, 1); px('#f4f6ff', 18, 17, 2, 1); }      /* a shell */
+      if (v === 31) { px(OUT, 7, 13, 18, 6); px('#8a6a48', 8, 14, 16, 3); px('#a8885e', 8, 14, 16, 1); px('#5a3a22', 12, 15, 4, 1); px('#5a3a22', 19, 16, 3, 1); }   /* driftwood */
+      if (v === 12) { px(sd[0], 9, 22, 3, 2); px(sd[0], 15, 18, 3, 2); px(sd[0], 21, 14, 3, 2); }   /* someone's footprints */
+      /* wet sand where the water reaches, its edge uneven, a lace of foam on it */
+      var wet = tone(sd[2], 0.8), lacey = '#c8dce4';
+      for (i = 0; i < C; i++) {
+        var dep = 4 + ((i + v) % 5 === 0 ? 2 : 0) + ((i + v * 3) % 7 === 0 ? -1 : 0);
+        if (N) { px(wet, i, 0, 1, dep); if (hash(i, v) < 0.3) px(lacey, i, dep - 1); }
+        if (S) { px(wet, i, C - dep, 1, dep); if (hash(i, v) < 0.3) px(lacey, i, C - dep); }
+        if (W) { px(wet, 0, i, dep, 1); if (hash(i, v) < 0.3) px(lacey, dep - 1, i); }
+        if (E) { px(wet, C - dep, i, dep, 1); if (hash(i, v) < 0.3) px(lacey, C - dep, i); }
+      }
+      return true;
+    }
+    if (t === T.MAINLAND) {
+      /* vistadelsol's bush: too thick to walk through, round clumps lit from
+         the top left with leaf flecks in them, now and then a palm */
+      px('#12291a', 0, 0, C, C);
+      var seed = v * 2654435761 >>> 0;
+      function rnd() { seed = (seed * 1103515245 + 12345) >>> 0; return (seed >>> 8) / 16777216; }
+      var clumps = 3 + Math.floor(rnd() * 3);
+      for (var cI = 0; cI < clumps; cI++) {
+        var cr = 5 + rnd() * 4, ccx = cr + 1 + rnd() * (C - 2 * cr - 2), ccy = cr + 1 + rnd() * (C - 2 * cr - 2), base = cI % 2 ? '#1f5a2e' : '#2a6a34';
+        for (y = 0; y < C; y++) for (x = 0; x < C; x++) {
+          var ddx = x + 0.5 - ccx, ddy = y + 0.5 - ccy, dd = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (dd > cr + 0.8) continue;
+          var lit = ddx + ddy;
+          px(dd > cr - 0.5 ? OUT : lit < -cr * 0.75 ? '#8ad87a' : lit < -cr * 0.3 ? '#4f9a50' : lit > cr * 0.55 ? '#164424' : hash(x + v, y + cI) < 0.08 ? '#4f9a50' : base, x, y);
+        }
+      }
+      if (v % 6 === 0) {
+        /* a palm: a bent, ringed trunk and a star of fronds */
+        for (y = 12; y < 28; y++) { var tx = 15 + Math.round((y - 12) * -0.12); px(OUT, tx - 1, y, 4, 1); px(y % 3 ? '#6a4628' : '#4a2e18', tx, y, 2, 1); }
+        [[-8, 1], [8, 1], [-6, -4], [6, -4], [-4, 5], [4, 5], [0, -6]].forEach(function (f) {
+          for (var q = 1; q <= 6; q++) { var fx = 15 + Math.round(f[0] * q / 6), fy = 11 + Math.round(f[1] * q / 6) + (q > 3 && f[1] >= 0 ? 1 : 0); px(OUT, fx, fy + 1); px(q > 4 ? '#2a6a34' : '#3f9a4a', fx, fy); }
+        });
+        px('#8ad87a', 15, 10, 2, 1);
+      }
+      return true;
+    }
+    if (t === T.BRIDGE) {
+      /* the mask here means the side over water: boards across, nail heads,
+         a rail with posts and a neon strip along it */
+      var dk = ramp('#3a3150');
+      px(dk[2], 0, 0, C, C);
+      for (y = 0; y < C; y += 6) { px(dk[1], 0, y + 5, C, 1); px(dk[3], 0, y, C, 1); for (x = 3 + ((y / 6) & 1) * 8; x < C; x += 16) px(dk[0], x, y + 2, 1, 1); }
+      var rail = '#9f8cff', post = '#2a2340';
+      if (N) { px(OUT, 0, 0, C, 4); px(post, 0, 1, C, 2); px(rail, 0, 1, C, 1); for (x = 2; x < C; x += 10) px('#4a4168', x, 0, 2, 4); }
+      if (S) { px(OUT, 0, C - 4, C, 4); px(post, 0, C - 3, C, 2); px(rail, 0, C - 3, C, 1); for (x = 2; x < C; x += 10) px('#4a4168', x, C - 4, 2, 4); }
+      if (E) { px(OUT, C - 4, 0, 4, C); px(post, C - 3, 0, 2, C); px(rail, C - 3, 0, 1, C); }
+      if (W) { px(OUT, 0, 0, 4, C); px(post, 1, 0, 2, C); px(rail, 2, 0, 1, C); }
+      if ((v & 3) === 0 && (N || S || E || W)) px('#7cf5ff', N || S ? 15 : 2, N ? 1 : S ? C - 3 : 15, 2, 1);
+      return true;
+    }
+
     if (t === T.GRASS || t === T.TREE) {
       /* (a tree tile is grass; the tree is a sprite of its own) */
-      if (t === T.TREE) { m = 15; sides(); }
+      /* for grass the mask marks the sides where it gives way */
+      if (t === T.TREE) { m = 0; sides(); }
       var gr = M.grass;
       px(gr[2], 0, 0, C, C);
       for (i = 0; i < 22; i++) { var bx = (hash(v, i * 3) * 30) | 0, by = (hash(i * 5, v) * 29) | 0; px(hash(i, v + 1) < 0.5 ? gr[3] : gr[1], bx, by, 1, 2); }
@@ -111,10 +205,10 @@
         px(p.leaf, c[0], c[1] + 1, 1, 3); px(p.leaf, c[0] + 2, c[1], 1, 4); px(p.leaf, c[0] + 4, c[1] + 2, 1, 2); px(tone(p.leaf, 1.3), c[0] + 2, c[1]);
       });
       /* where it gives way: a dark rim and a broken middle row */
-      if (!N) { px(gr[0], 0, 0, C, 2); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], i, 2, 3, 1); }
-      if (!S) { px(gr[0], 0, 30, C, 2); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], i, 29, 3, 1); }
-      if (!E) { px(gr[0], 30, 0, 2, C); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], 29, i, 1, 3); }
-      if (!W) { px(gr[0], 0, 0, 2, C); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], 2, i, 1, 3); }
+      if (N) { px(gr[0], 0, 0, C, 2); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], i, 2, 3, 1); }
+      if (S) { px(gr[0], 0, 30, C, 2); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], i, 29, 3, 1); }
+      if (E) { px(gr[0], 30, 0, 2, C); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], 29, i, 1, 3); }
+      if (W) { px(gr[0], 0, 0, 2, C); for (i = (v & 1) * 3; i < C; i += 6) px(gr[1], 2, i, 1, 3); }
       return true;
     }
 
@@ -201,5 +295,18 @@
     return false;
   }
 
-  root.MFTiles = { C: C, MATS: MATS, draw: draw, tone: tone, ramp: ramp };
+  /* the flat colour of a tile, for overworld.js shores() to round the
+     coast's corners with: null for kinds it doesn't round */
+  function base(t, di, X) {
+    var T = X.T, p = X.pal(di), id = di >= 0 ? X.D[di].id : '', M = matsOf(id || 'none', p);
+    if (t === T.DEEP) return '#0d1d3c';
+    if (t === T.SHALLOW) return '#14396a';
+    if (t === T.SAND) return tone('#7a6a4c', 0.8);
+    if (t === T.MAINLAND) return '#12291a';
+    if (t === T.GRASS || t === T.TREE) return M.grass[2];
+    if (t === T.GROUND || t === T.STALL) return id && id !== 'naturia' ? M.pave[2] : p.ground;
+    if (t === T.ROAD) return M.road[2];
+    return null;
+  }
+  root.MFTiles = { C: C, MATS: MATS, draw: draw, base: base, tone: tone, ramp: ramp };
 })(typeof window !== 'undefined' ? window : globalThis);
