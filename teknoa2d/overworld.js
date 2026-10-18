@@ -41,10 +41,18 @@
   /* ── tile art, drawn once per (kind, district, variant) ───── */
   function tileCanvas(key, draw) {
     if (tiles[key]) return tiles[key];
-    var c = document.createElement('canvas'); c.width = c.height = TS;
+    var c = document.createElement('canvas'); c.width = c.height = TS * ART;
     var g = c.getContext('2d'); draw(g); tiles[key] = c; return c;
   }
   function px(g, col, x, y, w, h) { g.fillStyle = col; g.fillRect(x, y, w || 1, h || 1); }
+  /* a tile at the canvas's full resolution: the 32px street art (tiles.js)
+     where there is some, else the old 16px art, doubled */
+  var TILE_X = null;
+  function paintTile(g, t, di, v, m, w, rv, dr) {
+    if (!TILE_X) TILE_X = { T: T, D: D, pal: pal, OUT: OUT, upperOn: upperOn };
+    if (ART > 1 && window.MFTiles && window.MFTiles.draw(g, t, di, v, m, w, rv, dr, TILE_X)) return;
+    g.setTransform(ART, 0, 0, ART, 0, 0); drawTile(g, t, di, v, m, w, rv, dr);
+  }
 
   /* the game boy rules: flat colours, a dark outline where things meet,
      patterns that repeat on a grid instead of noise, and every block drawn
@@ -4073,7 +4081,7 @@
       else if (t !== T.STALL && t !== T.ROAD && t !== T.GROUND && t !== T.SAND && t !== T.MAINLAND) v &= 7;
       var w = wet(t) ? wave : 0;
       var key = t + '.' + di + '.' + v + '.' + m + '.' + w + '.' + rv + dr;
-      ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
+      ctx.drawImage(tileCanvas(key, function (g) { paintTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy, TS, TS);
     }
     if (!inside) { shores(x0, y0, cx, cy, at, wet); glints(x0, y0, cx, cy, now); }
     var sunUp = inside ? SHADE * 0.6 : SHADE * (1 - darkness(novaNow())), sl = inside ? 1 : shadowLen(novaNow());
