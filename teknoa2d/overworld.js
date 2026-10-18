@@ -1079,6 +1079,18 @@
   }
 
   /* ── talking ─────────────────────────────────────────────── */
+  /* lines nobody asked for (a warning, a nudge, a gift) wait their turn:
+     they come once you're free (no phone, game, counter, table or other
+     line up), one at a time, and the same one never stacks. the phone's
+     bar shows how many are waiting */
+  var later = [];
+  function sayLater(key, lines, who) {
+    if (later.some(function (q) { return q.key === key; })) return;
+    later.push({ key: key, lines: lines, who: who });
+    if (phone) drawPhoneBar();
+  }
+  function free() { return !(phone || talkBox || mini || counter || table || fainting); }
+  function tickLater() { if (later.length && free()) { var q = later.shift(); say(q.lines, q.who); } }
   function say(lines, who) {
     talkBox = { lines: lines.slice(), who: who || '' };
     $('wTalk').hidden = false;
@@ -1601,7 +1613,7 @@
     tired = state !== '';
     if (state === 'collapse') return faint(now, true);
     if (state === 'faint') return faint(now);
-    if (tired && !warned && !talkBox && !mini && !counter && !table) { warned = true; say([MF.ibc(s) ? 'core at ' + Math.round(s.body.food) + '%. you\'re running on fumes.\ncharge at home, the hospital or the police. no running till then.' : s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
+    if (tired && !warned) { warned = true; sayLater('tired', [MF.ibc(s) ? 'core at ' + Math.round(s.body.food) + '%. you\'re running on fumes.\ncharge at home, the hospital or the police. no running till then.' : s.body.drink < MF.WEAK ? 'your mouth is dust. you need a drink.\nno running till you find one.' : 'your stomach is eating itself.\nyou need food. no running till you eat.']); }
     if (!tired) warned = false;
     if (now - bodyT > 400) { bodyT = now; drawBody(); weekly(); }
   }
@@ -1659,10 +1671,10 @@
     var was = torchLit;
     torchLit = dark && has && s.torch > 0;
     if (torchLit) s.torch = Math.max(0, s.torch - dt);
-    if (was && !torchLit && dark && has && !talkBox) say(['your flashlight flickers and dies.\na night in bed will charge it.']);
-    if (dark && !torchLit && !talkBox && !mini && !counter && Date.now() - darkSaid > 90000) {
+    if (was && !torchLit && dark && has) sayLater('torch', ['your flashlight flickers and dies.\na night in bed will charge it.']);
+    if (dark && !torchLit && Date.now() - darkSaid > 90000) {
       darkSaid = Date.now();
-      say([has ? 'pitch black out here, and the flashlight\'s flat.\nstay close to the city lights.' : 'pitch black out here. you can barely see your hands.\na flashlight would help. the general stores sell them.']);
+      sayLater('dark', [has ? 'pitch black out here, and the flashlight\'s flat.\nstay close to the city lights.' : 'pitch black out here. you can barely see your hands.\na flashlight would help. the general stores sell them.']);
     }
   }
   /* the stamina bar: up while you run, and until it's full again */
@@ -1686,7 +1698,7 @@
   function faint(now, hard) {
     collapsed = !!hard;
     if (!hard) window.MF.hurt(s, 25);
-    if (mini) closeMini(); if (counter) closeCounter(); if (table && !(table.hand && !table.hand.done)) closeTable();
+    if (mini) closeMini(); if (counter) closeCounter(); if (table && !(table.hand && !table.hand.done)) closeTable(); if (phone) closePhone();
     talkBox = null; $('wTalk').hidden = true; me.moving = false; held = {};
     fainting = now + 1800;
     $('world').classList.add('fainted');
@@ -1833,7 +1845,8 @@
   function drawPhoneBar() {
     var c = novaNow();
     $('wPhoneBar').textContent = '';
-    var l = document.createElement('span'); l.textContent = c.text; var r = document.createElement('span'); r.textContent = tempNow() + '°C · ' + window.MF.fmtJ(window.MF.joules(s));
+    var l = document.createElement('span'); l.textContent = c.text + (later.length ? '  ● ' + later.length : '');
+    if (later.length) l.title = later.length + ' waiting for when you put the phone away'; var r = document.createElement('span'); r.textContent = tempNow() + '°C · ' + window.MF.fmtJ(window.MF.joules(s));
     $('wPhoneBar').appendChild(l); $('wPhoneBar').appendChild(r);
     if (phone && phone.app !== 'home' && !BIG_ALWAYS[phone.app]) {
       var big = bigPref(), b = document.createElement('button'); b.type = 'button'; b.className = 'pbig'; b.id = 'wPhoneBig';
@@ -2632,6 +2645,7 @@
     /* a line that turns up while the phone is out (a nudge, a warning) is
        read first: the phone waits under it, or neither A nor B would reach it */
     if (phone && !talkBox) { tickPhone(now); return; }
+    tickLater();
     if (mini) { tickMini(dt, now); return; }
     if (counter) { tickCounter(); return; }
     if (table) { tickTable(); return; }
@@ -3047,7 +3061,7 @@
   function arrest() {
     var LAW = window.MFLaw, MF = window.MF, where = lawHere(), by = LAW.JAILS[where].by, out = LAW.caught(s, MF, where, Date.now());
     if (!out.level) return '';
-    dropMobs(); shots = []; drawSiren(); wallet();
+    dropMobs(); shots = []; drawSiren(); wallet(); if (phone) closePhone();
     talkBox = null; $('wTalk').hidden = true; held = {}; me.moving = false;
     var what = Object.keys(out.crimes).map(function (k) { return LAW.CRIMES[k].name + (out.crimes[k] > 1 ? ' x' + out.crimes[k] : ''); }).join(', ');
     if (!out.jail) {
@@ -4071,7 +4085,7 @@
     }
     var j0 = window.MFLaw && window.MFLaw.jailed(s, Date.now());
     if (j0 && (!inside || inside.id !== j0.room)) { var jw0 = j0.room === 'lockup' ? 'redrum' : 'city'; goIn(j0.room, { x: window.MFLaw.JAILS[jw0].cell.x, y: window.MFLaw.JAILS[jw0].cell.y, d: 'down' }); }
-    if (gift) setTimeout(function () { if (active && !talkBox) say(["there's a key in your pocket you don't remember taking.\nthe tag says, in eyeliner: walk-up, round the back of the arcade. -H"]); }, 1200);
+    if (gift) setTimeout(function () { if (active) sayLater('gift', ["there's a key in your pocket you don't remember taking.\nthe tag says, in eyeliner: walk-up, round the back of the arcade. -H"]); }, 1200);
     else nudge();
     if (!active) { active = true; last = 0; raf = requestAnimationFrame(loop); }
     try { $('world').focus(); } catch (e) {}
@@ -4086,8 +4100,8 @@
     if (at && Date.now() - at < 7 * 86400000) return;
     nudged = true;
     setTimeout(function () {
-      if (!active || talkBox) return;
-      say(['your run only lives in this browser. clear the site data and it is gone.\nback it up: phone, SYS, SAVE.']);
+      if (!active) return;
+      sayLater('nudge', ['your run only lives in this browser. clear the site data and it is gone.\nback it up: phone, SYS, SAVE.']);
     }, 3200);
   }
   /* ── the shared streets (lobby.js) ───────────────────────── */
