@@ -8,6 +8,10 @@
    from the island they are on. A step goes out at most twice a second and
    only while walking; standing still costs nothing.
 
+   Handing something over (overworld.js does the asking and the pockets):
+   give (an offer) → reply (yes or no) → sent (the thing) or gone. Each one
+   names who it's for, and only comes from someone on this channel.
+
    Names are only drawn when lobby-pass signed them (see
    supabase/functions/_shared/lobby.js). Anything else is "stranger". */
 (function (root) {
@@ -107,6 +111,16 @@
            payload: { type: 'presence', event: 'track', payload: meta() } });
   }
 
+  /* ── handing things over ──────────────────────────────────── */
+  var HAND = { give: 1, reply: 1, sent: 1, gone: 1 };
+  function tell(to, ev, body) {
+    if (!HAND[ev] || !ws || ws.readyState !== 1 || !room) return false;
+    body.s = sid; body.to = to;
+    send({ topic: topic(), event: 'broadcast', ref: String(++ref), join_ref: String(joinRef),
+           payload: { type: 'broadcast', event: ev, payload: body } });
+    return true;
+  }
+
   /* ── the socket ────────────────────────────────────────────── */
   function join() {
     if (!room || !ws || ws.readyState !== 1) return;
@@ -124,6 +138,11 @@
     if (m.event === 'phx_reply' && m.ref === String(joinRef) && m.payload && m.payload.status === 'ok') { retry = 0; track(); return; }
     if (m.event === 'presence_state') return onPresence(m.payload);
     if (m.event === 'presence_diff') return onPresence(m.payload && m.payload.joins, m.payload && m.payload.leaves);
+    if (m.event === 'broadcast' && m.payload && HAND[m.payload.event]) {
+      var q = m.payload.payload || {}, from = others[q.s];
+      if (from && sid && q.to === sid && typeof q.id === 'string' && q.id.length <= 40 && api.onGive) api.onGive(m.payload.event, q, from);
+      return;
+    }
     if (m.event === 'broadcast' && m.payload && m.payload.event === 'at') {
       var p = m.payload.payload || {}, o = others[p.s];
       if (o) place(o, p.x, p.y, p.d, p.b);
@@ -175,7 +194,7 @@
   function restyle(look) { if (me) { me.look = look; track(); } }
   function list() { return Object.keys(others).map(function (id) { return others[id]; }).filter(function (o) { return o.x >= 0; }); }
 
-  root.MFLobby = { start: start, stop: stop, setRoom: setRoom, moved: moved, restyle: restyle, step: step, list: list,
+  var api = root.MFLobby = { start: start, stop: stop, setRoom: setRoom, moved: moved, restyle: restyle, step: step, list: list, tell: tell, onGive: null,
                    get on() { return want; }, get live() { return !!(ws && ws.readyState === 1); },
-                   _: { nameOf: nameOf, passText: passText, onMessage: onMessage, place: place, meet: meet, setPub: function (j) { PUB = j; pubKey = null; checked = {}; } } };
+                   _: { nameOf: nameOf, passText: passText, onMessage: onMessage, place: place, meet: meet, setSid: function (v) { sid = v; }, setPub: function (j) { PUB = j; pubKey = null; checked = {}; } } };
 })(typeof window !== 'undefined' ? window : globalThis);

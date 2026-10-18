@@ -1142,13 +1142,14 @@
      line up), one at a time, and the same one never stacks. the phone's
      bar shows how many are waiting */
   var later = [];
-  function sayLater(key, lines, who) {
+  /* yes, no: it's a question (ask), asked when its turn comes */
+  function sayLater(key, lines, who, yes, no) {
     if (later.some(function (q) { return q.key === key; })) return;
-    later.push({ key: key, lines: lines, who: who });
+    later.push({ key: key, lines: lines, who: who, yes: yes, no: no });
     if (phone) drawPhoneBar();
   }
   function free() { return !(phone || talkBox || mini || counter || table || fainting); }
-  function tickLater() { if (later.length && free()) { var q = later.shift(); say(q.lines, q.who); } }
+  function tickLater() { if (later.length && free()) { var q = later.shift(); if (q.yes) { ask(q.lines, q.yes, q.no); talkBox.who = q.who || ''; showLine(); } else say(q.lines, q.who); } }
   function say(lines, who) {
     talkBox = { lines: lines.slice(), who: who || '' };
     $('wTalk').hidden = false;
@@ -1243,7 +1244,7 @@
       var walkers = L.list();
       for (i = 0; i < walkers.length; i++) {
         if (walkers[i].x !== tx || walkers[i].y !== ty) continue;
-        return say([(walkers[i].name || 'a stranger') + ' is walking the city too.'], walkers[i].name || '');
+        return say([(walkers[i].name || 'a stranger') + ' is walking the city too.\nto hand them something: INV, pick it, GIVE.'], walkers[i].name || '');
       }
     }
     if (!inside && M.water(world, tx, ty) && !npcs.some(function (n) { return n.x === tx && n.y === ty; })) {
@@ -2102,9 +2103,73 @@
     if (k === 'flashlight') acts.push([s.torchOff ? 'TURN ON' : 'TURN OFF', function () { toggleTorch(); return s.torchOff ? 'flashlight off.' : 'flashlight on. it shines whenever it\'s dark outside.'; }]);
     if (SH.MEDS[k]) acts.push(['USE', function () { var r = SH.useMed(MF, s, k); return r.ok ? 'patched up. health ' + Math.round(MF.vital(s, 'hp')) + '/' + MF.maxOf(s, 'hp') + '.' : r.why; }]);
     acts.push([MF.isSafe(s, k) ? 'TAKE OUT' : 'SAFE', function () { var r = MF.toggleSafe(s, k); return !r.ok ? r.why : r.safe ? 'locked in a safe slot. muggers can\'t touch it.' : 'out of the safe slot.'; }]);
+    var to = g && facingWalker();
+    if (to) acts.push(['GIVE', function () { return offer(to, k); }]);
     acts.push(['DROP', function () { return SH.drop(s, k) ? 'dropped one.' : 'nothing to drop.'; }]);
     return { name: g ? g.name : k, n: n, what: g ? g.what : '', note: note, kg: SH.weightOf(k), acts: acts };
   }
+  /* ── giving: face another player, INV, GIVE. they're asked first, and
+     only on a yes does it leave your pockets (lobby.js carries the
+     messages). one at a time; an offer nobody answers lapses ── */
+  var GIVE_MS = 45000, offers = {}, taking = {};
+  function facingWalker() {
+    if (!L || !L.live || (inside && !inside.place)) return null;
+    var d = DIRS[me.dir], tx = me.x + d[0], ty = me.y + d[1];
+    return L.list().filter(function (o) { return o.x === tx && o.y === ty; })[0] || null;
+  }
+  function whoOf(o) { return o.name || 'the stranger'; }
+  function goodsName(k) { var g = window.MFShops.goods(k); return g ? g.name : k; }
+  function heard(line) {
+    if (phone && phone.app === 'inv') { phone.imsg = line; drawPhone(); }
+    else sayLater('hand:' + line, [line]);
+  }
+  function offer(o, k) {
+    var SH = window.MFShops, now = Date.now(), name = goodsName(k);
+    for (var id in offers) if (now - offers[id].at > GIVE_MS) delete offers[id];
+    if (Object.keys(offers).some(function (i) { return offers[i].to === o.id; })) return whoOf(o) + " still hasn't answered your last one.";
+    id = Math.random().toString(36).slice(2, 12);
+    if (!L.tell(o.id, 'give', { id: id, k: k })) return 'the streets are offline.';
+    offers[id] = { k: k, to: o.id, at: now };
+    return 'you hold out ' + name + ' to ' + whoOf(o) + '...';
+  }
+  function onGive(ev, q, from) {
+    var SH = window.MFShops, MF = window.MF, now = Date.now(), who = whoOf(from), name, o, t;
+    if (ev === 'give') {
+      if (typeof q.k !== 'string' || !SH.goods(q.k) || later.filter(function (x) { return /^give:/.test(x.key); }).length >= 3) return;
+      name = goodsName(q.k);
+      sayLater('give:' + q.id, [who + ' holds out ' + name + '.\ntake it?'], from.name || '', function () {
+        if (Date.now() - now > GIVE_MS) { L.tell(from.id, 'reply', { id: q.id, ok: 0 }); return say(['too slow. ' + who + ' put it away.']); }
+        taking[q.id] = { k: q.k, from: from.id, at: Date.now() };
+        L.tell(from.id, 'reply', { id: q.id, ok: 1 });
+      }, function () { L.tell(from.id, 'reply', { id: q.id, ok: 0 }); });
+    } else if (ev === 'reply') {
+      o = offers[q.id];
+      if (!o || o.to !== from.id) { if (q.ok) L.tell(from.id, 'gone', { id: q.id }); return; }
+      delete offers[q.id]; name = goodsName(o.k);
+      if (!q.ok) return heard(who + ' waves ' + name + ' off.');
+      if (!((s.items || {})[o.k] > 0 || (s.res || {})[o.k] > 0)) { L.tell(from.id, 'gone', { id: q.id }); return heard('you go to hand it over, but the ' + name.replace(/^(an?|the|some) /, '') + "'s gone."); }
+      var w = s.wear && s.wear[o.k];
+      SH.drop(s, o.k);
+      L.tell(from.id, 'sent', { id: q.id, k: o.k, w: w > 0 ? w : 0 });
+      if (api.save) api.save();
+      refresh();
+      heard('you hand ' + who + ' ' + name + '.');
+    } else if (ev === 'sent') {
+      t = taking[q.id];
+      if (!t || t.from !== from.id || t.k !== q.k) return;
+      delete taking[q.id];
+      var box = SH.RES[q.k] ? (s.res = s.res || {}) : (s.items = s.items || {}), had = box[q.k] > 0;
+      box[q.k] = (box[q.k] || 0) + 1;
+      var dur = (SH.TOOLS[q.k] || (window.MFCombat && window.MFCombat.WEAPONS[q.k]) || {}).dur;
+      if (!had && dur && q.w > 0) { s.wear = s.wear || {}; s.wear[q.k] = Math.min(dur, Math.floor(q.w)); }
+      if (api.save) api.save();
+      refresh();
+      heard(who + ' hands you ' + goodsName(q.k) + '.');
+    } else if (ev === 'gone') {
+      if (taking[q.id] && taking[q.id].from === from.id) { delete taking[q.id]; heard(who + " doesn't have it any more."); }
+    }
+  }
+  if (L) L.onGive = onGive;
   function runInv(e, i) {
     var act = invInfo(e).acts[i];
     if (!act) return;
