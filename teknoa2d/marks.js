@@ -331,6 +331,202 @@
     tower: null   /* the old art is drawn from width and height: overworld.js draws it at twice the size */
   };
 
+  /* ── indoors: the furniture, each drawn to whatever footprint the room
+     gives it (W x H in px). the top surface catches the light, the front
+     face is darker, a shadow on the floor under it ── */
+  function shadow(K, x, y, w) { K.px('rgba(0,0,0,.3)', x, y, w, 3); }
+  function box(K, x, y, w, h, top, R) {
+    /* a block: lit top of `top` px, its front below, outlined */
+    K.px(OUT, x, y, w, h); K.px(R[3], x + 1, y + 1, w - 2, top - 1); K.px(R[4], x + 1, y + 1, w - 2, 1);
+    K.px(R[2], x + 1, y + top, w - 2, h - top - 1); K.px(R[1], x + 1, y + h - 3, w - 2, 2); K.px(OUT, x, y + top, w, 1);
+  }
+  var WOOD = ramp('#7e532f'), STEEL = ramp('#727e98'), FELT = ramp('#1f6a3a'), VINYL = ramp('#a83038');
+  var IN = {
+    counter: function (g, W, H) {
+      var K = kit(g); shadow(K, 1, H - 3, W - 2); box(K, 0, 6, W, H - 8, 9, WOOD);
+      for (var x = 8; x < W - 4; x += 16) K.px(WOOD[1], x, 18, 1, H - 22);
+      K.px(OUT, 5, 2, 10, 7); K.px('#343b4e', 6, 3, 8, 5); K.px('#7cffb2', 7, 4, 4, 2);                 /* a till */
+      K.px('#f4f6ff', W - 12, 5, 5, 4); K.px('#c8ccd8', W - 12, 8, 5, 1);                               /* a cup */
+    },
+    bench: function (g, W, H) {
+      var K = kit(g); shadow(K, 2, H - 4, W - 4);
+      K.px(OUT, 1, 12, W - 2, 9); for (var y = 13; y < 20; y += 3) { K.px(WOOD[3], 2, y, W - 4, 2); K.px(WOOD[1], 2, y + 2, W - 4, 1); }
+      [3, W - 7].forEach(function (x) { K.px(OUT, x, 20, 4, 9); K.px(WOOD[1], x + 1, 20, 2, 8); });
+    },
+    booth: function (g, W, H) {
+      var K = kit(g); shadow(K, 1, H - 3, W - 2);
+      K.px(OUT, 1, 2, W - 2, 26); K.px(VINYL[2], 2, 3, W - 4, 12); K.px(VINYL[3], 2, 3, W - 4, 2);
+      for (var x = 8; x < W - 4; x += 10) K.px(VINYL[1], x, 5, 1, 9);
+      K.px(VINYL[3], 2, 16, W - 4, 6); K.px(VINYL[1], 2, 22, W - 4, 5); K.px('#c8ccd8', 2, 15, W - 4, 1);
+    },
+    bed: function (g, W, H) {
+      var K = kit(g); shadow(K, 2, H - 4, W - 4);
+      K.px(OUT, 2, 2, W - 4, H - 6); K.px(WOOD[2], 3, 3, W - 6, 8); K.px(WOOD[3], 3, 3, W - 6, 2);           /* headboard */
+      K.px('#f4f6ff', 6, 11, W - 12, H - 20); K.px('#dce3ff', 8, 12, 18, 8); K.px('#dce3ff', W - 26, 12, 18, 8);   /* sheet, pillows */
+      K.px('#2f4f8a', 4, 24, W - 8, H - 30); K.px('#4a6aa8', 4, 24, W - 8, 3); K.px('#22386a', 4, H - 9, W - 8, 2); /* the blanket */
+      for (var x = 10; x < W - 8; x += 12) K.px('#3a5a98', x, 28, 1, H - 38);
+    },
+    chest: function (g, W, H) {
+      var K = kit(g); shadow(K, 3, H - 4, W - 6); box(K, 3, 8, W - 6, H - 11, 8, WOOD);
+      K.px('#a3aec4', 3, 15, W - 6, 2); K.px('#a3aec4', 3, 23, W - 6, 2); K.px(OUT, W / 2 - 3, 13, 6, 6); K.px('#f2c94c', W / 2 - 2, 14, 4, 4);
+    },
+    window: function (g, W, H) {
+      /* a window onto the city: night sky, a few lit windows across the way */
+      var K = kit(g); K.px(OUT, 4, 3, W - 8, H - 8); K.px('#d8dce8', 5, 4, W - 10, H - 10);
+      K.px('#141032', 7, 6, W - 14, H - 14); K.px('#2a1d5e', 7, 6 + (H - 14) / 2, W - 14, (H - 14) / 2);
+      for (var x = 9; x < W - 9; x += 6) { var bh = 4 + (hash(x, W) * 8 | 0); K.px('#0b0d1a', x, H - 8 - bh, 5, bh); if (hash(x, 3) < 0.5) K.px('#ffd36a', x + 2, H - 6 - bh, 1, 1); }
+      K.px('#d8dce8', W / 2 - 1, 4, 2, H - 10); K.px('#c8ccd8', 2, H - 6, W - 4, 2);
+    },
+    plant: function (g, W, H) {
+      var K = kit(g); shadow(K, 8, H - 4, 16);
+      K.px(OUT, 9, 19, 14, 10); K.px('#c4573a', 10, 20, 12, 8); K.px('#e07a50', 10, 20, 12, 2);
+      [[16, 8, 6], [10, 12, 5], [22, 12, 5], [16, 4, 4]].forEach(function (l) { K.oval(OUT, l[0], l[1], l[2] + 1, l[2]); K.oval('#2f7048', l[0], l[1], l[2], l[2] - 1); K.px('#4a945c', l[0] - 2, l[1] - 2, 2, 2); });
+    },
+    sofa: function (g, W, H) {
+      var K = kit(g), R = ramp('#5a3a8a'); shadow(K, 2, H - 3, W - 4);
+      K.px(OUT, 1, 4, W - 2, 25); K.px(R[2], 2, 5, W - 4, 10); K.px(R[3], 2, 5, W - 4, 2);
+      for (var x = 2; x < W - 2; x += (W - 4) / 3) K.px(R[1], x | 0, 7, 1, 8);
+      K.px(R[3], 6, 16, W - 12, 6); K.px(R[1], 6, 22, W - 12, 5);
+      K.px(R[2], 2, 12, 5, 15); K.px(R[2], W - 7, 12, 5, 15); K.px(R[4], 2, 12, 5, 1); K.px(R[4], W - 7, 12, 5, 1);
+    },
+    tv: function (g, W, H) {
+      var K = kit(g); shadow(K, 5, H - 3, 22);
+      K.px(OUT, 4, 4, 24, 19); K.px('#343b4e', 5, 5, 22, 17); K.px('#3a9aa8', 7, 7, 15, 12); K.px('#7cf5ff', 7, 7, 15, 1);
+      for (var y = 9; y < 19; y += 2) K.px('rgba(0,0,0,.25)', 7, y, 15, 1);
+      K.px('#a3aec4', 23, 8, 2, 2); K.px('#a3aec4', 23, 12, 2, 2); K.px(OUT, 9, 23, 14, 6); K.px(WOOD[2], 10, 23, 12, 5);
+    },
+    cabinet: function (g, W, H) {
+      /* an arcade cabinet: a lit marquee, a screen mid-game, the stick and buttons */
+      var K = kit(g); shadow(K, 5, H - 3, 22);
+      K.px(OUT, 6, 0, 20, H - 2); K.px('#2a1048', 7, 1, 18, H - 4); K.px('#4a2a7a', 7, 1, 2, H - 4);
+      K.px('#ff4fd8', 7, 1, 18, 4); K.px('#ffd0f4', 9, 2, 14, 1);
+      K.px(OUT, 8, 6, 16, 11); K.px('#0b2a3a', 9, 7, 14, 9); K.px('#7cf5ff', 10, 12, 4, 2); K.px('#ff4fd8', 17, 9, 3, 3); K.px('#ffe97c', 14, 8, 1, 1);
+      K.px('#343b4e', 6, 18, 20, 5); K.px('#4f5970', 6, 18, 20, 1); K.px('#c4473a', 10, 16, 2, 3); K.oval('#ff4f5e', 11, 16, 1, 1); K.px('#7cffb2', 17, 20, 2, 1); K.px('#ffd36a', 21, 20, 2, 1);
+      K.px('#14101e', 9, 24, 14, 5); K.px('#ffd36a', 15, 26, 2, 1);
+    },
+    desk: function (g, W, H) {
+      var K = kit(g); shadow(K, 1, H - 3, W - 2); box(K, 0, 9, W, H - 11, 7, WOOD);
+      for (var x = W - 30; x < W - 4; x += 13) { K.px(WOOD[1], x, 18, 11, 8); K.px('#e8b13a', x + 4, 21, 3, 1); }
+      K.px(OUT, 6, 0, 16, 11); K.px('#1c2a48', 7, 1, 14, 8); K.px('#7cf5ff', 8, 2, 8, 1); K.px('#7cf5ff', 8, 4, 10, 1); K.px('#343b4e', 12, 9, 4, 2);   /* a monitor */
+      K.px('#f4f6ff', 28, 6, 8, 5); K.px('#c8ccd8', 30, 5, 8, 5);                                                                                     /* papers */
+    },
+    lantern: function (g, W, H) {
+      var K = kit(g); K.px('#2a1810', 15, 0, 2, 6);
+      K.px(OUT, 9, 6, 14, 20); K.px('#c4473a', 10, 7, 12, 18); K.px('#ff6a3a', 12, 9, 8, 14); K.px('#ffd36a', 14, 12, 4, 8);
+      [11, 17].forEach(function (y) { K.px('#7a1a1a', 10, y, 12, 1); }); K.px('#2a1810', 11, 5, 10, 2); K.px('#2a1810', 11, 25, 10, 2); K.px('#ffd36a', 15, 27, 2, 3);
+    },
+    shrine: function (g, W, H) {
+      var K = kit(g); shadow(K, 2, H - 3, W - 4); box(K, 2, 10, W - 4, H - 12, 6, ramp('#5a1414'));
+      K.px('#f2c94c', W / 2 - 6, 3, 12, 8); K.px('#ffe97c', W / 2 - 6, 3, 12, 1);
+      [[10, 4], [W - 14, 4]].forEach(function (c) { K.px('#f4f6ff', c[0], c[1] + 3, 3, 7); K.px('#ffd36a', c[0] + 1, c[1], 1, 3); });
+      for (var i = 0; i < 4; i++) K.px('rgba(220,227,255,.4)', W / 2 + i % 2, 2 - i, 1, 1);
+    },
+    bell: function (g, W, H) {
+      var K = kit(g); K.px(OUT, 2, 2, W - 4, 4); K.px('#7a2020', 3, 3, W - 6, 2); K.px(OUT, 3, 4, 3, H - 6); K.px(OUT, W - 6, 4, 3, H - 6);
+      K.px('#5a3a22', 4, 5, 1, H - 8); K.px('#5a3a22', W - 5, 5, 1, H - 8);
+      K.px(OUT, 9, 10, 14, 28); K.px('#a8885e', 10, 11, 12, 26); K.px('#d8b87a', 10, 11, 3, 26); K.px('#6a5232', 19, 11, 3, 26); K.px('#6a5232', 10, 20, 12, 1); K.px('#6a5232', 10, 30, 12, 1);
+      K.px('#8a6a42', 8, 36, 16, 3); shadow(K, 6, H - 4, 20);
+    },
+    roots: function (g, W, H) {
+      var K = kit(g);
+      for (var i = 0; i < 6; i++) { var y = 6 + i * 4, x0 = (hash(i, 7) * 10) | 0; K.px(OUT, x0, y, W - x0 - (hash(7, i) * 10 | 0), 4); K.px('#5a3a22', x0 + 1, y + 1, W - x0 - 2 - (hash(7, i) * 10 | 0), 2); K.px('#7a5232', x0 + 1, y + 1, 6, 1); }
+      for (var s = 0; s < 6; s++) K.px('#3affc8', 4 + (hash(s, 2) * (W - 8) | 0), 8 + (hash(2, s) * 18 | 0), 1, 1);
+    },
+    pool: function (g, W, H) {
+      /* a pool inside the tree: it shows a sky that isn't there */
+      var K = kit(g); K.oval(OUT, W / 2, H / 2, W / 2 - 2, H / 2 - 4); K.oval('#5a3a22', W / 2, H / 2, W / 2 - 3, H / 2 - 5);
+      K.oval('#2a4a8a', W / 2, H / 2 + 1, W / 2 - 7, H / 2 - 9); K.oval('#4a7ac8', W / 2 - 8, H / 2 - 4, W / 4, H / 6);
+      for (var s = 0; s < 14; s++) K.px('#f4f6ff', 16 + (hash(s, 5) * (W - 32) | 0), 22 + (hash(5, s) * (H - 44) | 0), 1, 1);
+      K.oval('#ffe97c', W / 2 + 12, H / 2 - 8, 3, 3);
+    },
+    shrooms: function (g, W, H) {
+      var K = kit(g);
+      [[10, 18, 5, '#3affc8'], [20, 22, 4, '#b28cff'], [16, 12, 3, '#7cf5ff']].forEach(function (m) {
+        K.px('#dce3ff', m[0] - 1, m[1], 2, 28 - m[1]); K.oval(OUT, m[0], m[1], m[2] + 1, m[2]); K.oval(m[3], m[0], m[1], m[2], m[2] - 1); K.px('#f4f6ff', m[0] - 2, m[1] - 2, 2, 1);
+      });
+    },
+    slot: function (g, W, H) {
+      var K = kit(g); shadow(K, 5, H - 3, 22);
+      K.px(OUT, 5, 1, 22, H - 3); K.px('#a83030', 6, 2, 20, H - 5); K.px('#c4473a', 6, 2, 20, 2); K.px('#f2c94c', 6, 4, 20, 1);
+      K.px(OUT, 8, 7, 16, 9); K.px('#f4f6ff', 9, 8, 14, 7); K.text('777', 10, 9, '#c4473a', 1);
+      K.px('#343b4e', 8, 19, 16, 6); K.px('#f2c94c', 10, 21, 3, 2); K.px('#7cffb2', 15, 21, 3, 2);
+      K.px('#a3aec4', 27, 6, 2, 10); K.oval('#ff4f5e', 28, 5, 2, 2);
+    },
+    claw: function (g, W, H) {
+      var K = kit(g); shadow(K, 2, H - 3, W - 4);
+      K.px(OUT, 2, 1, W - 4, H - 3); K.px('#ff4fd8', 3, 2, W - 6, 3); K.px('rgba(191,233,255,.35)', 4, 5, W - 8, 15); K.px('#f4f6ff', 5, 6, 2, 10);
+      [[10, '#ffd36a'], [20, '#7cffb2'], [30, '#ff8a6b'], [40, '#7cf5ff'], [50, '#b28cff']].forEach(function (p) { if (p[0] < W - 8) K.oval(p[1], p[0], 17, 4, 3); });
+      K.px('#a3aec4', W / 2, 5, 1, 6); K.px('#a3aec4', W / 2 - 2, 11, 5, 1); K.px('#343b4e', 3, 21, W - 6, 7); K.px('#ff4fd8', W / 2 - 2, 23, 4, 3);
+    },
+    prize: function (g, W, H) {
+      var K = kit(g); shadow(K, 1, H - 3, W - 2); box(K, 0, 12, W, H - 14, 5, ramp('#3a2a5a'));
+      K.px(OUT, 2, 0, W - 4, 13); K.px('#1c1736', 3, 1, W - 6, 11);
+      for (var x = 6; x < W - 6; x += 9) { K.oval(['#ffd36a', '#ff4fd8', '#7cffb2', '#7cf5ff', '#ff8a6b'][(x / 9 | 0) % 5], x, 7, 3, 3); }
+      K.text('PRIZES', W / 2 - 11, 19, '#ffe97c', 1);
+    },
+    lift: function (g, W, H) {
+      var K = kit(g); K.px(OUT, 4, 0, W - 8, H - 2); K.px('#a3aec4', 5, 1, W - 10, H - 4); K.px('#c8ccd8', 5, 1, W - 10, 2);
+      K.px(OUT, W / 2 - 1, 4, 2, H - 8); K.px('#727e98', 8, 4, W / 2 - 10, H - 8); K.px('#727e98', W / 2 + 2, 4, W / 2 - 10, H - 8);
+      K.px(OUT, W / 2 - 5, 0, 10, 4); K.px('#ff4f5e', W / 2 - 1, 1, 2, 2);
+    },
+    glass: function (g, W, H) {
+      /* a tall pane looking out, the sky going up it */
+      var K = kit(g); K.px(OUT, 3, 2, W - 6, H - 4); K.px('#d8dce8', 4, 3, W - 8, H - 6);
+      for (var y = 5; y < H - 5; y++) K.px(['#2a1d5e', '#3a2a7a', '#6a2a5a', '#c4573a'][Math.floor((y - 5) / (H - 10) * 4)], 6, y, W - 12, 1);
+      K.px('rgba(255,255,255,.35)', 7, 6, 2, H - 14); K.px('#f4f6ff', 10, 14, 1, 1); K.px('#f4f6ff', 18, 30, 1, 1);
+    },
+    fork: function (g, W, H) {
+      /* the tuned tower's tuning fork, humming on its plinth */
+      var K = kit(g), cx = W / 2; shadow(K, 8, H - 4, W - 16);
+      K.px(OUT, cx - 13, 4, 6, 36); K.px(OUT, cx + 7, 4, 6, 36); K.px(OUT, cx - 13, 36, 26, 8); K.px(OUT, cx - 3, 42, 6, 12);
+      K.px('#c8ccd8', cx - 12, 5, 4, 34); K.px('#f4f6ff', cx - 12, 5, 1, 34); K.px('#c8ccd8', cx + 8, 5, 4, 34); K.px('#8a92a6', cx + 11, 5, 1, 34); K.px('#c8ccd8', cx - 12, 37, 24, 6); K.px('#c8ccd8', cx - 2, 43, 4, 10);
+      K.px(OUT, cx - 12, H - 12, 24, 10); K.px('#3d3468', cx - 11, H - 11, 22, 8); K.px('#9f8cff', cx - 11, H - 11, 22, 1);
+      [[-18, 14], [18, 20], [-17, 28], [19, 8]].forEach(function (d) { K.px('#9f8cff', cx + d[0], d[1], 2, 1); });
+    },
+    board: function (g, W, H) {
+      var K = kit(g); K.px(OUT, 2, 2, W - 4, H - 8); K.px('#a8885e', 3, 3, W - 6, H - 10); K.px('#c8a878', 3, 3, W - 6, 1);
+      [[6, 6, '#f4f6ff'], [20, 5, '#ffe97c'], [34, 7, '#f4f6ff'], [46, 6, '#ff8a6b'], [12, 14, '#ffe97c'], [28, 15, '#f4f6ff']].forEach(function (n) { if (n[0] < W - 12) { K.px(n[2], n[0], n[1], 10, 7); K.px('#8a92a6', n[0] + 2, n[1] + 2, 6, 1); K.px('#c4473a', n[0] + 4, n[1], 2, 1); } });
+    },
+    bars: function (g, W, H) {
+      var K = kit(g); K.px(OUT, 0, 2, W, 3); K.px('#727e98', 0, 3, W, 1); K.px(OUT, 0, H - 4, W, 3);
+      for (var x = 3; x < W; x += 6) { K.px(OUT, x - 1, 2, 4, H - 4); K.px('#a3aec4', x, 3, 2, H - 6); K.px('#f4f6ff', x, 3, 1, H - 6); }
+    },
+    bjtable: function (g, W, H) {
+      var K = kit(g); shadow(K, 4, H - 4, W - 8);
+      K.oval(OUT, W / 2, H / 2 - 2, W / 2 - 3, H / 2 - 5); K.oval('#5a3a22', W / 2, H / 2 - 2, W / 2 - 4, H / 2 - 6); K.oval(FELT[2], W / 2, H / 2 - 3, W / 2 - 8, H / 2 - 10);
+      K.px(OUT, 4, 4, W - 8, 10); K.px('#5a3a22', 5, 5, W - 10, 8);
+      [[W / 2 - 18, 24], [W / 2 - 4, 28], [W / 2 + 10, 24]].forEach(function (c) { K.px('#f4f6ff', c[0], c[1], 7, 9); K.px('#c4473a', c[0] + 2, c[1] + 2, 2, 2); });
+      [[16, 40, '#c4473a'], [W - 20, 40, '#2a6aff'], [W / 2, 42, '#f2c94c']].forEach(function (c) { K.oval(OUT, c[0], c[1], 3, 2); K.oval(c[2], c[0], c[1], 2, 1); });
+    },
+    dicetable: function (g, W, H) {
+      var K = kit(g); shadow(K, 2, H - 4, W - 4);
+      K.px(OUT, 2, 4, W - 4, H - 10); K.px('#5a3a22', 3, 5, W - 6, H - 12); K.px(FELT[2], 7, 9, W - 14, H - 20); K.px(FELT[3], 7, 9, W - 14, 2);
+      K.px('#f4f6ff', 12, 16, W - 24, 1); K.text('PASS', 16, 20, '#f4f6ff', 1);
+      [[W - 30, 26], [W - 22, 30]].forEach(function (d) { K.px(OUT, d[0] - 1, d[1] - 1, 7, 7); K.px('#f4f6ff', d[0], d[1], 5, 5); K.px('#c4473a', d[0] + 2, d[1] + 2, 1, 1); });
+    },
+    wheel: function (g, W, H) {
+      var K = kit(g), cx = W / 2, cy = H / 2 - 2; shadow(K, 4, H - 4, W - 8);
+      K.px(OUT, 2, 4, W - 4, H - 10); K.px('#5a3a22', 3, 5, W - 6, H - 12); K.px(FELT[2], 6, 8, W - 12, H - 18);
+      K.oval(OUT, cx, cy, 20, 15); K.oval('#a8885e', cx, cy, 19, 14);
+      for (var a = 0; a < 18; a++) { var t = a / 18 * Math.PI * 2; K.px(a % 2 ? '#c4473a' : '#14121c', Math.round(cx + Math.cos(t) * 15), Math.round(cy + Math.sin(t) * 11), 2, 2); }
+      K.oval('#5a3a22', cx, cy, 9, 7); K.oval('#f2c94c', cx, cy, 3, 2); K.px('#f4f6ff', cx + 12, cy - 6, 2, 2);
+    },
+    lottobooth: function (g, W, H) {
+      var K = kit(g); shadow(K, 1, H - 3, W - 2);
+      K.px(OUT, 0, 0, W, H - 2); K.px('#2f6f5e', 1, 1, W - 2, H - 4); K.px('#ffd36a', 1, 1, W - 2, 3);
+      K.px(OUT, 6, 7, W - 12, 12); K.px('#14101e', 7, 8, W - 14, 10); K.text('7 14 22 31', 9, 10, '#ffe97c', 1);
+      K.px('#c8a878', 4, H - 9, W - 8, 4);
+    },
+    stall: function (g, W, H) {
+      var K = kit(g), aw = ['#c4473a', '#e8b13a'][(W / 32) % 2]; shadow(K, 2, H - 3, W - 4);
+      K.px(OUT, 2, 1, W - 4, 9); for (var x = 3; x < W - 3; x++) K.px(((x >> 2) % 2) ? '#f4f6ff' : aw, x, 2, 1, 7);
+      K.px(OUT, 3, 14, W - 6, 14); K.px(WOOD[2], 4, 15, W - 8, 12); K.px(WOOD[3], 4, 15, W - 8, 2);
+      for (var c = 7; c < W - 9; c += 9) { K.px(OUT, c - 1, 10, 8, 5); K.px(['#ff7a45', '#7cffb2', '#ffd36a'][(c / 9 | 0) % 3], c, 11, 6, 3); }
+      K.px('#a3aec4', 3, 9, 1, 6); K.px('#a3aec4', W - 4, 9, 1, 6);
+    }
+  };
+  Object.keys(IN).forEach(function (k) { ART[k] = IN[k]; });
+
   /* the door's span in 32px, from overworld.js DOOR_PX (16px) or the middle */
   function draw(g, id, W, H, doorPx) {
     var a = ART[id];

@@ -119,6 +119,50 @@
       return true;
     }
 
+    /* ── indoors: boards, tiles, the walls, a rug by the door ── */
+    if (t === T.FLOOR) {
+      /* planks: long boards in staggered lengths, a lit edge, grain, the odd knot */
+      var wd = ramp(tone(M.door[2], 1.35));
+      px(wd[2], 0, 0, C, C);
+      for (y = 0; y < C; y += 8) {
+        px(wd[1], 0, y + 7, C, 1); px(wd[3], 0, y, C, 1);
+        var cut = ((hash(v, y) * 24) | 0) + 4; px(wd[0], cut, y, 1, 7);
+        for (i = 0; i < 3; i++) px(wd[1], (hash(i + y, v) * 30) | 0, y + 2 + i * 2, 4, 1);
+      }
+      if (v % 9 === 4) { px(wd[0], 20, 12, 3, 2); px(wd[1], 19, 11, 5, 1); }
+      return true;
+    }
+    if (t === T.CHECK) {
+      /* glossy tiles, two by two, a shine in the light ones' corners */
+      var ta = tone(p.road, 1.45), tb = tone(p.road, 0.75);
+      px(ta, 0, 0, C, C); px(tb, 0, 0, 16, 16); px(tb, 16, 16, 16, 16);
+      px(tone(ta, 1.2), 17, 1, 4, 1); px(tone(ta, 1.2), 17, 1, 1, 3); px(tone(ta, 1.2), 1, 17, 4, 1); px(tone(ta, 1.2), 1, 17, 1, 3);
+      px(tone(tb, 0.8), 0, 15, 16, 1); px(tone(tb, 0.8), 16, 31, 16, 1);
+      return true;
+    }
+    if (t === T.WALL) {
+      /* the mask: sides that are wall too. with open floor below it's the
+         wall's face (plaster over wainscot, a skirting board); otherwise the
+         top of the wall, seen from above */
+      var pl = ramp(tone(M.brick[2], 1.5)), wn = ramp(tone(M.door[2], 1.2));
+      if (S) { px(tone(pl[0], 0.6), 0, 0, C, C); px(tone(pl[1], 0.7), 2, 0, C - 4, C); px('#0b0d1a', 0, 0, 1, C); px('#0b0d1a', C - 1, 0, 1, C); if (!N) px('#0b0d1a', 0, 0, C, 1); return true; }
+      px(pl[2], 0, 0, C, 18);
+      for (i = 0; i < 18; i++) px(hash(i, v) < 0.5 ? pl[1] : pl[3], (hash(v, i) * C) | 0, (hash(i * 3, v) * 16) | 0);
+      px(pl[3], 0, 0, C, 2); px(tone(M.trim, 1.1), 0, 17, C, 2);
+      px(wn[2], 0, 19, C, 9); for (x = 0; x < C; x += 8) { px(wn[1], x, 19, 1, 9); px(wn[3], x + 1, 20, 6, 1); }
+      px(wn[0], 0, 28, C, 2); px('#0b0d1a', 0, 30, C, 2);
+      return true;
+    }
+    if (t === T.MAT) {
+      /* a rug: a border, a pattern, fringe at the ends */
+      var fl = ramp(tone(M.door[2], 1.35));
+      px(fl[2], 0, 0, C, C); for (y = 7; y < C; y += 8) px(fl[1], 0, y, C, 1);
+      px('#0b0d1a', 3, 5, 26, 22); px('#5a1e3c', 4, 6, 24, 20); px('#7a2e54', 6, 8, 20, 16); px('#5a1e3c', 8, 10, 16, 12);
+      px('#e8b13a', 15, 14, 2, 4); px('#e8b13a', 13, 15, 6, 2);
+      for (x = 5; x < 28; x += 2) { px('#c8b88a', x, 3, 1, 2); px('#c8b88a', x, 27, 1, 2); }
+      return true;
+    }
+
     /* ── the coast ── */
     if (t === T.DEEP || t === T.SHALLOW) {
       /* the mask here means the side that meets land */

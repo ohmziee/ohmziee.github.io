@@ -788,16 +788,17 @@
      there is one, the tower's own art drawn at that size, else the old
      16px art doubled. drawn at m.w x m.h tiles either way */
   function markCanvas(m) {
-    if (markArt[m.id]) return markArt[m.id];
+    var mk = m.id + ':' + m.w + 'x' + m.h;
+    if (markArt[mk]) return markArt[mk];
     var w = m.w * TS, h = m.h * TS, c = document.createElement('canvas'); c.width = w * ART; c.height = h * ART;
     var g = c.getContext('2d');
-    if (ART > 1 && window.MFMarks && window.MFMarks.has(m.id)) { window.MFMarks.draw(g, m.id, c.width, c.height, DOOR_PX[m.id] ? DOOR_PX[m.id](w) : null); return (markArt[m.id] = c); }
-    if (m.id === 'tower') { MARK_ART.tower(g, c.width, c.height); return (markArt[m.id] = c); }
+    if (ART > 1 && window.MFMarks && window.MFMarks.has(m.id)) { window.MFMarks.draw(g, m.id, c.width, c.height, DOOR_PX[m.id] ? DOOR_PX[m.id](w) : null); return (markArt[mk] = c); }
+    if (m.id === 'tower') { MARK_ART.tower(g, c.width, c.height); return (markArt[mk] = c); }
     g.setTransform(ART, 0, 0, ART, 0, 0);
     (MARK_ART[m.id] || MARK_ART.market)(g, w, h);
-    if (UNFRAMED[m.id]) return (markArt[m.id] = c);
+    if (UNFRAMED[m.id]) return (markArt[mk] = c);
     px(g, OUT, 0, 0, w, 1); px(g, OUT, 0, h - 1, w, 1); px(g, OUT, 0, 0, 1, h); px(g, OUT, w - 1, 0, 1, h);
-    return (markArt[m.id] = c);
+    return (markArt[mk] = c);
   }
 
   /* ── cast shadows: the light comes from the top left, so everything
@@ -806,11 +807,12 @@
      (a pixel is shaded when the pixel up-left of it is a building) ── */
   var SH_X = 4, SH_Y = 3, SHADE = 0.3, markShade = {};
   function markShadow(m) {
-    if (markShade[m.id]) return markShade[m.id];
+    var mk = m.id + ':' + m.w + 'x' + m.h;
+    if (markShade[mk]) return markShade[mk];
     var src = markCanvas(m), c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
     var g = c.getContext('2d'); g.drawImage(src, 0, 0);
     g.globalCompositeOperation = 'source-in'; g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
-    return (markShade[m.id] = c);
+    return (markShade[mk] = c);
   }
   function shadows(x0, y0, cx, cy, at, a) {
     if (a <= 0.01) return;
@@ -4066,6 +4068,7 @@
         else if (wet(t)) hit = !wet(o) && o !== T.BRIDGE;
         else if (t === T.BRIDGE) hit = wet(o);
         else if (t === T.SAND) hit = wet(o);
+        else if (t === T.WALL) hit = o === T.WALL;
         if (hit) m |= 1 << b;
       }
       if (t === T.BUILDING || t === T.ROAD || t === T.GRASS) {
