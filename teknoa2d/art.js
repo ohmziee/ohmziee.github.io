@@ -70,15 +70,15 @@
     for (var i = 0; i < out.length; i++) if (d[i * 4 + 3] >= 128) out[i] = KEY_OF[(d[i * 4] << 16) | (d[i * 4 + 1] << 8) | d[i * 4 + 2]] || 0;
     sheetKeys = out; sheetW = c.width;
   }
-  var OUTLINE = [11, 13, 26], people = {}, peopleN = 0;
+  var OUTLINE = [11, 13, 26], people = {}, peopleN = 0, keyOf = new WeakMap();
   /* someone at 32px: the layers for their look, stacked, recoloured, the
      right way round, outlined. step: 0 standing, 1 and 2 the feet, 3 a
      breath out (head and shoulders down a pixel). null until the sheet is in */
   function person(look, dir, step) {
     if (!ready.people || typeof document === 'undefined') return null;
-    var key = JSON.stringify(look) + dir + step;
+    var key = (keyOf.get(look) || keyOf.set(look, JSON.stringify(look)).get(look)) + dir + step;
     if (people[key]) return people[key];
-    if (++peopleN > 600) { people = {}; peopleN = 1; }
+    if (++peopleN > 2000) { people = {}; peopleN = 1; }
     if (!sheetKeys) readPeople();
     var flip = dir === 'right', d = flip ? 'left' : dir, dy = step === 3 ? 1 : 0, buf = new Uint8Array(CELL * CELL);
     function lay(k, oy) {

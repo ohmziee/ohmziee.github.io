@@ -4121,12 +4121,17 @@
     });
     if (!inside) drawBodies(cx, cy, now);
     /* people, back to front */
-    var who = npcs.map(function (n) {
+    /* only who's on screen: the whole city's crowd would rebuild sprites every frame */
+    function onScreen(wx, wy) { return wx - cx > -TS && wy - cy > -TS && wx - cx < VW * TS && wy - cy < VH * TS + TS; }
+    var who = [];
+    npcs.forEach(function (n) {
       var nx = (n.moving ? n.fx + (n.x - n.fx) * n.t : n.x) * TS, ny = (n.moving ? n.fy + (n.y - n.fy) * n.t : n.y) * TS;
-      return { x: nx, y: ny, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.moving ? walkFrame(true, n.t, n.step) : idleFrame(now, n.hx * 7 + n.hy)) };
+      if (!onScreen(nx, ny)) return;
+      who.push({ x: nx, y: ny, img: sprite(n.look === 'gen' ? crowdLook(n) : LOOKS[n.look] || LOOKS.local, n.dir, n.moving ? walkFrame(true, n.t, n.step) : idleFrame(now, n.hx * 7 + n.hy)) });
     });
     mobs.forEach(function (m) {
       var mx = (m.moving ? m.fx + (m.x - m.fx) * m.t : m.x) * TS, my = (m.moving ? m.fy + (m.y - m.fy) * m.t : m.y) * TS;
+      if (!onScreen(mx, my)) return;
       if (now < m.lunge) { var ld = DIRS[m.dir]; mx += ld[0] * 3; my += ld[1] * 3; }
       who.push({ x: mx, y: my, img: sprite(m.look, m.dir, walkFrame(m.moving, m.t, m.step)), mob: m });
     });
