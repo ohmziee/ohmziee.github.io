@@ -296,7 +296,25 @@
     stew:     { name: 'a fish stew', what: 'fish, fruit, whatever\'s in the cupboard. it works.', food: 60, drink: 30, price: 0 },
     juice:    { name: 'fresh juice', what: 'three fruits\' worth. the pulp is the point.', food: 10, drink: 60, price: 0 },
     houseblend:{ name: 'the house blend', what: 'don\'t ask what\'s in it. your hands go very still.', food: 0, drink: 60, price: 15, here: 1, buff: 'steady line', secs: 600, mind: 50 },
-    bao:      { name: 'a bao set', what: 'soft, steaming, three to a basket.', food: 70, drink: 0, price: 25, here: 1, buff: 'sharp eye', secs: 480 }
+    bao:      { name: 'a bao set', what: 'soft, steaming, three to a basket.', food: 70, drink: 0, price: 25, here: 1, buff: 'sharp eye', secs: 480 },
+    /* the second round of carts and the grease pit */
+    hotdog:   { name: 'a hot dog', what: 'boiled in the same water since the crossing. mustard, onions, no regrets.', food: 25, drink: 0, price: 5, here: 1 },
+    pretzel:  { name: 'a hot pretzel', what: 'salt the size of teeth.', food: 20, drink: -3, price: 4, here: 1 },
+    eggcream: { name: 'an egg cream', what: 'no egg. no cream. don\'t ask him why.', food: 5, drink: 25, price: 5, here: 1 },
+    boba:     { name: 'a bubble tea', what: 'the pearls glow. you chew them anyway.', food: 10, drink: 35, price: 7, here: 1, mind: 10 },
+    coconut:  { name: 'a cold coconut', what: 'one swing of the machete, a straw, done.', food: 0, drink: 40, price: 4, here: 1 },
+    plantain: { name: 'plantain chips', what: 'a paper cone of them. salty, sweet, gone.', food: 15, drink: -3, price: 3, here: 1 },
+    takoyaki: { name: 'takoyaki', what: 'six balls, one tray, all of them lava inside.', food: 30, drink: 0, price: 8, here: 1 },
+    ramune:   { name: 'a ramune', what: 'there\'s a marble in the neck. you will never get it out.', food: 0, drink: 30, price: 4, here: 1, mind: 10 },
+    honeycomb:{ name: 'a slab of honeycomb', what: 'naturia bees. they glow a little. so does the honey.', food: 20, drink: 5, price: 6, here: 1, mind: 10 },
+    mintwater:{ name: 'a cup of mint water', what: 'leaves picked while you watched.', food: 0, drink: 35, price: 3, here: 1 },
+    coffee:   { name: 'a cup of coffee', what: 'approved. stamped on the lid.', food: 0, drink: 15, price: 6, here: 1, mind: 40 },
+    croissant:{ name: 'a croissant', what: 'flaky in exactly the regulated way.', food: 20, drink: 0, price: 7, here: 1 },
+    soup:     { name: 'a bowl of pot soup', what: 'whatever went in this morning. it\'s hot. it\'s yours.', food: 35, drink: 15, price: 5, here: 1 },
+    rainwater:{ name: 'a cup of boiled rainwater', what: 'boiled twice. tastes like the roof.', food: 0, drink: 25, price: 1, here: 1 },
+    fryup:    { name: 'the fry-up', what: 'eggs, beans, something fried that used to be bread. you see further after.', food: 75, drink: 0, price: 22, here: 1, buff: 'sharp eye', secs: 480 },
+    pie:      { name: 'a slice of pie', what: 'the filling changes daily. nobody says what to.', food: 30, drink: 0, price: 9, here: 1 },
+    blackcoffee:{ name: 'a mug of black coffee', what: 'bottomless. the mug, too, by the look of it.', food: 0, drink: 20, price: 4, here: 1, mind: 40 }
   };
   /* the places that serve it: street carts, a market stall, restaurants */
   var VENDORS = {
@@ -308,11 +326,20 @@
     'skewer-guy':   { kind: 'vendor', name: 'SKEWERS', district: 'redrum', line: 'four joules. no questions. especially about the meat.', menu: ['skewer', 'buzz'] },
     'market-patties':{ kind: 'vendor', name: 'PATTY STALL', district: 'yucayeque', line: 'the good ones. tell them who sent you.', menu: ['patty', 'cocobread', 'sorrel'] },
     'market-mangoes':{ kind: 'vendor', name: 'MANGO STALL', district: 'yucayeque', line: 'three for a joule. two if you can carry a tune.', menu: ['mango', 'smoothie'] },
+    /* the second round of carts. PLACEHOLDER lines */
+    'hotdog-cart':  { kind: 'vendor', name: 'HOT DOGS', district: 'worldwood', line: 'two dogs, one pretzel, and keep the line moving.', menu: ['hotdog', 'pretzel', 'eggcream'] },
+    'boba-bike':    { kind: 'vendor', name: 'BOBA BIKE', district: 'worldwood', line: 'it\'s a bike. it\'s a cart. it\'s parked. order.', menu: ['boba', 'soda'] },
+    'coconut-man':  { kind: 'vendor', name: 'COCONUT MAN', district: 'yucayeque', line: 'stand back. the machete doesn\'t miss. it just doesn\'t look.', menu: ['coconut', 'plantain'] },
+    'takoyaki-cart':{ kind: 'vendor', name: 'TAKOYAKI', district: 'majinryu', line: 'blow on them. no, more than that.', menu: ['takoyaki', 'ramune'] },
+    'honey-stand':  { kind: 'vendor', name: 'HONEY STAND', district: 'naturia', line: 'the bees agreed to this. ask them.', menu: ['honeycomb', 'mintwater'] },
+    'coffee-cart':  { kind: 'vendor', name: 'COFFEE CART', district: 'haven', line: 'coffee, permit number on the cup. pastry, permit pending.', menu: ['coffee', 'croissant'] },
+    'soup-pot':     { kind: 'vendor', name: 'SOUP POT', district: 'redrum', line: 'one joule for the water. five for the soup. no refills.', menu: ['soup', 'rainwater'] },
     'clinic':       { kind: 'clinic', name: 'NOVA CITY HOSPITAL', district: 'majinryu', line: 'reception. take a number. there are no numbers. you\'re next.', meds: ['medkit', 'bandage'] },
     /* redrum's doctor: no licence, no hospital, a folding table in an alley.
        dearer per point than the city. PLACEHOLDER words */
     'street-doc':   { kind: 'clinic', name: 'STREET DOC', district: 'redrum', line: 'sit. do not bleed on the table, i eat off it.', meds: ['bandage', 'medkit'], treat: 3 },
     'noodle-bar':   { kind: 'restaurant', name: 'NO SIGN', district: 'worldwood', line: 'no sign. that\'s the sign. sit anywhere.', menu: ['ramen', 'wontons', 'icedbarley'] },
+    'grease-pit':   { kind: 'restaurant', name: 'THE GREASE PIT', district: 'redrum', line: 'sit where it\'s dry. the fry-up is the only thing on the menu that\'s on the menu.', menu: ['fryup', 'pie', 'blackcoffee'] },
     'tea-house':    { kind: 'restaurant', name: 'THE TEA HOUSE', district: 'majinryu', line: 'two doors down. you found it. ask for the house blend.', menu: ['houseblend', 'bao', 'barley'] }
   };
   /* cooking: at a fire (cook:fire:<kind>) or in your kitchen (cook:kitchen).

@@ -886,6 +886,15 @@
     person(M0, 1, 4, 'medic', ['the hospital is the best on teknoa.\nthe streets around it are not.']);
     person(R0, 3, 2, 'merc', ['redrum is not on any map the council prints.\nwe like it that way.', 'the lighthouse? do not go knocking.']);
 
+    /* the second round of carts and redrum's diner, placed last so nothing
+       before them moves (shops.js VENDORS) */
+    [['hotdog-cart', W0, 4, -2], ['boba-bike', W0, -5, 6], ['coconut-man', Y0, -4, -5], ['takoyaki-cart', M0, -4, 1], ['honey-stand', N0, -3, 4], ['coffee-cart', H0, -4, 3], ['soup-pot', R0, 2, -2]].forEach(function (c) {
+      var at3 = standIn(c[1], c[2], c[3]), v = root.MFShops && root.MFShops.VENDORS[c[0]];
+      if (at3) npcs.push({ id: c[0], x: at3[0], y: at3[1], dir: 'down', look: c[0] === 'honey-stand' ? 'ape' : 'cook', name: v ? v.name : c[0], vend: c[0], still: true });
+    });
+    var gpAt = clearSpot(R0, 3, 2, -2, 5);
+    if (gpAt) { landmark(R0, 'greasepit', 'the grease pit', gpAt[0], gpAt[1], 3, 2, 'THE GREASE PIT\nthe O in PIT is a frying pan.\nit smells like breakfast at every hour.', true); walkIn('greasepit'); }
+
     /* no sealed pockets: open ground nobody can walk to is joined to the
        streets with a path, or, if it is only a tile or two, filled in */
     var seen = reachFrom(spawn.x, spawn.y);
@@ -1319,6 +1328,22 @@
       people: [
         { x: 5, y: 1, look: 'local', name: 'TEA MASTER', still: true, lines: ['the house blend steadies the hands.\nwhat\'s in it is between me and the leaves.', 'interns from the labs drink it before exams.\nthey never say which exams.'] },
         { x: 5, y: 4, look: 'android', lines: ['i cannot taste the tea.\ni come for the steam.'] }] },
+    /* redrum's diner: a counter, booths, a cook who has seen things. PLACEHOLDER lines */
+    greasepit: { d: 'redrum', map: [
+      '##########',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '#........#',
+      '####==####'],
+      things: [
+        { id: 'counter', x: 2, y: 1, w: 4, h: 1, vend: 'grease-pit', text: 'the counter. sticky in the good way. mostly.' },
+        { id: 'booth', x: 1, y: 4, w: 2, h: 1, text: 'a booth. the seat\'s been taped. twice.' },
+        { id: 'booth', x: 7, y: 4, w: 2, h: 1, text: 'someone scratched a crescent into the table.\nsmall. like the one on the lockup door.' }],
+      people: [
+        { x: 7, y: 1, look: 'cook', name: 'COOK', still: true, lines: ['eggs, beans, bread. that\'s the fry-up.\nthe rest of the menu is a rumour.', 'the hashshashin eat free.\nnobody told me to. nobody had to.'] },
+        { x: 4, y: 3, look: 'merc', lines: ['the hunter used to sit in that booth.\nnobody sits in it now. nobody says why.'] }] },
     /* the lockup: hex's hashshashin keep redrum's peace here. PLACEHOLDER lines */
     lockup: { d: 'redrum', map: [
       '############',

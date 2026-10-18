@@ -592,6 +592,13 @@
     px(g, OUT, w - 14, 14, 10, h - 14); px(g, '#5a3a22', w - 13, 15, 8, h - 15);
     px(g, '#ff6a3a', 22, 8, 3, 4);
   };
+  /* the grease pit: a steamed-up window, a frying-pan sign, a red door */
+  MARK_ART.greasepit = function (g, w, h) {
+    px(g, '#2a1a12', 0, 0, w, h); px(g, '#c4473a', 0, 0, w, 3); px(g, '#ffd36a', 0, 3, w, 1);
+    px(g, OUT, 3, 9, 20, 13); px(g, '#8a7a5a', 4, 10, 18, 11); for (var i = 0; i < 3; i++) px(g, '#c8b88a', 6 + i * 6, 12 + (i % 2) * 3, 3, 2);
+    px(g, '#5a6070', 26, 5, 8, 6); px(g, '#2a2f4a', 27, 6, 6, 4); px(g, '#ffd36a', 29, 7, 2, 2); px(g, '#5a6070', 34, 7, 5, 2);
+    px(g, OUT, w - 14, 16, 10, 16); px(g, '#8a1a1a', w - 13, 17, 8, 15); px(g, '#ffd36a', w - 7, 24, 1, 2);
+  };
   MARK_ART.fountain = function (g, w, h) {
     px(g, '#8a92a6', 0, h - 10, w, 10); px(g, '#c8ccd8', 1, h - 10, w - 2, 2); px(g, '#2f69a0', 3, h - 8, w - 6, 5);
     px(g, '#c8ccd8', (w >> 1) - 3, 6, 6, h - 14); px(g, '#7cf5ff', (w >> 1) - 1, 1, 2, 8);
@@ -1338,7 +1345,7 @@
   }
   /* where a building's door is drawn (MARK_ART): a pixel span across its
      front. most are centred; these few hang theirs on the right */
-  var DOOR_PX = { arcade: function (W) { return [W - 18, W - 6]; }, noodlebar: function (W) { return [W - 14, W - 4]; }, teahouse: function (W) { return [W - 14, W - 4]; } };
+  var DOOR_PX = { arcade: function (W) { return [W - 18, W - 6]; }, noodlebar: function (W) { return [W - 14, W - 4]; }, teahouse: function (W) { return [W - 14, W - 4]; }, greasepit: function (W) { return [W - 14, W - 4]; } };
   /* the front-row tiles the drawn door covers (a centred door on an even
      front straddles two) */
   function doorCols(m) {
@@ -3504,7 +3511,7 @@
   function rgba(hex, a) { var n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
   /* each landmark's neon; the rest take their district's first glow */
   var MARK_GLOW = { tower: '#9f8cff', ncpd: '#2a6aff', hospital: '#ff4f6a', pagoda: '#ffd36a', greattree: '#3affc8', market: '#ffd36a', arcade: '#ff4fd8',
-                    casino: '#f2c94c', sapphire: '#7cf5ff', noorborj: '#ffe97c', noodlebar: '#ffd36a', teahouse: '#ff6a3a', fountain: '#7cf5ff', boatyard: '#ffd36a' };
+                    casino: '#f2c94c', sapphire: '#7cf5ff', noorborj: '#ffe97c', noodlebar: '#ffd36a', teahouse: '#ff6a3a', greasepit: '#ffd36a', fountain: '#7cf5ff', boatyard: '#ffd36a' };
   /* a streetlamp: a post at the kerb, a head leaning over the road */
   var LAMP_AT = { down: [7, 9], up: [7, 0], right: [12, 4], left: [2, 4] };
   function lampHead(l, cx, cy) { var o = LAMP_AT[l.side]; return [l.x * TS - cx + o[0] + 1, l.y * TS - cy + o[1] - 6]; }
