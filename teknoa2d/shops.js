@@ -334,7 +334,7 @@
     'honey-stand':  { kind: 'vendor', name: 'HONEY STAND', district: 'naturia', line: 'the bees agreed to this. ask them.', menu: ['honeycomb', 'mintwater'] },
     'coffee-cart':  { kind: 'vendor', name: 'COFFEE CART', district: 'haven', line: 'coffee, permit number on the cup. pastry, permit pending.', menu: ['coffee', 'croissant'] },
     'soup-pot':     { kind: 'vendor', name: 'SOUP POT', district: 'redrum', line: 'one joule for the water. five for the soup. no refills.', menu: ['soup', 'rainwater'] },
-    'clinic':       { kind: 'clinic', name: 'NOVA CITY HOSPITAL', district: 'majinryu', line: 'reception. take a number. there are no numbers. you\'re next.', meds: ['medkit', 'bandage'] },
+    'clinic':       { kind: 'clinic', name: 'NOVA CITY HOSPITAL', district: 'majinryu', line: 'reception. take a number. there are no numbers. you\'re next.', meds: ['medkit', 'bandage'], cores: true },
     /* redrum's doctor: no licence, no hospital, a folding table in an alley.
        dearer per point than the city. PLACEHOLDER words */
     'street-doc':   { kind: 'clinic', name: 'STREET DOC', district: 'redrum', line: 'sit. do not bleed on the table, i eat off it.', meds: ['bandage', 'medkit'], treat: 3 },
@@ -588,6 +588,9 @@
       var missing = Math.ceil(MF.maxOf(s, 'hp') - MF.vital(s, 'hp'));
       rows.push({ key: 'treat', label: missing ? 'treatment: back to full health (' + missing + ' points)' : 'treatment: you\'re fine. go home.', price: missing * (st.treat || TREAT), have: 0, here: true, treat: true });
       st.meds.forEach(function (k) { rows.push({ key: k, label: MEDS[k].name, price: MEDS[k].price, have: items[k] || 0 }); });
+      /* the hospital fits bigger IBC cores (engine.js IBC_CORES) */
+      var nextCore = st.cores && MF.ibc(s) && MF.IBC_CORES[(s.ibc || 0) + 1];
+      if (nextCore) rows.push({ key: 'core', label: 'fit a ' + nextCore.name + ': holds ' + nextCore.cap + 'x the charge', price: nextCore.price, have: 0, here: true, core: true });
       rows.forEach(function (r) { r.ok = MF.joules(s) >= r.price && (!r.treat || missing > 0); });
       return rows;
     }
@@ -626,6 +629,12 @@
       if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
       MF.heal(s, MF.maxOf(s, 'hp'));
       return { ok: true, price: row.price, name: 'treatment', ate: true, healed: true };
+    }
+    if (tab === 'buy' && row.core) {
+      if (!MF.spend(s, row.price)) return { ok: false, why: 'not enough joules', price: row.price };
+      MF.earn(s, row.price);
+      var up = MF.upgradeCore(s);
+      return up.ok ? { ok: true, price: row.price, name: up.name } : up;
     }
     /* a cart or a restaurant: you eat it there and then */
     if (tab === 'buy' && row.here) {

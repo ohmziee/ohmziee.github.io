@@ -1443,7 +1443,7 @@
     if (L) { L.setRoom(lobbyRoom()); L.moved(me.x, me.y, me.dir); }
     s.world = here();
     if (api.save) api.save();
-    if (charging() && s.body.food < 95 && !talkBox) say(['you find a socket and plug in.\ncharging. stay a minute.']);
+    if (charging() && s.body.food < 95 && !talkBox) say(['you find a socket and plug in.\ncharging, at your joules\' expense. stay a minute.']);
   }
   function goOut() {
     startWipe();
@@ -1615,7 +1615,7 @@
     if (sta <= 0) winded = true; else if (winded && sta >= MF.RUN_AGAIN) winded = false;
     if (now - staT > 100) { staT = now; drawSta(run); }
     torchTick(dt);
-    if (charging()) s.body.food = Math.min(100, s.body.food + 100 * dt / CHARGE_SECS);
+    if (charging() && s.body.food < 100 && !MF.charge(s, 100 * dt / CHARGE_SECS) && !MF.joules(s)) sayLater('broke', ['the socket clicks off.\nno joules, no charge. you\'ll have to earn some.']);
     var state = s.dev && s.dev.nohunger ? (MF.weak(s) ? 'weak' : '') : MF.drain(s, dt, run ? 1.5 : 1, tempNow());
     tired = state !== '';
     if (state === 'collapse') return faint(now, true);
@@ -2197,7 +2197,7 @@
     } else if (phone.tab === 'vitals') {
       var b = s.body, SH = window.MFShops;
       Object.keys(MF.CORE).forEach(function (k) { var c = MF.CORE[k]; gauge(c.icon, c.pool, MF.vital(s, k), MF.maxOf(s, k), k); });
-      if (MF.ibc(s)) gauge('🔋', 'charge' + (charging() ? ' · charging' : ''), b.food, 100, 'sta');
+      if (MF.ibc(s)) gauge('🔋', MF.ibcCore(s).name + (charging() ? ' · charging' : ''), b.food, 100, 'sta');
       else { gauge('🍞', 'food', b.food, 100, 'food'); gauge('💧', 'drink', b.drink, 100, 'drink'); }
       line('vrow', '🎒 load ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg');
       if (s.items && s.items.flashlight) line('vrow', '🔦 flashlight ' + Math.round(100 * s.torch / SH.GEAR.flashlight.secs) + '%' + (s.torchOff ? ' · off' : torchLit ? ' · lit' : ' · on'));

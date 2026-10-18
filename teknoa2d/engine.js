@@ -29,6 +29,7 @@
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
              torch: 0,                                       /* seconds of flashlight battery left */
+             ibc: 0, ibcPaid: 0,                             /* an IBC's core (IBC_CORES index), and charge already paid for, in % */
              torchOff: 0,                                    /* 1 when the flashlight is switched off */
              safe: [],                                       /* the inventory's safe slots: item kinds a mugger can't take */
              equip: '',                                      /* the weapon in hand (combat.js WEAPONS); '' is fists */
@@ -261,8 +262,9 @@
     var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0), heat = 1, cold = 1, fx = originFx(s), chill = fx.cold ? COLD_AI : 20;
     if (temp !== undefined) { heat = 1 + Math.max(0, temp - 28) * 0.08; cold = 1 + Math.max(0, chill - temp) * 0.06; }
     if (ibc(s)) {
-      /* a battery core: one charge, no hunger or thirst, lasts IBC_LASTS times longer */
-      b.food = Math.max(0, b.food - 100 * f / (FOOD_SECS * IBC_LASTS)); b.drink = 100;
+      /* a battery core: one charge, no hunger or thirst. the starter lasts as
+         long as a full stomach; a bigger core lasts its cap times longer */
+      b.food = Math.max(0, b.food - 100 * f / (FOOD_SECS * ibcCore(s).cap)); b.drink = 100;
     } else {
       b.food = Math.max(0, b.food - 100 * f * cold / FOOD_SECS);
       b.drink = Math.max(0, b.drink - 100 * f * heat / DRINK_SECS);
@@ -308,8 +310,37 @@
   var SIDE = { defector: { name: 'walked out', what: 'you left corpocult behind. their agents know a barcode on sight, and they want their property back.' },
                loyal:    { name: 'still theirs', what: 'you work for corpocult, quietly, against teknoa. their agents leave you be. everyone else had better not find out.' } };
   var POWER = { ade: { name: 'artificial digestive engine (ADE)', what: 'you eat and drink like anyone else.' },
-                ibc: { name: 'internal battery core (IBC)', what: 'no hunger, no thirst, a charge that lasts. charging points: your home, the hospital, the police.' } };
-  var OLD_ORIGINS = { local: 1, runner: 1, defector: 1, ghost: 1 }, COLD_AI = -6, IBC_LASTS = 3;
+                ibc: { name: 'internal battery core (IBC)', what: 'no hunger, no thirst: you run on charge, and charge costs joules. charging points: your home, the hospital, the police. the hospital fits bigger cores.' } };
+  var OLD_ORIGINS = { local: 1, runner: 1, defector: 1, ghost: 1 }, COLD_AI = -6;
+  /* IBC cores: cap is how many starter charges one holds (and how much
+     longer it lasts). a full starter charge costs IBC_FULL joules, about
+     what a sapien spends on a full stomach and a drink; a bigger core costs
+     cap times that to fill. the hospital fits the next one (shops.js
+     clinic). PLACEHOLDER names and prices */
+  var IBC_CORES = [{ name: 'starter core', cap: 1, price: 0 },
+                   { name: 'core mk II', cap: 1.5, price: 600 },
+                   { name: 'core mk III', cap: 2, price: 1500 },
+                   { name: 'core mk IV', cap: 3, price: 4000 }], IBC_FULL = 30;
+  function ibcCore(s) { return IBC_CORES[Math.max(0, Math.min(IBC_CORES.length - 1, Math.floor(+s.ibc || 0)))]; }
+  /* plugged in: up to pct more charge, paid a joule at a time as it goes
+     in. returns the % that went in (less, or 0, when the joules run out) */
+  function charge(s, pct) {
+    var b = s.body, want = Math.max(0, Math.min(+pct || 0, 100 - b.food)), per = 100 / (IBC_FULL * ibcCore(s).cap);
+    s.ibcPaid = Math.max(0, +s.ibcPaid || 0);
+    while (s.ibcPaid + 1e-9 < want && spend(s, 1)) s.ibcPaid += per;
+    var got = s.ibcPaid + 1e-9 >= want ? want : s.ibcPaid;
+    b.food = Math.min(100, b.food + got); s.ibcPaid = Math.max(0, s.ibcPaid - got);
+    return got;
+  }
+  /* the hospital fits the next core up. the charge you had moves across */
+  function upgradeCore(s) {
+    var i = Math.floor(+s.ibc || 0), next = IBC_CORES[i + 1];
+    if (!ibc(s)) return { ok: false, why: 'you don\'t run on a core' };
+    if (!next) return { ok: false, why: 'that\'s the biggest core there is' };
+    if (!spend(s, next.price)) return { ok: false, why: 'not enough joules', price: next.price };
+    s.body.food = s.body.food * IBC_CORES[i].cap / next.cap; s.ibc = i + 1;
+    return { ok: true, price: next.price, name: next.name };
+  }
   function originFx(s) { return ORIGINS[s.player && s.player.origin] || {}; }
   function ibc(s) { return !!(s.player && s.player.origin === 'ai' && s.player.power === 'ibc'); }
   /* where people can tell you come from: an ape or an android body shows,
@@ -391,7 +422,7 @@
   root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
               SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
               FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
-              ORIGINS: ORIGINS, POWER: POWER, SIDE: SIDE, COLD_AI: COLD_AI, IBC_LASTS: IBC_LASTS, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
+              ORIGINS: ORIGINS, POWER: POWER, SIDE: SIDE, COLD_AI: COLD_AI, IBC_CORES: IBC_CORES, IBC_FULL: IBC_FULL, ibcCore: ibcCore, charge: charge, upgradeCore: upgradeCore, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
               SAFE_SLOTS: SAFE_SLOTS, safeKeys: safeKeys, isSafe: isSafe, toggleSafe: toggleSafe,
               CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
               STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, HP_REGEN: HP_REGEN, HP_MEND: HP_MEND, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
