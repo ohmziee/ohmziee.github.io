@@ -784,13 +784,19 @@
     px(g, '#ff8a6b', 4, 9, 3, 3); px(g, '#7cffb2', 11, 9, 3, 3); px(g, '#ffd36a', 18, 9, 3, 3); px(g, '#ff8a6b', 25, 9, 3, 3);
   };
   var markArt = {}, UNFRAMED = { tower: 1, chest: 1, drumfire: 1, campfire: 1, grill: 1, slot: 1, plant: 1, tv: 1, sofa: 1, cabinet: 1, lantern: 1, bell: 1, roots: 1, shrooms: 1, bench: 1, fork: 1, glass: 1 };
+  /* at the canvas's full resolution: the 32px landmark (marks.js) where
+     there is one, the tower's own art drawn at that size, else the old
+     16px art doubled. drawn at m.w x m.h tiles either way */
   function markCanvas(m) {
     if (markArt[m.id]) return markArt[m.id];
-    var c = document.createElement('canvas'); c.width = m.w * TS; c.height = m.h * TS;
+    var w = m.w * TS, h = m.h * TS, c = document.createElement('canvas'); c.width = w * ART; c.height = h * ART;
     var g = c.getContext('2d');
-    (MARK_ART[m.id] || MARK_ART.market)(g, c.width, c.height);
+    if (ART > 1 && window.MFMarks && window.MFMarks.has(m.id)) { window.MFMarks.draw(g, m.id, c.width, c.height, DOOR_PX[m.id] ? DOOR_PX[m.id](w) : null); return (markArt[m.id] = c); }
+    if (m.id === 'tower') { MARK_ART.tower(g, c.width, c.height); return (markArt[m.id] = c); }
+    g.setTransform(ART, 0, 0, ART, 0, 0);
+    (MARK_ART[m.id] || MARK_ART.market)(g, w, h);
     if (UNFRAMED[m.id]) return (markArt[m.id] = c);
-    px(g, OUT, 0, 0, c.width, 1); px(g, OUT, 0, c.height - 1, c.width, 1); px(g, OUT, 0, 0, 1, c.height); px(g, OUT, c.width - 1, 0, 1, c.height);
+    px(g, OUT, 0, 0, w, 1); px(g, OUT, 0, h - 1, w, 1); px(g, OUT, 0, 0, 1, h); px(g, OUT, w - 1, 0, 1, h);
     return (markArt[m.id] = c);
   }
 
@@ -823,7 +829,7 @@
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx + SH_X < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy + SH_Y < 0) return;
       if (window.MFArt && window.MFArt.has('mark:' + m.id)) return;   /* sheet art paints its own ground shadow */
-      ctx.drawImage(markShadow(m), m.x * TS - cx + SH_X, m.y * TS - cy + SH_Y);
+      ctx.drawImage(markShadow(m), m.x * TS - cx + SH_X, m.y * TS - cy + SH_Y, m.w * TS, m.h * TS);
     });
     ctx.globalAlpha = 1;
   }
@@ -4091,7 +4097,7 @@
     world.marks.forEach(function (m) {
       if (m.x * TS - cx > VW * TS || (m.x + m.w) * TS - cx < 0 || m.y * TS - cy > VH * TS || (m.y + m.h) * TS - cy < 0) return;
       if (window.MFArt && window.MFArt.draw(ctx, 'mark:' + m.id, m.x * TS - cx, m.y * TS - cy)) return;
-      ctx.drawImage(markCanvas(m), m.x * TS - cx, m.y * TS - cy);
+      ctx.drawImage(markCanvas(m), m.x * TS - cx, m.y * TS - cy, m.w * TS, m.h * TS);
     });
     world.signs.forEach(function (sg) {
       var sx = sg.x * TS - cx, sy = sg.y * TS - cy;

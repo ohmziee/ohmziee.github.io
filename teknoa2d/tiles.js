@@ -81,7 +81,7 @@
       return true;
     }
 
-    if (t === T.GROUND) {
+    if (t === T.GROUND || t === T.STALL) {
       var q = M.pave;
       if (!id || id === 'naturia') return false;
       /* concrete slabs, two by two, staggered by row: a lit top edge and a
@@ -96,7 +96,19 @@
       var gk = v % 8;
       if (gk === 2) [[4, 5], [5, 5], [6, 6], [7, 7], [8, 7], [9, 8], [9, 9], [10, 10]].forEach(function (c) { px(q[0], c[0], c[1]); });
       else if (gk === 5) { px(p.leaf, off + 13, 12, 1, 3); px(p.leaf, off + 12, 13); px(p.leaf, off + 14, 12); px(tone(p.leaf, 0.7), off + 13, 14, 2, 1); }
-      else if (gk === 6) { px(p.glow[v % p.glow.length], 21, 22, 3, 2); px(q[0], 21, 24, 3, 1); }
+      else if (gk === 6 && t === T.GROUND) { px(p.glow[v % p.glow.length], 21, 22, 3, 2); px(q[0], 21, 24, 3, 1); }
+      if (t === T.STALL) {
+        /* a market stall: a striped awning on poles, a wooden counter, crates of
+           whatever they're selling, a shadow under it all */
+        var aw = p.glow[v % p.glow.length], wd = ramp('#6e4628');
+        px('rgba(0,0,0,.3)', 3, 28, 28, 3);
+        px(OUT, 3, 4, 2, 24); px('#a3aec4', 3, 4, 1, 24); px(OUT, 27, 4, 2, 24); px('#a3aec4', 27, 4, 1, 24);
+        px(OUT, 1, 1, 30, 12);
+        for (i = 0; i < 28; i++) { var st = (i >> 2) % 2; px(st ? '#f4f6ff' : aw, 2 + i, 2, 1, 9); px(st ? '#c8ccd8' : tone(aw, 0.7), 2 + i, 11, 1, 1); }
+        for (i = 2; i < 30; i += 8) px(aw, i + 1, 12, 2, 2);
+        px(OUT, 2, 17, 28, 12); px(wd[2], 3, 18, 26, 10); px(wd[3], 3, 18, 26, 2); px(wd[1], 3, 23, 26, 1);
+        [[5, 14, p.glow[(v + 1) % p.glow.length]], [12, 15, '#ffe97c'], [19, 14, p.glow[(v + 2) % p.glow.length]]].forEach(function (c) { px(OUT, c[0] - 1, c[1] - 1, 8, 5); px(c[2], c[0], c[1], 6, 3); px(tone(c[2], 1.35), c[0], c[1], 6, 1); });
+      }
       return true;
     }
 
