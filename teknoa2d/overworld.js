@@ -1634,6 +1634,10 @@
     var left = jailLeft();
     $('wBuff').textContent = left ? '⛓ ' + mmss(left) : b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
     drawSiren();
+    var eye = $('wEye'), near = !inside && (helis.length || mobs.some(watcher)), sn = near && seen();
+    eye.hidden = !near;
+    eye.classList.toggle('open', sn);
+    eye.setAttribute('aria-label', sn ? 'seen' : 'out of sight'); eye.title = sn ? 'they see you' : 'out of sight';
     var tb = $('wTorch'), hasT = !!(s.items && s.items.flashlight);
     tb.hidden = !hasT;
     if (hasT) { tb.classList.toggle('on', !s.torchOff); tb.title = 'flashlight ' + (s.torchOff ? 'off' : 'on') + ' · battery ' + Math.round(100 * s.torch / window.MFShops.GEAR.flashlight.secs) + '% (F)'; tb.setAttribute('aria-label', tb.title); }
@@ -2815,7 +2819,7 @@
     var C = window.MFCombat, LV = window.MFLevel, MF = window.MF, P = C.player(s, LV), r = C.strike(P, m.f), w = C.swing(s);
     swingFx = now;
     /* hit a passer-by who was busy with someone else: now it's you */
-    m.foe = null;
+    m.foe = null; m.spot = true;
     if (m.civ && !m.struck) { m.struck = true; crime('assault', m.x, m.y, m.civ); }
     if (m.law && !m.struck) { m.struck = true; crime('officer', m.x, m.y, null, true); }
     if (w.broke) float(me.x * TS + 2, me.y * TS - 12, C.WEAPONS[w.key].name.replace(/^an? /, '') + ' breaks!', '#ffb02e');
@@ -2900,10 +2904,47 @@
     }
     return null;
   }
+  /* ── being seen (law.js spotChance): hostiles and enforcers have to pick
+     you out before they come for you; your stealth makes that harder. one
+     that has you keeps you until you've been out of its sight a while, then
+     goes to where it saw you last. the eye on the hud says if anyone has
+     you. a passer-by you squared up to always knows where you are ── */
+  var sightT = 0;
+  function watcher(m) { return !m.civ && !m.foe && !m.leaving; }
+  function tickSight(dt) {
+    var LAW = window.MFLaw, LV = window.MFLevel, stl = LV ? LV.traitLevel(s, 'stl') : 1, solid = function (x, y) { return M.solid(world, x, y); };
+    sightT += dt;
+    var look = sightT >= LAW.SPOT_EVERY;
+    if (look) sightT = 0;
+    mobs.forEach(function (m) {
+      if (!watcher(m)) return;
+      var d = Math.abs(m.x - me.x) + Math.abs(m.y - me.y), can = !inside && d <= LAW.SIGHT && LAW.clearShot(solid, m.x, m.y, me.x, me.y);
+      if (d <= 1 || (can && !m.spot && look && Math.random() < LAW.spotChance(stl, d))) m.spot = true;
+      if (!m.spot) return;
+      m.lost = can ? 0 : (m.lost || 0) + dt;
+      if (m.lost > LAW.LOSE) { m.spot = false; m.lost = 0; return; }
+      m.lx = me.x; m.ly = me.y;
+    });
+  }
+  function seen() { return !inside && (helis.some(heliSees) || mobs.some(function (m) { return watcher(m) && m.spot; })); }
+  /* not seen: head for where it saw you last, else drift about */
+  function search(m, dt) {
+    if (m.lx !== undefined && (m.x !== m.lx || m.y !== m.ly)) {
+      var o = chaseStep(m, m.lx, m.ly);
+      if (o) { m.fx = m.x; m.fy = m.y; m.x += o[0]; m.y += o[1]; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]); return; }
+    }
+    m.lx = undefined;
+    if (Math.random() > dt * 0.7) return;
+    var ks = Object.keys(DIRS), k = ks[Math.floor(Math.random() * ks.length)], nx = m.x + DIRS[k][0], ny = m.y + DIRS[k][1];
+    m.dir = k;
+    if (M.solid(world, nx, ny) || occupied(nx, ny) || (nx === me.x && ny === me.y)) return;
+    m.fx = m.x; m.fy = m.y; m.x = nx; m.y = ny; m.moving = true; m.t = 0; m.step ^= 1;
+  }
   function tickMobs(dt, now) {
     var zn = zoneNow();
     tickBodies(now);
     if (!zn) { dropMobs(); return; }
+    tickSight(dt);
     if (!(s.dev && s.dev.peace) && window.MFStreets) {
       spawnClock += dt;
       if (spawnClock >= window.MFStreets.CHECK[zn]) {
@@ -2924,9 +2965,10 @@
       if (d > GIVE_UP) { m.gone = true; return; }
       /* a hostile goes for whoever it passes that it would: always on the way
          to you, now and then even with you right there (SIDE_SWING) */
-      if (m.law) return lawMove(m, d, dx, dy, now);
+      if (m.law) return m.leaving || m.spot ? lawMove(m, d, dx, dy, now) : search(m, dt);
       var v = !foe && !m.civ && m.cd <= 0 ? victimNear(m) : null;
       if (v && (d !== 1 || Math.random() < SIDE_SWING)) { m.dir = faceTo(v.x - m.x, v.y - m.y); return mobOn(m, v, now); }
+      if (watcher(m) && !m.spot) return search(m, dt);
       if (d === 1) { m.dir = faceTo(dx, dy); if (m.cd <= 0) { if (foe) brawl(m, foe, now); else mobHit(m, now); } return; }
       var o = chaseStep(m, gx, gy);
       if (o) { m.fx = m.x; m.fy = m.y; m.x += o[0]; m.y += o[1]; m.moving = true; m.t = 0; m.step ^= 1; m.dir = faceTo(o[0], o[1]); }
@@ -3129,8 +3171,7 @@
      they shoot. once the siren's off they stand down and go ── */
   var lawDown = false, callClock = 0, shots = [];
   function lawSees() {
-    var LAW = window.MFLaw, solid = function (x, y) { return M.solid(world, x, y); };
-    return !inside && (helis.some(heliSees) || mobs.some(function (m) { return m.law && !m.leaving && Math.abs(m.x - me.x) + Math.abs(m.y - me.y) <= LAW.SIGHT && LAW.clearShot(solid, m.x, m.y, me.x, me.y); }));
+    return !inside && (helis.some(heliSees) || mobs.some(function (m) { return m.law && !m.leaving && m.spot; }));
   }
   function tickEnforcers(dt, now) {
     var LAW = window.MFLaw, siren = LAW.law(s).siren, zn = zoneNow();
@@ -3147,7 +3188,7 @@
     for (var tries = 0; tries < 80; tries++) {
       var dx = Math.floor(Math.random() * 25) - 12, dy = Math.floor(Math.random() * 17) - 8, d = Math.abs(dx) + Math.abs(dy), x = me.x + dx, y = me.y + dy;
       if (d < 8 || d > 13 || x < 0 || y < 0 || x >= world.W || y >= world.H || occupied(x, y) || world.dist[y * world.W + x] < 0) continue;
-      var m = { f: f, law: f.law, x: x, y: y, fx: x, fy: y, t: 0, moving: false, dir: 'down', step: 0, cd: 1, hurt: 0, lunge: 0,
+      var m = { f: f, law: f.law, x: x, y: y, fx: x, fy: y, lx: me.x, ly: me.y, t: 0, moving: false, dir: 'down', step: 0, cd: 1, hurt: 0, lunge: 0,
                 speed: LAW.LAW_SPEED, look: MOB_LOOK[f.id] };
       mobs.push(m);
       float(x * TS + 4, y * TS - 4, '!', '#7cc8ff');
@@ -4167,5 +4208,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; }, get torchLit() { return torchLit; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving, spot: !!m.spot }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; }, get torchLit() { return torchLit; }, get seen() { return seen(); } };
 })();
