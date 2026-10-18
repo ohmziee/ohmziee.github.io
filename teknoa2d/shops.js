@@ -243,7 +243,7 @@
   /* gear: things you carry that aren't rods. secs: battery, full, in seconds
      of use; it runs only while it's needed and charges in a bed. PLACEHOLDER price */
   var GEAR = {
-    flashlight: { name: 'a flashlight', what: 'for the dark past the city lights. it comes on by itself out there; a night in bed charges it.', price: 120, secs: 600 }
+    flashlight: { name: 'a flashlight', what: 'for the dark past the city lights. switch it on or off (F, or the 🔦 up top); while it is on it shines whenever it is dark outside. a night in bed charges it.', price: 120, secs: 600 }
   };
   function bestRod(s) { var it = s.items || {}; return it.jormun ? 'jormun' : it.tuned ? 'tuned' : it.rod ? 'rod' : ''; }
   /* every cast wears the rod: a clean catch 1, a spooked or missed bite 2, a

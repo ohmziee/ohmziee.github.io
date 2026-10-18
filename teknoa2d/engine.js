@@ -29,6 +29,7 @@
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
              torch: 0,                                       /* seconds of flashlight battery left */
+             torchOff: 0,                                    /* 1 when the flashlight is switched off */
              safe: [],                                       /* the inventory's safe slots: item kinds a mugger can't take */
              equip: '',                                      /* the weapon in hand (combat.js WEAPONS); '' is fists */
              dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
@@ -187,6 +188,7 @@
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
     s.torch = Math.max(0, Math.min(3600, +s.torch || 0));
+    s.torchOff = s.torchOff ? 1 : 0;
     s.safe = s.safe.filter(function (k, i, a) { return typeof k === 'string' && k && a.indexOf(k) === i; }).slice(0, SAFE_SLOTS);
     var tr = s.treasury;
     s.treasury = { week: Math.floor(+tr.week) >= -1 ? Math.floor(+tr.week) : -1, spent: Math.max(0, Math.floor(+tr.spent || 0)), arrears: Math.max(0, Math.floor(+tr.arrears || 0)) };

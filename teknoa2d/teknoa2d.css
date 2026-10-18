@@ -340,6 +340,9 @@ a{color:var(--lavender)}
 .wbody .alert{pointer-events:auto;cursor:pointer;font:inherit;color:#0b0d1a;background:#ffd36a;border:2px solid #0b0d1a;border-radius:3px;padding:.2rem .35rem}
 .wbody .alert.crit{background:#ff4f5e;color:#fff;animation:critpulse 1s ease-in-out infinite}
 .wbody .alert[hidden]{display:none}
+.wbody .torch{pointer-events:auto;cursor:pointer;font:inherit;background:#141a2e;border:2px solid #3a3150;border-radius:3px;padding:.15rem .3rem;filter:grayscale(1) brightness(.6)}
+.wbody .torch.on{background:#3a3150;border-color:#ffe97c;filter:none}
+.wbody .torch[hidden]{display:none}
 @keyframes critpulse{50%{opacity:.55}}
 .world.fainted .wscreen canvas{filter:brightness(0);transition:filter 1.2s}
 @media (prefers-reduced-motion:reduce){.wbody .alert.crit{animation:none}}

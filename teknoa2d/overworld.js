@@ -1634,6 +1634,9 @@
     var left = jailLeft();
     $('wBuff').textContent = left ? '⛓ ' + mmss(left) : b.buff && b.buffT > 0 ? b.buff + ' ' + Math.ceil(b.buffT / 60) + 'm' : '';
     drawSiren();
+    var tb = $('wTorch'), hasT = !!(s.items && s.items.flashlight);
+    tb.hidden = !hasT;
+    if (hasT) { tb.classList.toggle('on', !s.torchOff); tb.title = 'flashlight ' + (s.torchOff ? 'off' : 'on') + ' · battery ' + Math.round(100 * s.torch / window.MFShops.GEAR.flashlight.secs) + '% (F)'; tb.setAttribute('aria-label', tb.title); }
     var al = alerts(), crit = al.some(function (a) { return a.crit; }), btn = $('wAlert');
     btn.hidden = !al.length;
     btn.textContent = '⚠ ' + al.map(function (a) { return a.name; }).join(' · ');
@@ -1655,8 +1658,9 @@
     return out;
   }
   /* ── the dark past the city: districts are lit, the wilds and the water
-     aren't. a flashlight comes on by itself out there at night and runs
-     its battery down (shops.js GEAR); a bed charges it ── */
+     aren't. a flashlight switched on shines whenever it's dark outside and
+     runs its battery down (shops.js GEAR); a bed charges it. F, the 🔦 on
+     the hud or INV switch it ── */
   var torchLit = false, darkSaid = 0;
   /* an IBC core charges inside your own place or a government building */
   var CHARGE_AT = { hospital: 1, ncpd: 1 }, CHARGE_SECS = 60;
@@ -1667,15 +1671,22 @@
   }
   function wild() { return !inside && ['vistadelsol', 'bay', 'jormun'].indexOf(whereNow()) >= 0; }
   function torchTick(dt) {
-    var dark = wild() && darkness(novaNow()) > 0.3, has = !!(s.items && s.items.flashlight);
+    var night = !inside && darkness(novaNow()) > 0.3, dark = wild() && night, has = !!(s.items && s.items.flashlight), on = has && !s.torchOff;
     var was = torchLit;
-    torchLit = dark && has && s.torch > 0;
+    torchLit = night && on && s.torch > 0;
     if (torchLit) s.torch = Math.max(0, s.torch - dt);
-    if (was && !torchLit && dark && has) sayLater('torch', ['your flashlight flickers and dies.\na night in bed will charge it.']);
+    if (was && on && night && s.torch <= 0) sayLater('torch', ['your flashlight flickers and dies.\na night in bed will charge it.']);
     if (dark && !torchLit && Date.now() - darkSaid > 90000) {
       darkSaid = Date.now();
-      sayLater('dark', [has ? 'pitch black out here, and the flashlight\'s flat.\nstay close to the city lights.' : 'pitch black out here. you can barely see your hands.\na flashlight would help. the general stores sell them.']);
+      sayLater('dark', [!has ? 'pitch black out here. you can barely see your hands.\na flashlight would help. the general stores sell them.' : s.torchOff ? 'pitch black out here, and your flashlight\'s off.\nF, or tap the 🔦 up top.' : 'pitch black out here, and the flashlight\'s flat.\nstay close to the city lights.']);
     }
+  }
+  function toggleTorch() {
+    if (!(s.items && s.items.flashlight)) return false;
+    s.torchOff = s.torchOff ? 0 : 1;
+    if (api.save) api.save();
+    drawBody();
+    return true;
   }
   /* the stamina bar: up while you run, and until it's full again */
   function drawSta(run) {
@@ -1999,6 +2010,7 @@
     var note = arm ? C.usesLeft(s, k) + '/' + C.WEAPONS[k].dur + ' uses left' + (C.wielded(s) === k ? ' · in hand' : '') : SH.TOOLS[k] ? SH.rodLeft(s, k) + '/' + SH.TOOLS[k].dur + ' uses left' : SH.GEAR[k] && SH.GEAR[k].secs ? 'battery ' + Math.round(100 * (s.torch || 0) / SH.GEAR[k].secs) + '%' : '';
     if (SH.FOODS[k]) acts.push([SH.FOODS[k].food ? 'EAT' : 'DRINK', function () { var r = SH.eat(MF, s, k); return r.ok ? 'down it goes.' : r.why; }]);
     if (arm) acts.push([C.wielded(s) === k ? 'UNEQUIP' : 'EQUIP', function () { var on = C.wielded(s) !== k, r = C.equip(s, on ? k : 'fists'); return !r.ok ? r.why : on ? 'in hand: ' + C.WEAPONS[k].name + '.' : 'back to your fists.'; }]);
+    if (k === 'flashlight') acts.push([s.torchOff ? 'TURN ON' : 'TURN OFF', function () { toggleTorch(); return s.torchOff ? 'flashlight off.' : 'flashlight on. it shines whenever it\'s dark outside.'; }]);
     if (SH.MEDS[k]) acts.push(['USE', function () { var r = SH.useMed(MF, s, k); return r.ok ? 'patched up. health ' + Math.round(MF.vital(s, 'hp')) + '/' + MF.maxOf(s, 'hp') + '.' : r.why; }]);
     acts.push([MF.isSafe(s, k) ? 'TAKE OUT' : 'SAFE', function () { var r = MF.toggleSafe(s, k); return !r.ok ? r.why : r.safe ? 'locked in a safe slot. muggers can\'t touch it.' : 'out of the safe slot.'; }]);
     acts.push(['DROP', function () { return SH.drop(s, k) ? 'dropped one.' : 'nothing to drop.'; }]);
@@ -2177,7 +2189,7 @@
       if (MF.ibc(s)) gauge('🔋', 'charge' + (charging() ? ' · charging' : ''), b.food, 100, 'sta');
       else { gauge('🍞', 'food', b.food, 100, 'food'); gauge('💧', 'drink', b.drink, 100, 'drink'); }
       line('vrow', '🎒 load ' + SH.carried(s) + ' / ' + SH.cap(s) + 'kg');
-      if (s.items && s.items.flashlight) line('vrow', '🔦 flashlight ' + Math.round(100 * s.torch / SH.GEAR.flashlight.secs) + '%' + (torchLit ? ' · on' : ''));
+      if (s.items && s.items.flashlight) line('vrow', '🔦 flashlight ' + Math.round(100 * s.torch / SH.GEAR.flashlight.secs) + '%' + (s.torchOff ? ' · off' : torchLit ? ' · lit' : ' · on'));
       if (b.buff && b.buffT > 0) line('buff', b.buff + ' · ' + Math.ceil(b.buffT / 60) + 'm left');
     } else if (phone.tab === 'traits') {
       Object.keys(LV.TRAITS).forEach(function (t) {
@@ -3997,6 +4009,7 @@
   function onKey(e, down) {
     if (!active) return;
     if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if ((e.key === 'f' || e.key === 'F') && !phone) { if (down && !e.repeat) toggleTorch(); e.preventDefault(); return; }
     if ((e.key === 'm' || e.key === 'M') && phone) { if (down && !e.repeat) toggleBig(); e.preventDefault(); return; }
     if (e.key === 'z' || e.key === 'Z' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); held.a = down; if (down && !e.repeat) pressedA = true; return; }
     var k = KEYS[e.key];
@@ -4062,6 +4075,7 @@
       counterButtons();
       tableButtons();
       $('wAlert').addEventListener('click', function (e) { e.preventDefault(); openVitals(); });
+      $('wTorch').addEventListener('click', function (e) { e.preventDefault(); toggleTorch(); });
     }
     var at = s.world;
     if (!s.homes) s.homes = {};
@@ -4153,5 +4167,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; }, get torchLit() { return torchLit; } };
 })();
