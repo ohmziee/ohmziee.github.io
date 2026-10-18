@@ -820,6 +820,21 @@
     ctx.globalAlpha = 1;
   }
 
+  /* sun (or moon) on the water: now and then a fleck catches it, one
+     canvas pixel wide, for a beat, then goes. calmer in the dark */
+  function glints(x0, y0, cx, cy, now) {
+    var dk = darkness(novaNow()), beat = Math.floor(now / 260), half = 1 / ART;
+    for (var y = y0; y <= y0 + VH && y < world.H; y++) for (var x = x0; x <= x0 + VW && x < world.W; x++) {
+      if (!M.water(world, x, y)) continue;
+      for (var i = 0; i < 2; i++) {
+        var h = hash(x * 7 + i * 131, y * 3 + Math.floor((beat + hash(x, y + i) * 9) / 3));
+        if (h > (dk > 0.5 ? 0.06 : 0.14)) continue;
+        var gx = x * TS - cx + Math.floor(hash(x + i, y * 5 + beat) * (TS - 3)), gy = y * TS - cy + Math.floor(hash(y + i, x * 5 + beat) * (TS - 2));
+        ctx.fillStyle = dk > 0.5 ? 'rgba(200,220,255,.45)' : 'rgba(255,255,255,.75)';
+        ctx.fillRect(gx, gy, 3 * half, half); ctx.fillRect(gx + half, gy - half, half, half);
+      }
+    }
+  }
   /* the boat, drawn over the lower half of whoever is in it */
   var hullCanvas = null;
   function hull() {
@@ -965,6 +980,20 @@
       if (solidAt(x + 1, y) || solidAt(x - 1, y) || solidAt(x, y + 1) || solidAt(x, y - 1)) edge.push([x, y]);
     }
     edge.forEach(function (e) { px(g, OUT, e[0], e[1]); });
+  }
+  /* the oval under someone's feet: a darker core in a softer rim, at the
+     canvas's full resolution (12 x 4 units) */
+  var footCv = null;
+  function footShadow() {
+    if (footCv) return footCv;
+    var w = 12 * ART, h = 4 * ART, c = document.createElement('canvas'); c.width = w; c.height = h;
+    var g = c.getContext('2d');
+    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+      var dx = (x + 0.5 - w / 2) / (w / 2), dy = (y + 0.5 - h / 2) / (h / 2), q = dx * dx + dy * dy;
+      if (q > 1) continue;
+      g.fillStyle = q < 0.45 ? 'rgba(0,0,0,.42)' : 'rgba(0,0,0,.22)'; g.fillRect(x, y, 1, 1);
+    }
+    return (footCv = c);
   }
   var spriteCache = {};
   /* step: 0 standing, 1 and 2 the two walking feet, 3 breathing out (head
@@ -3571,11 +3600,36 @@
       px(ctx, OUT, bx - 2, by - 10, 7, 4); px(ctx, lit ? '#fff3b0' : '#8a92a6', bx - 1, by - 9, 5, 2);
     });
   }
+  /* ── light as pixel art: a light is a disc in bands (bright core, a
+     middle ring, a faint edge) with the edges between bands dithered, made
+     once per size and colour at the canvas's full resolution (ART), the way
+     the mock draws it. alpha 1 at the core; the caller sets globalAlpha ── */
+  var BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], LIGHT_BANDS = [0, 0.22, 0.55, 1], discs = {}, discN = 0;
+  function disc(r, col) {
+    r = Math.max(2, Math.round(r));
+    var key = r + (col || '');
+    if (discs[key]) return discs[key];
+    if (++discN > 400) { discs = {}; discN = 1; }
+    var n = r * 2 * ART, c = document.createElement('canvas'); c.width = c.height = n;
+    var g = c.getContext('2d'), id = g.createImageData(n, n), d = id.data, rgb = col ? [parseInt(col.slice(1, 3), 16), parseInt(col.slice(3, 5), 16), parseInt(col.slice(5, 7), 16)] : [0, 0, 0];
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+      var dx = x + 0.5 - n / 2, dy = y + 0.5 - n / 2, f = Math.sqrt(dx * dx + dy * dy) / (n / 2);
+      if (f >= 1) continue;
+      /* the continuous falloff, then down to a band: the next band up wins
+         where the falloff is past the Bayer threshold for this pixel */
+      var lv = Math.min(3, 3 * (1 - f) / 0.65), b = Math.floor(lv), t = (BAYER[(y % 4) * 4 + (x % 4)] + 0.5) / 16;
+      if (lv - b > t) b++;
+      var a = LIGHT_BANDS[Math.min(3, b)], p = (y * n + x) * 4;
+      d[p] = rgb[0]; d[p + 1] = rgb[1]; d[p + 2] = rgb[2]; d[p + 3] = Math.round(a * 255);
+    }
+    g.putImageData(id, 0, 0);
+    return (discs[key] = c);
+  }
   var lightCv = null;
   function night(dk, cx, cy, now, ppx, ppy) {
     var W = VW * TS, Hh = VH * TS, lights = [], nc = novaNow();
     if (!lightCv) lightCv = document.createElement('canvas');
-    if (lightCv.width !== W || lightCv.height !== Hh) { lightCv.width = W; lightCv.height = Hh; }
+    if (lightCv.width !== W * ART || lightCv.height !== Hh * ART) { lightCv.width = W * ART; lightCv.height = Hh * ART; }
     function add(x, y, r, a, col, ga) { if (x > -r && y > -r && x < W + r && y < Hh + r) lights.push({ x: x, y: y, r: r, a: a, col: col, ga: ga }); }
     /* a helicopter's spotlight */
     helis.forEach(function (h) { add(h.sx - cx, h.sy - cy, 30, 1, '#f4f6ff', 0.4); });
@@ -3639,6 +3693,7 @@
     var out = wild();
     add(ppx - cx + 8, ppy - cy + 8, out ? 14 : 26, out ? 0.4 : 0.55, null, 0);
     var g = lightCv.getContext('2d');
+    g.setTransform(ART, 0, 0, ART, 0, 0); g.imageSmoothingEnabled = false;
     g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, Hh);
     g.fillStyle = 'rgba(2,3,12,' + ((out ? 0.96 : 0.66) * dk).toFixed(3) + ')'; g.fillRect(0, 0, W, Hh);
     g.globalCompositeOperation = 'destination-out';
@@ -3649,20 +3704,21 @@
       cg.addColorStop(0, 'rgba(0,0,0,.97)'); cg.addColorStop(0.6, 'rgba(0,0,0,.7)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = cg; g.beginPath(); g.moveTo(ox, oy); g.arc(ox, oy, R, ang - 0.48, ang + 0.48); g.closePath(); g.fill();
     }
+    /* each light cuts a banded hole in the dark... */
     lights.forEach(function (l) {
-      var gr = g.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r);
-      gr.addColorStop(0, 'rgba(0,0,0,' + l.a + ')'); gr.addColorStop(0.55, 'rgba(0,0,0,' + (l.a * 0.5) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = gr; g.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
+      var r = Math.round(l.r);
+      g.globalAlpha = Math.min(1, l.a); g.drawImage(disc(r), Math.round(l.x) - r, Math.round(l.y) - r, r * 2, r * 2);
     });
-    ctx.drawImage(lightCv, 0, 0);
-    /* and the colour of each light, added on top */
+    g.globalAlpha = 1;
+    ctx.drawImage(lightCv, 0, 0, W, Hh);
+    /* ...and adds its colour on top, a little smaller */
     ctx.globalCompositeOperation = 'lighter';
     lights.forEach(function (l) {
       if (!l.col) return;
-      var gr = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r * 0.8);
-      gr.addColorStop(0, rgba(l.col, (l.ga * dk).toFixed(3))); gr.addColorStop(1, rgba(l.col, 0));
-      ctx.fillStyle = gr; ctx.fillRect(l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
+      var r = Math.round(l.r * 0.8);
+      ctx.globalAlpha = Math.min(1, l.ga * dk); ctx.drawImage(disc(r, l.col), Math.round(l.x) - r, Math.round(l.y) - r, r * 2, r * 2);
     });
+    ctx.globalAlpha = 1;
     /* lights by the water drop a wobbling streak down across it */
     lights.forEach(function (l) {
       if (!l.col || l.r < 11) return;
@@ -4015,7 +4071,7 @@
       var key = t + '.' + di + '.' + v + '.' + m + '.' + w + '.' + rv + dr;
       ctx.drawImage(tileCanvas(key, function (g) { drawTile(g, t, di, v, m, w, rv, dr); }), x * TS - cx, y * TS - cy);
     }
-    if (!inside) shores(x0, y0, cx, cy, at, wet);
+    if (!inside) { shores(x0, y0, cx, cy, at, wet); glints(x0, y0, cx, cy, now); }
     var sunUp = inside ? SHADE * 0.6 : SHADE * (1 - darkness(novaNow())), sl = inside ? 1 : shadowLen(novaNow());
     SH_X = Math.round(4 * sl); SH_Y = Math.round(3 * sl);
     shadows(x0, y0, cx, cy, at, sunUp);
@@ -4072,7 +4128,7 @@
       if (!p.boat) {
         /* a small oval under the feet */
         var fx = Math.round(p.x - cx), fy = Math.round(p.y - cy);
-        ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(fx + 5, fy + 13, 6, 1); ctx.fillRect(fx + 4, fy + 14, 8, 1); ctx.fillRect(fx + 5, fy + 15, 6, 1);
+        ctx.drawImage(footShadow(), fx + 2, fy + 12, 12, 4);
       }
       if (p.mob && now < p.mob.flash) { ctx.drawImage(whiteOf(p.img), Math.round(p.x - cx), Math.round(p.y - cy) - 2); return; }
       if (p.mob && now < p.mob.hurt && Math.floor(now / 60) % 2) ctx.globalAlpha = 0.35;
