@@ -34,9 +34,6 @@ a{color:var(--lavender)}
 .mbar .back{text-decoration:none;color:var(--rain)}
 .mbar .back:hover,.mbar .back:focus-visible{color:var(--ice)}
 .mbar .chan{font-family:var(--font-display);font-weight:700;letter-spacing:.2em;color:var(--live)}
-.mbar .tools{margin-left:auto;display:flex;gap:.5rem}
-.mbar .tools button{background:transparent;border:1px solid var(--violet);padding:.3rem .7rem;color:var(--lavender)}
-.mbar .tools button[aria-expanded="true"],.mbar .tools button:hover{border-color:var(--lavender);color:var(--ice)}
 
 .locked{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:2rem 1rem;color:var(--rain)}
 .locked .k{font-family:var(--font-display);font-weight:700;letter-spacing:.2em;color:var(--glitch-b)}
@@ -133,7 +130,6 @@ a{color:var(--lavender)}
 @media (prefers-reduced-motion:reduce){.mapview .here{animation:none}}
 .devrow{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.4rem}
 .devrow button,.devrow select{font:inherit;font-size:.78rem;background:#141a2e;color:#7cffb2;border:1px solid #3a3150;padding:.25rem .45rem;cursor:pointer}
-#devBtn{color:#7cffb2}
 .panel .pback{position:sticky;top:-.4rem;z-index:1;display:block;width:100%;margin:0 0 .4rem;text-align:left;background:var(--deep)}
 .panel h2{font-family:var(--font-display);font-size:.95rem;letter-spacing:.2em;color:var(--lavender);margin:1rem 0 .5rem}
 .panel ul{list-style:none;margin:0;padding:0}
@@ -433,3 +429,7 @@ a{color:var(--lavender)}
 .psave button:hover,.psave button:focus-visible{border-color:#dce3ff;color:#fff}
 .psave .msg{min-height:1.2em;margin:.5rem 0 0;color:#7cffb2}
 .psave .msg.err{color:#ff8a6b}
+.pdev{max-width:34rem;margin:0 auto}
+.pdev h2{font:inherit;color:#ff4f6d;letter-spacing:.15em;margin:.8rem 0 .4rem}
+.pdev .dim{color:#b9a8ff;margin:0 0 .5rem}
+.pdev .msg{min-height:1.2em;margin:.5rem 0 0;color:#7cffb2}

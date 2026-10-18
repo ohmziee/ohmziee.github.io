@@ -20,9 +20,8 @@
      where they come from. Nothing is saved until they chip in. */
   var look = null, origin = '', power = '', side = '';
   function showChip() {
-    closePanels();
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
-    $('stage').hidden = true; $('shop').hidden = true; document.querySelector('.tools').hidden = true; $('chip').hidden = false;
+    $('stage').hidden = true; $('shop').hidden = true; $('chip').hidden = false;
     origin = D.origins[s.player.origin] ? s.player.origin : '';
     look = Object.keys(s.player.look).length ? A.normalize(s.player.look, origin || undefined) : A.random(null, origin || undefined);
     power = s.player.power || ''; side = s.player.side || '';
@@ -135,14 +134,13 @@
   });
   function showStage() {
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
-    $('chip').hidden = true; $('stage').hidden = false; document.querySelector('.tools').hidden = false;
+    $('chip').hidden = true; $('stage').hidden = false;
   }
   /* ── nova city ──────────────────────────────────────────────
      overworld.js walks them around; talking to someone with a scene comes
      back here, and the end of a scene goes back out to the street. */
   function showWorld() {
-    closePanels();
-    $('chip').hidden = true; $('stage').hidden = true; document.querySelector('.tools').hidden = false;
+    $('chip').hidden = true; $('stage').hidden = true;
     $('shop').hidden = true;
     window.MFWorld.show(s, {
       save: function () { if (store) MF.save(s, store); },
@@ -160,9 +158,8 @@
     var sh = SH && SH.SHOPS[id];
     if (!sh) return;
     shopId = id; trying = A.normalize(s.player.look, s.player.origin || undefined);
-    closePanels();
     window.MFWorld.hide();
-    $('stage').hidden = true; $('chip').hidden = true; document.querySelector('.tools').hidden = true;
+    $('stage').hidden = true; $('chip').hidden = true;
     $('shopName').textContent = sh.name;
     $('shopLine').textContent = '"' + sh.hello + '"';
     $('shopWhat').textContent = SH.KINDS[sh.kind].title + ' // ' + SH.KINDS[sh.kind].what;
@@ -412,7 +409,7 @@
   box.addEventListener('click', advance);
   document.addEventListener('keydown', function (e) {
     if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
-    if (e.key === 'Escape') { if (!$('shop').hidden) return leaveShop(); return closePanels(); }
+    if (e.key === 'Escape') { if (!$('shop').hidden) return leaveShop(); return; }
     if ($('stage').hidden) return;               /* out in the street, the keys are the world's */
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); return; }
     if (current && current.kind === 'choose' && /^[1-9]$/.test(e.key)) {
@@ -421,16 +418,6 @@
     }
   });
 
-  /* ── panels ─────────────────────────────────────────────── */
-  function closePanels() {
-    ['dev'].forEach(function (p) { $(p).hidden = true; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'false'); });
-  }
-  function toggle(p, fillIt) {
-    var was = !$(p).hidden;
-    closePanels();
-    if (was) return;
-    fillIt(); $(p).hidden = false; if ($(p + 'Btn')) $(p + 'Btn').setAttribute('aria-expanded', 'true');
-  }
   /* the backup: the whole site's progress (backup.js), not just this run.
      Old game-only MF1 codes still load. */
   var B = window.EXBackup;
@@ -438,12 +425,10 @@
   function code() { if (store) MF.save(s, store); return B && store ? B.pack(store) : MF.exportCode(s); }
   function backedUp() { try { store.setItem('exiled.backupAt', String(Date.now())); } catch (e) {} }
   /* ── DEV: the owner's test drawer ─────────────────────────────
-     shows only when this browser holds the owner key (the one the chat
-     takes as name#key). it only touches this browser's run, and it is a
-     convenience, not a lock: a run in localStorage can always be edited */
-  var owner = '';
-  try { owner = store && store.getItem('exiled.owner') || ''; } catch (e) {}
-  if (owner) $('devBtn').hidden = false;
+     a phone app (overworld.js) that shows only when this browser holds the
+     owner key (the one the chat takes as name#key). it only touches this
+     browser's run, and it is a convenience, not a lock: a run in
+     localStorage can always be edited */
   function devMsg(t) { $('devMsg').textContent = t; }
   function devPlaces() {
     var M = window.MFWorldMap, w = M && M.build(), sel = $('devTo'), opts = [];
@@ -510,7 +495,7 @@
       s.world = { x: p[1].x, y: p[1].y, d: 'down', v: M.V, in: p[1].in, sail: p[1].sail };
       if (p[1].sail) s.boat = 1;
       if (store) MF.save(s, store);
-      closePanels();
+      window.MFWorld.hide();
       showWorld();
       return;
     }
@@ -522,15 +507,18 @@
     devMsg('done: ' + act + '. ⚡' + MF.joules(s).toLocaleString() + (window.MFLevel ? ' · LVL ' + window.MFLevel.level(s) : '') + ' · nova city ' + MF.clock(Date.now(), s.dev.shift || 0).text);
   }
   [].forEach.call(document.querySelectorAll('[data-dev]'), function (b) { b.addEventListener('click', function () { devDo(b.getAttribute('data-dev')); }); });
-  $('devBtn').addEventListener('click', function () {
-    toggle('dev', function () { devPlaces(); devMsg(''); $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON'); $('devPeace').textContent = 'FOES: ' + (s.dev && s.dev.peace ? 'OFF' : 'ON'); });
-  });
+  function fillDev() {
+    devPlaces(); devMsg('');
+    $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON');
+    $('devPeace').textContent = 'FOES: ' + (s.dev && s.dev.peace ? 'OFF' : 'ON');
+    $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev && s.dev.noweight ? 'OFF' : 'ON');
+  }
 
   /* SYS is a phone app (overworld.js): its SAVE screen is filled fresh each
      time it opens, and WIPE asks the phone twice before it calls wipe() */
   function fillSave() { $('code').value = code(); $('paste').value = ''; msg(''); }
   function wipe() { if (store) MF.wipe(store); s = MF.newState(); showChip(); }
-  window.MFUI = { fillSave: fillSave, wipe: wipe };
+  window.MFUI = { fillSave: fillSave, fillDev: fillDev, wipe: wipe };
   $('copyBtn').addEventListener('click', function () {
     var t = $('code').value;
     function fallback() { $('code').select(); try { document.execCommand('copy'); backedUp(); msg('copied.'); } catch (e) { msg('select it and copy by hand.', true); } }

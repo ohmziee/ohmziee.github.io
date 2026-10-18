@@ -1765,6 +1765,8 @@
   }
   var phone = null, pPrev = {}, pDrawn = 0;
   var APPS = [['id', 'ID', '#ff9de2', '◉'], ['inv', 'INV', '#7cc8ff', '▦'], ['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
+  /* DEV: the owner's test drawer, only on a phone that holds the owner key */
+  function apps() { return isDev() ? APPS.concat([['dev', 'DEV', '#ff4f6d', '⚑']]) : APPS; }
   /* MAP: vista del sol (region.js draws it from the canon map) and the
      streets you walk, close up */
   var MAP_LAYERS = ['vista del sol', 'nova city'], ZOOM_MAX = [6, 16];
@@ -1784,7 +1786,7 @@
   }
   /* the phone fills the screen for MAP and INV, and for any other app when
      you ask it to (⤢ in the bar, or M); that choice sticks on this device */
-  var BIG_ALWAYS = { map: 1, inv: 1, sys: 1 };
+  var BIG_ALWAYS = { map: 1, inv: 1, sys: 1, dev: 1 };
   function bigPref() { try { return localStorage.getItem('exiled.t2d.bigphone') === '1'; } catch (e) { return false; } }
   function lift() { $('wPhone').classList.toggle('lifted', !!phone && phone.app !== 'home' && (BIG_ALWAYS[phone.app] || bigPref())); }
   function toggleBig() {
@@ -1797,20 +1799,21 @@
     phone.app = id; phone.sub = ''; phone.ssel = 0; phone.wipeAt = 0; phone.msel = 0; phone.open = -1; phone.isel = 0; phone.act = -1; phone.imsg = '';
     lift();
     drawPhone();
+    if (id === 'dev' && window.MFUI) window.MFUI.fillDev();
   }
   function tickPhone(now) {
     function edge(k) { var e = !!held[k] && !pPrev[k]; pPrev[k] = !!held[k]; return e; }
     var up = edge('up'), dn = edge('down'), lf = edge('left'), rt = edge('right'), a = pressedA;
     pressedA = false;
     if (phone.app === 'home') {
-      var n = APPS.length;
+      var n = apps().length;
       if (lf) phone.sel = (phone.sel + n - 1) % n;
       if (rt) phone.sel = (phone.sel + 1) % n;
       /* up and down a row of the grid */
       if (up) phone.sel = phone.sel - HOME_COLS >= 0 ? phone.sel - HOME_COLS : phone.sel;
       if (dn) phone.sel = Math.min(n - 1, phone.sel + HOME_COLS);
       if (up || dn || lf || rt) drawPhone();
-      if (a) openApp(APPS[phone.sel][0]);
+      if (a) openApp(apps()[phone.sel][0]);
     } else if (phone.app === 'mail') {
       var box = (s.inbox || []).slice().reverse();
       if (phone.open >= 0) { scrollHeld(); if (a) { phone.open = -1; drawPhone(); } }
@@ -1823,7 +1826,7 @@
       tickId(up, dn, lf, rt, a);
     } else if (phone.app === 'inv') {
       tickInv(up, dn, lf, rt, a);
-    } else if (phone.app === 'clock') {
+    } else if (phone.app === 'clock' || phone.app === 'dev') {
       scrollHeld();
     } else if (phone.app === 'sys') {
       tickSys(up, dn, a);
@@ -1869,7 +1872,7 @@
   function drawPhoneIn(scr, hint) {
     if (phone.app === 'home') {
       var grid = document.createElement('div'); grid.className = 'papps';
-      APPS.forEach(function (ap, i) {
+      apps().forEach(function (ap, i) {
         var b = document.createElement('button'); b.type = 'button'; b.className = 'papp' + (i === phone.sel ? ' sel' : '');
         var ic = document.createElement('i'); ic.style.background = ap[2]; ic.textContent = ap[3]; b.appendChild(ic);
         var unread = ap[0] === 'mail' ? (s.inbox || []).filter(function (m) { return !m.read; }).length : 0;
@@ -1915,6 +1918,9 @@
     } else if (phone.app === 'sys') {
       drawSys(scr);
       hint.textContent = phone.sub ? 'tap B: back to SYS' : '▲ ▼ pick · A choose · tap B: home';
+    } else if (phone.app === 'dev') {
+      var dv = document.createElement('div'); dv.className = 'pdevbox'; dv.appendChild($('dev')); scr.appendChild(dv);
+      hint.textContent = 'tap to use · ▲ ▼ scroll · tap B: home';
     } else if (phone.app === 'map') drawMap();
   }
   /* ── SYS: the phone's settings. SAVE is the backup screen ui.js owns: it
@@ -1954,6 +1960,8 @@
   function shelveSave() {
     var sv = $('sysSave');
     if (sv && sv.parentNode !== $('sysShelf')) $('sysShelf').appendChild(sv);
+    var dv = $('dev');
+    if (dv && dv.parentNode !== $('devShelf')) $('devShelf').appendChild(dv);
   }
   function drawSys(scr) {
     var box = document.createElement('div'); box.className = 'psys';
@@ -3988,7 +3996,7 @@
                W: 'up', S: 'down', A: 'left', D: 'right', x: 'b', X: 'b', Shift: 'b' };
   function onKey(e, down) {
     if (!active) return;
-    if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     if ((e.key === 'm' || e.key === 'M') && phone) { if (down && !e.repeat) toggleBig(); e.preventDefault(); return; }
     if (e.key === 'z' || e.key === 'Z' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); held.a = down; if (down && !e.repeat) pressedA = true; return; }
     var k = KEYS[e.key];
@@ -4131,6 +4139,7 @@
   }
   function hide() {
     if (L) L.stop();
+    if (phone) closePhone();
     active = false; cancelAnimationFrame(raf); held = {};
     $('world').hidden = true;
   }

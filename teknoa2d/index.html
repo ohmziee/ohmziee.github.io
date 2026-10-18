@@ -41,9 +41,6 @@
   <header class="mbar">
     <a class="back" href="../index.html">&lt;&lt; EXiLED</a>
     <span class="chan">TEKNOA 2D</span>
-    <span class="tools" hidden>
-      <button type="button" id="devBtn" aria-controls="dev" aria-expanded="false" hidden>DEV</button>
-    </span>
   </header>
 
   <!-- shown until ui.js takes over; stays up only if the game did not load -->
@@ -139,9 +136,10 @@
 
 
 
-  <!-- the owner's test drawer: only shown when this browser holds the owner key -->
-  <aside class="panel devpanel" id="dev" hidden aria-label="test tools">
-    <h2>DEV</h2>
+  <!-- the owner's test drawer: the phone's DEV app (overworld.js), only on a
+       browser that holds the owner key. it waits on this shelf otherwise -->
+  <div id="devShelf" hidden>
+  <div class="pdev" id="dev" aria-label="test tools">
     <p class="dim">owner test tools. everything here only changes this browser's run.</p>
     <h2>JOULES</h2>
     <div class="devrow"><button type="button" data-dev="j1k">+⚡1,000</button><button type="button" data-dev="j10k">+⚡10,000</button><button type="button" data-dev="j100k">+⚡100,000</button><button type="button" data-dev="j0">⚡0</button></div>
@@ -159,7 +157,8 @@
     <div class="devrow"><button type="button" data-dev="h1">TIME +1H</button><button type="button" data-dev="h6">TIME +6H</button><button type="button" data-dev="noon">NOON</button><button type="button" data-dev="midnight">MIDNIGHT</button><button type="button" data-dev="real">REAL TIME</button><button type="button" data-dev="bill">BILL NOW</button></div>
     <div class="devrow"><select id="devTo" aria-label="teleport to"></select><button type="button" data-dev="tp">GO</button></div>
     <p class="msg" id="devMsg" role="status"></p>
-  </aside>
+  </div>
+  </div>
 
   <!-- SYS is a phone app (overworld.js). This hidden shelf holds its SAVE
        screen while it is not on the phone, so ui.js can always reach it -->
