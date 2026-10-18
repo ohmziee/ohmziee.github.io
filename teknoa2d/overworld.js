@@ -2863,7 +2863,10 @@
     if (m.law) crime(window.MFLaw.fall(weapon, Math.random) === 'dead' ? 'murder' : 'officer', m.x, m.y, null, true);
     downs.push({ x: m.x * TS, y: m.y * TS, img: sprite(m.look, m.dir, 0), t0: performance.now() });
     freezeUntil = performance.now() + 120; jolt(180, 1);
-    if (m.f.joules > 0) { MF.earn(s, m.f.joules); wallet('+' + MF.fmtJ(m.f.joules)); }
+    if (m.f.joules > 0) {
+      if (window.MFCombat.hack(s, MF)) { MF.earn(s, m.f.joules); wallet('+' + MF.fmtJ(m.f.joules)); float(me.x * TS - 4, me.y * TS - 16, 'chip cracked', '#7cf5ff'); }
+      else float(me.x * TS - 4, me.y * TS - 16, 'chip locked', '#8a8f99');
+    }
     wonExp(m, unseen);
     float(m.x * TS, m.y * TS - 8, m.f.name + ' down', '#7cffb2');
     if (api.save) api.save();
@@ -2882,8 +2885,8 @@
   }
   function lose(m, now) {
     if (m.law) { lawDown = true; dropMobs(); floats = []; faint(now, true); return; }
-    var took = m.f.robs ? window.MFCombat.rob(s, window.MF) : null;
-    lostTo = { name: m.f.name, took: took, civ: !!m.civ };
+    var took = m.f.robs ? window.MFCombat.rob(s, window.MF, m.f.hacks) : null;
+    lostTo = { name: m.f.name, took: took, civ: !!m.civ, hacks: !!m.f.hacks };
     dropMobs(); floats = [];
     wallet();
     faint(now, true);
@@ -2896,7 +2899,9 @@
     if (!l.took) return ['a ' + l.name + ' left you for dead out there.\nwe got to you before anything else did.'];
     var n = 0; ['items', 'res'].forEach(function (b) { Object.keys(l.took[b]).forEach(function (k) { n += l.took[b][k]; }); });
     var kept = window.MF.safeKeys(s).length;
-    return ['a ' + l.name + ' went through your pockets before we found you.\n' + (l.took.joules ? MF.fmtJ(l.took.joules) : 'not a joule') + (n ? ' and ' + n + ' thing' + (n > 1 ? 's' : '') : '') + ' gone.' + (kept ? ' the safe slots held.' : '')];
+    var safe = kept ? ' the safe slots held.' : '';
+    if (l.hacks) return ['a ' + l.name + ' jacked your chip before we found you.\n' + (l.took.joules ? MF.fmtJ(l.took.joules) : 'not a joule') + (n ? ' and ' + n + ' thing' + (n > 1 ? 's' : '') : '') + ' gone.' + safe];
+    return ['a ' + l.name + ' went through your pockets before we found you.\n' + (n ? n + ' thing' + (n > 1 ? 's' : '') + ' gone.' : 'nothing worth taking.') + safe + '\nyour joules are on your chip. they couldn\'t touch them.'];
   }
   /* the first step of the shortest way round the walls to a tile next to
      you (or gx, gy), searched within CHASE tiles; null when there's no way */
@@ -3393,10 +3398,14 @@
     var LAW = window.MFLaw, MF = window.MF, SH = window.MFShops, p = b.pockets, what = [];
     var state = b.dead ? 'they\'re not breathing.' : 'they\'re out cold.';
     if (LAW.empty(p)) return say([state + '\nnothing in their pockets. not any more.']);
-    if (p.joules) what.push(MF.fmtJ(p.joules));
+    var C = window.MFCombat, crack = p.joules > 0 && C.canHack(s, MF);
+    var chip = !p.joules ? '' : crack ? 'their chip. you could crack it: ' + MF.fmtJ(p.joules) + ' on it, ' + C.HACK_COST + ' brainpower.'
+      : MF.maxOf(s, 'int') < C.HACK_INT ? 'their chip, locked. you\'d need intelligence ' + C.HACK_INT + ' to crack it.'
+      : 'their chip, locked. your head\'s too tired to crack it. (' + C.HACK_COST + ' brainpower)';
     Object.keys(p.items).forEach(function (k) { var g = SH.FOODS[k] || SH.MEDS[k]; what.push(g ? g.name : k); });
-    ask([state + '\nin their pockets: ' + what.join(', ') + '.', 'take it?'], function () {
-      var r = LAW.loot(s, MF, p);
+    if (!what.length && !crack) return say([state + '\n' + chip]);
+    ask([state + '\n' + (what.length ? 'in their pockets: ' + what.join(', ') + '.' : '') + (chip ? (what.length ? '\n' : '') + chip : ''), 'take it?'], function () {
+      var r = LAW.loot(s, MF, p, crack && C.hack(s, MF));
       if (!r.ok) return;
       var saw = crime('theft', b.x, b.y, b.n);
       exp('steal', { joules: r.got.joules, unseen: !saw });

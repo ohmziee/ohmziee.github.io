@@ -13,7 +13,8 @@
      targets    origins they go after on sight: 'all', or a list. an origin
                 they can't see (a covered barcode) counts as human
      never      origins they leave alone, whatever else is true
-     robs       on a win they take your joules and everything not in a safe slot
+     robs       on a win they take everything not in a safe slot
+     hacks      with robs: they drain your joules too (only hackers can)
      violent    false: they never start a fight (they work the system instead)
      bystanders false: they leave passers-by alone, it's only ever you (law.js preys)
      calm       conditions that keep them off you, any one is enough (engine.js
@@ -64,7 +65,7 @@
       colour: '#5fbf6a', mark: 'green accents',
       turf: ['yucayeque'], threat: 'low',
       allies: ['revengers'], rivals: ['intergang'],
-      targets: 'all', robs: true, violent: true
+      targets: 'all', robs: true, hacks: true, violent: true
     },
     revengers: {
       code: 'RVG', name: 'Revengers', one: 'revenger',

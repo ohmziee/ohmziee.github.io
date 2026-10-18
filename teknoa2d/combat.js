@@ -94,7 +94,7 @@
              pow: st('atk'), def: st('def'), ref: st('ref'), crit: 0,
              xp: Math.max(1, Math.round(((base.xp || 0) + (d.xp || 0)) * (1 + XP_GROW * (lv - 1)))),
              joules: Math.round((j[0] + rng() * (j[1] - j[0])) * (gang ? mult : 1)),
-             robs: gang ? !!gang.robs : !!base.robs, drain: base.drain || 0, gang: gang ? id.slice(5) : '', colour: gang ? gang.colour : '',
+             robs: gang ? !!gang.robs : !!base.robs, hacks: gang ? !!gang.hacks : !!base.hacks, drain: base.drain || 0, gang: gang ? id.slice(5) : '', colour: gang ? gang.colour : '',
              lethal: (gang ? gang.lethal : base.lethal) || LETHAL };
   }
 
@@ -134,11 +134,12 @@
     return true;
   }
 
-  /* ── losing to someone who robs: every joule, and all you carry except
-     what's in a safe slot. keys and the boat stay yours ── */
-  function rob(s, MF) {
-    var keep = MF.safeKeys(s), took = { joules: MF.joules(s), items: {}, res: {} };
-    s.joules = 0;
+  /* ── losing to someone who robs: all you carry except what's in a safe
+     slot. keys and the boat stay yours. joules aren't in your pocket, they're
+     on your chip: only a hacker (hacks) can drain them ── */
+  function rob(s, MF, hacks) {
+    var keep = MF.safeKeys(s), took = { joules: hacks ? MF.joules(s) : 0, items: {}, res: {} };
+    if (hacks) s.joules = 0;
     ['items', 'res'].forEach(function (b) {
       Object.keys(s[b] || {}).forEach(function (k) {
         if (keep.indexOf(k) >= 0) return;
@@ -149,14 +150,22 @@
     if (s.equip && !(s.items[s.equip] > 0)) s.equip = '';
     return took;
   }
-  /* winning: their pockets, and exp (combat trains ATK unless a move says otherwise) */
+  /* cracking someone's chip for their joules: you need the mind for it
+     (intelligence HACK_INT or more) and it spends HACK_COST brainpower.
+     canHack only asks; hack spends */
+  var HACK_INT = 150, HACK_COST = 20;
+  function canHack(s, MF) { return MF.maxOf(s, 'int') >= HACK_INT && MF.vital(s, 'int') >= HACK_COST; }
+  function hack(s, MF) { return MF.intCheck(s, HACK_INT, HACK_COST); }
+  /* winning: their joules if you can crack their chip, and exp (combat
+     trains ATK unless a move says otherwise) */
   function reward(s, MF, LV, f, trainT) {
-    if (f.joules > 0) MF.earn(s, f.joules);
+    var got = f.joules > 0 && hack(s, MF) ? f.joules : 0;
+    if (got) MF.earn(s, got);
     var x = LV ? LV.award(s, 'combat', { xp: f.xp, trait: trainT }) : null;
-    return { joules: f.joules, xp: x };
+    return { joules: got, locked: f.joules > 0 && !got, xp: x };
   }
 
   root.MFCombat = { WEAPONS: WEAPONS, HIT_BASE: HIT_BASE, HIT_MIN: HIT_MIN, HIT_MAX: HIT_MAX, CRIT_MULT: CRIT_MULT, DEF_SOAK: DEF_SOAK, GROW: GROW, LETHAL: LETHAL,
                     isWeapon: isWeapon, usesLeft: usesLeft, wielded: wielded, equip: equip, swing: swing,
-                    player: player, foe: foe, chance: chance, strike: strike, first: first, hostile: hostile, seenAs: seenAs, rob: rob, reward: reward };
+                    player: player, foe: foe, chance: chance, strike: strike, first: first, hostile: hostile, seenAs: seenAs, rob: rob, reward: reward, HACK_INT: HACK_INT, HACK_COST: HACK_COST, canHack: canHack, hack: hack };
 })(typeof window !== 'undefined' ? window : globalThis);

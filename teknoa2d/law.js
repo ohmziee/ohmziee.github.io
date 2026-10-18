@@ -211,14 +211,15 @@
     return out;
   }
   function empty(p) { return !p || (!p.joules && !Object.keys(p.items).length); }
-  /* going through them: everything moves to you, all or nothing on the carry limit */
-  function loot(s, MF, p) {
-    if (empty(p)) return { ok: false, why: 'nothing on them' };
+  /* going through them: their things move to you. their joules sit on
+     their chip: they're yours only if you hack it (hacked), else they stay */
+  function loot(s, MF, p, hacked) {
+    if (empty(p) || (!hacked && !Object.keys(p.items).length)) return { ok: false, why: p && p.joules ? 'their chip is locked' : 'nothing on them' };
     if (!s.items) s.items = {};
-    var got = { joules: p.joules, items: {} };
-    if (p.joules) MF.earn(s, p.joules);
+    var got = { joules: hacked ? p.joules : 0, items: {} };
+    if (got.joules) { MF.earn(s, got.joules); p.joules = 0; }
     Object.keys(p.items).forEach(function (k) { s.items[k] = (s.items[k] || 0) + p.items[k]; got.items[k] = p.items[k]; });
-    p.joules = 0; p.items = {};
+    p.items = {};
     return { ok: true, got: got };
   }
   /* who could step in as an attacker: only the crowd, never shopkeepers, guards or named people */

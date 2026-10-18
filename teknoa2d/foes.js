@@ -5,8 +5,10 @@
    hp atk def ref   at level 1; every level past 1 adds GROW of each (combat.js)
    xp       exp for the win at level 1 (also grows)
    joules   [min, max] in their pockets, yours if you win
-   robs     a win for them means they take your joules and everything not in a
-            safe slot (MF.SAFE_SLOTS)
+   robs     a win for them means they take everything not in a safe slot
+            (MF.SAFE_SLOTS)
+   hacks    they can drain your joules too (with robs). joules live on your
+            chip, not in a pocket: only hackers and rogue AI get at them
    where    city | wilds | deep (past the wilds), and when: day | night | any
    never    origins they leave alone (a zombie wants flesh; an android has none)
    subs     variants: a name and what they change (+/- on the base)
@@ -40,7 +42,7 @@
               knight: { name: 'bone knight', hp: 15, def: 4, ref: -1, xp: 10 } }
     },
     rogueai: {
-      tier: 'unnamed', name: 'rogue AI', hp: 35, atk: 9, def: 5, ref: 6, xp: 26, joules: [10, 60], lethal: 0.4,
+      tier: 'unnamed', name: 'rogue AI', hp: 35, atk: 9, def: 5, ref: 6, xp: 26, joules: [10, 60], lethal: 0.4, robs: true, hacks: true,
       where: ['wilds', 'deep'], when: 'any',
       subs: { drone: { name: 'rogue drone', hp: -15, ref: 4, xp: -6 },
               hunter: { name: 'hunter-killer', hp: 20, atk: 3, def: 2, xp: 14 } }
@@ -56,6 +58,20 @@
       where: ['wilds', 'deep'], when: 'night',
       subs: { stray: { name: 'werewolf' },
               alpha: { name: 'alpha', hp: 30, atk: 4, ref: 1, xp: 24 } }
+    },
+    /* the ones who can get at your chip: a hacker on foot, and rogue AI that
+       came in from the wilds to mug people on the street */
+    hacker: {
+      tier: 'unnamed', name: 'hacker', hp: 22, atk: 4, def: 1, ref: 7, xp: 14, joules: [10, 50], robs: true, hacks: true,
+      where: ['city'], when: 'any',
+      subs: { kid: { name: 'script kid', hp: -6, ref: -2, xp: -4 },
+              netrunner: { name: 'netrunner', hp: 8, atk: 2, ref: 2, xp: 8 } }
+    },
+    aimugger: {
+      tier: 'unnamed', name: 'rogue AI mugger', hp: 30, atk: 7, def: 4, ref: 6, xp: 20, joules: [10, 60], lethal: 0.3, robs: true, hacks: true,
+      where: ['city'], when: 'night',
+      subs: { leech: { name: 'leech unit', hp: -8, ref: 2, xp: -4 },
+              siphon: { name: 'siphon frame', hp: 14, atk: 2, def: 2, xp: 10 } }
     },
     /* corpocult's own (the street calls them sleepers). they never knowingly
        touch a loyal product; a defector's barcode is a warrant (combat.js hostile) */
