@@ -999,6 +999,10 @@
   /* step: 0 standing, 1 and 2 the two walking feet, 3 breathing out (head
      and shoulders down a pixel) */
   function sprite(look, dir, step) {
+    /* the 32px figure from the people sheet (art.js), once it has loaded;
+       this 16px one until then. either way it draws TS units square */
+    var big = window.MFArt && window.MFArt.person(look, dir, step);
+    if (big) return big;
     var key = JSON.stringify(look) + dir + step;
     if (spriteCache[key]) return spriteCache[key];
     var c = document.createElement('canvas'); c.width = c.height = TS;
@@ -3507,7 +3511,7 @@
         ctx.fillRect(x + 3 - r, y + 9, 10 + 2 * r, 4); ctx.fillRect(x + 4 - r, y + 8, 8 + 2 * r, 6);
       }
       ctx.save(); ctx.translate(x + 8, y + 10); ctx.rotate(b.dead ? Math.PI / 2 : -Math.PI / 2);
-      ctx.drawImage(sprite(b.look, 'down', 0), -8, -8);
+      ctx.drawImage(sprite(b.look, 'down', 0), -8, -8, TS, TS);
       ctx.restore();
       /* out cold: a little star going round */
       if (!b.dead) { var a = now / 300; px(ctx, '#ffe97c', x + 8 + Math.round(Math.cos(a) * 4), y + 2 + Math.round(Math.sin(a) * 1.5), 1, 1); }
@@ -3553,7 +3557,7 @@
     downs = downs.filter(function (k) { return now - k.t0 < 700; });
     downs.forEach(function (k) {
       var e = now - k.t0, x = Math.round(k.x - cx), y = Math.round(k.y - cy);
-      if (e < 380) { if (Math.floor(e / 60) % 2 === 0) ctx.drawImage(k.img, x, y - 2); return; }
+      if (e < 380) { if (Math.floor(e / 60) % 2 === 0) ctx.drawImage(k.img, x, y - 2, TS, TS); return; }
       var f = (e - 380) / 320, r = 2 + Math.round(f * 5);
       ctx.fillStyle = 'rgba(200,204,216,' + (0.7 * (1 - f)).toFixed(3) + ')';
       [[4, 9], [11, 8], [8, 4], [6, 12], [10, 12]].forEach(function (o, i) {
@@ -4130,9 +4134,9 @@
         var fx = Math.round(p.x - cx), fy = Math.round(p.y - cy);
         ctx.drawImage(footShadow(), fx + 2, fy + 12, 12, 4);
       }
-      if (p.mob && now < p.mob.flash) { ctx.drawImage(whiteOf(p.img), Math.round(p.x - cx), Math.round(p.y - cy) - 2); return; }
+      if (p.mob && now < p.mob.flash) { ctx.drawImage(whiteOf(p.img), Math.round(p.x - cx), Math.round(p.y - cy) - 2, TS, TS); return; }
       if (p.mob && now < p.mob.hurt && Math.floor(now / 60) % 2) ctx.globalAlpha = 0.35;
-      ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2 - (p.boat ? 3 : 0) + bob);
+      ctx.drawImage(p.img, Math.round(p.x - cx), Math.round(p.y - cy) - 2 - (p.boat ? 3 : 0) + bob, TS, TS);
       ctx.globalAlpha = 1;
       if (p.boat) ctx.drawImage(hull(), Math.round(p.x - cx), Math.round(p.y - cy) + bob);
       /* a real person: a little violet pip over their head */
@@ -4329,8 +4333,8 @@
   }
   /* Chippin' In shows the walking sprite as it is built */
   function preview(look, dir, step) {
-    var big = document.createElement('canvas'); big.width = big.height = TS;
-    var g = big.getContext('2d'); g.drawImage(sprite(lookOf(look), dir, step), 0, 0);
+    var im = sprite(lookOf(look), dir, step), big = document.createElement('canvas'); big.width = big.height = im.width;
+    big.getContext('2d').drawImage(im, 0, 0);
     return big;
   }
   /* after the DEV drawer changes the run: redraw the money and the meters */
