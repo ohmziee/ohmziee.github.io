@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ps7nI9H/Uri0znjcuJoXC3pVSRs+4QB1Zr3ldKNnleE=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-IA8/GGbRaKnKNsFp6isKVwAK9L0/Sn3Sfo0gtZlUdBw=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -629,6 +629,14 @@ body.stormmax .socials h3{color:var(--storm-accent)}
   transition:border-color .2s,background .2s;
 }
 #radioTab[hidden]{display:none}
+/* the power switch rides beside the tab: music and ambience together */
+#radio{display:flex;align-items:stretch}
+#radio #radioPower{display:flex;align-items:center;justify-content:center;width:2.6rem;flex:0 0 auto;margin-left:-1px;font-size:1rem;
+  color:var(--rain);border:1px solid var(--violet);background:rgba(11,13,26,.86)}
+#radio #radioPower[aria-pressed="true"]{color:#7CFFB2}
+#radio #radioPower:hover,#radio #radioPower:focus-visible{border-color:var(--lavender)}
+#radio.open #radioPower{display:none}
+#radio.src-yt #radioHide{display:none}
 #radioTab:hover,#radioTab:focus-visible{border-color:var(--lavender);background:rgba(42,29,94,.5)}
 #radio .r-dot{width:.5rem;height:.5rem;border-radius:50%;border:1px solid #4A5068;flex:0 0 auto}
 #radio.on .r-dot{background:#7CFFB2;border-color:#7CFFB2;box-shadow:0 0 10px #7CFFB2;animation:livepulse 2.4s ease-in-out infinite}
@@ -770,12 +778,13 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
     background:#0B0D1A;border-top:1px solid var(--violet);pointer-events:none}
   #radio{left:0;right:var(--perch);bottom:0}
   #radio.open{right:0}
-  #radioTab{width:100%;height:var(--bar-h);padding:0 1rem env(safe-area-inset-bottom,0px);
+  #radioTab{flex:1 1 auto;min-width:0;width:auto;height:var(--bar-h);padding:0 1rem env(safe-area-inset-bottom,0px);
     border:0;border-top:1px solid var(--violet);background:#0B0D1A;font-size:.78rem}
   #radioTab .r-tabnow{max-width:none;flex:1 1 auto;min-width:0;font-size:.68rem}
   #radioTab .r-tabnow:empty{display:block}
   #radioTab .r-tabnow:empty::before{content:'tap to tune in';color:var(--rain)}
   #radio.fresh #radioTab{animation:none;color:#7CFFB2}
+  #radio #radioPower{width:3rem;height:var(--bar-h);padding-bottom:env(safe-area-inset-bottom,0px);border:0;border-top:1px solid var(--violet);border-left:1px solid rgba(42,29,94,.7);background:#0B0D1A}
   #radioPanel,#radio.mini #radioPanel{width:100%;border-left:0;border-right:0;border-bottom:0;
     max-height:calc(88dvh - env(safe-area-inset-top,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
   #radio .r-tracks{max-height:22vh}
@@ -1225,13 +1234,15 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
      youtube playlist (RADIO_LIST); edit that one on youtube. -->
 <div id="radio" class="src-juke">
   <button type="button" id="radioTab" aria-expanded="false" aria-controls="radioPanel"><span class="r-dot" aria-hidden="true"></span>RADIO<span class="r-tabnow" id="radioTabNow"></span></button>
+  <button type="button" id="radioPower" aria-pressed="false" title="radio and ambience on" aria-label="radio and ambience on">&#x23FB;</button>
   <div id="radioPanel" role="region" aria-label="EXiLED radio" hidden>
     <div class="r-bar">
       <span class="r-dot" aria-hidden="true"></span><span class="r-title">EXiLED RADIO</span>
       <span class="r-state" id="radioState">OFF AIR</span>
       <button type="button" id="radioList" aria-expanded="true" aria-controls="radioTracks" title="track list" aria-label="track list">list</button>
       <button type="button" id="radioMini" aria-pressed="false" title="shrink to just the screen" aria-label="shrink the radio">min</button>
-      <button type="button" id="radioClose" title="pause and tuck away" aria-label="radio off">off</button>
+      <button type="button" id="radioHide" title="tuck away, keep playing" aria-label="hide the radio, keep playing">hide</button>
+      <button type="button" id="radioClose" title="radio and ambience off" aria-label="radio and ambience off">off</button>
     </div>
     <div class="r-srcs" role="tablist" aria-label="station">
       <button type="button" role="tab" id="srcJuke" aria-selected="true" aria-controls="radioPanel">JUKEBOX</button>
@@ -2542,6 +2553,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
       var ambArm = function(e){
         if(ambBox.contains(e.target)) return;
         if(ambAll.getAttribute('aria-pressed') !== 'true') return ambDisarm();
+        try { if(localStorage.getItem('exiled.radioPref') === 'off') return ambDisarm(); } catch(x){}
         if(amb.ac && amb.ac.state === 'running') return ambDisarm();
         ambSet(true);
         if(amb.ac && amb.ac.state === 'running') ambDisarm();
@@ -4407,7 +4419,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   var rEl = document.getElementById('radio'), rPanel = document.getElementById('radioPanel'), rTab = document.getElementById('radioTab');
   var rState = document.getElementById('radioState'), rNow = document.getElementById('radioNow'), rPlay = document.getElementById('radioPlay');
   var rTracks = document.getElementById('radioTracks'), rVol = document.getElementById('radioVol');
-  var rTabNow = document.getElementById('radioTabNow'), rMini = document.getElementById('radioMini');
+  var rTabNow = document.getElementById('radioTabNow'), rMini = document.getElementById('radioMini'), rPower = document.getElementById('radioPower');
   function radioMini(on, justNow){
     rEl.classList.toggle('mini', on);
     rMini.textContent = on ? 'max' : 'min'; rMini.setAttribute('aria-pressed', String(on));
@@ -4610,6 +4622,10 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     rEl.classList.toggle('on', radio.playing);
     rState.textContent = label || (radio.playing ? (radio.src === 'yt' && radio.mine ? 'YOUR PICK' : 'ON AIR') : live ? 'PAUSED' : 'OFF AIR');
     rPlay.textContent = radio.playing ? 'PAUSE' : 'TUNE IN';
+    var pw = radio.want || radio.playing;
+    rPower.setAttribute('aria-pressed', String(pw));
+    rPower.title = pw ? 'radio and ambience off' : 'radio and ambience on';
+    rPower.setAttribute('aria-label', rPower.title);
     /* tucked away: the tab keeps the track name, one tap resumes it */
     rTabNow.textContent = live && rNow.textContent ? rNow.textContent : '';
     lis = rTracks.children;
@@ -4711,8 +4727,31 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     if(juke.el) juke.el.pause();
     radio.want = false; radio.playing = false;
     rPanel.hidden = true; rTab.hidden = false; rTab.setAttribute('aria-expanded', 'false'); rEl.classList.remove('open');
+    radioRemember('off');
+    /* off means quiet: the ambience goes with it (its own setting is kept,
+       so switching back on brings it back) */
+    if(amb.on) ambSet(false);
     radioPaint(); ghostVibe(false);
   }
+  /* tucked into the tab, still playing. youtube has to stay on screen,
+     so there it only shrinks */
+  function radioHide(){
+    if(radio.src === 'yt') return radioMini(true);
+    rPanel.hidden = true; rTab.hidden = false; rTab.setAttribute('aria-expanded', 'false'); rEl.classList.remove('open');
+  }
+  /* the switch beside the tab: on plays without opening anything (the
+     jukebox; youtube opens small), and the ambience comes back if it was on */
+  function radioPower(){
+    if(radio.want || radio.playing) return radioClose();
+    radio.want = true; radioRemember('on');
+    if(radio.src === 'juke') jukePlay();
+    else { if(!rEl.classList.contains('mini')) radioMini(true, true); radioOpen(true); }
+    var ap = null;
+    try { ap = localStorage.getItem('exiled.ambience'); } catch(e){}
+    if(ap === null || ap === '1') ambSet(true);
+  }
+  /* phones: the sheet would cover the page, so the music starts in the bar */
+  function radioSmall(){ return !!(window.matchMedia && window.matchMedia('(max-width:560px)').matches); }
   /* ── tune in on first touch ──
      Browsers hold back sound until the visitor has interacted with the
      page, so the radio cannot start the instant the page loads. It starts
@@ -4760,6 +4799,7 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     }
     if(t && t.closest && t.closest('#radio')) return radioDisarm();
     radio.fade = true;
+    if(radio.src === 'juke' && radioSmall()){ radio.want = true; jukePlay(); return; }
     if(!rEl.classList.contains('mini')) radioMini(true, true);
     radioOpen(true);
   }
@@ -4991,6 +5031,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     else if(chatWide.addListener) chatWide.addListener(chatPlace);
   }
   document.getElementById('radioClose').addEventListener('click', radioClose);
+  document.getElementById('radioHide').addEventListener('click', radioHide);
+  rPower.addEventListener('click', radioPower);
   rPlay.addEventListener('click', function(){
     if(radio.src === 'juke'){ if(radio.playing) juke.el.pause(); else jukePlay(); return; }
     if(!radio.ready){ radio.want = true; return radioLoad(); }
