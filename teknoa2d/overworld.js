@@ -1203,8 +1203,35 @@
   }
   /* after the cinnamon line she keeps it short */
   var HEX_COLD = ['...hey.', "arcade's open. i'm busy.", 'not tonight, ok?'];
+  /* after her chapter she has a line for you, never the same one twice in
+     a row (DRAFT lines for Oms to rewrite) */
   var HEX_AFTER = ["the arcade's open. high score's mine though. it's always mine.", 'back already? you missed me. say you missed me.',
-                   "don't go knocking on the lighthouse, $handle. trust me on that one."];
+                   "don't go knocking on the lighthouse, $handle. trust me on that one.",
+                   "you again! like a song stuck in my head. a good one. mostly.",
+                   "I'm on shift, babe. watching the door. the door's watching back. it's a whole standoff.",
+                   "the rain's got opinions tonight. I told it to keep 'em to itself.",
+                   "go get lost a little. nova city keeps the good stuff down the alleys you shouldn't take.",
+                   'anybody gives you trouble, say my name. then run. in that order.',
+                   "you're gonna wear a groove in this sidewalk, $handle. I'm flattered."];
+  var HEX_KEYED = ["how's the walk-up? if the closet starts talking, don't answer. that's just manners."];
+  var HEX_WORD = ["line-word still good? don't say it out loud, I'll know it's you. I always know."];
+  var hexLast = -1;
+  function hexLine() {
+    var f = s.flags || {};
+    if (f['hex-closed']) return HEX_COLD[Math.floor(Math.random() * HEX_COLD.length)];
+    var pool = HEX_AFTER.concat(f['hex-key'] ? HEX_KEYED : [], f['has-line-word'] ? HEX_WORD : []);
+    var i = Math.floor(Math.random() * (pool.length - 1));
+    if (i >= hexLast) i++;
+    hexLast = i;
+    return pool[i];
+  }
+  /* her chapter is done once any of its marks is on the run: a run that
+     lost the "met" (an old save, a restore) shouldn't sit through it again */
+  function metHex() {
+    var f = s.flags || {};
+    if (!s.met.hex && (f['has-line-word'] || f['hex-key'] || f['hex-closed'])) s.met.hex = new Date().toISOString().slice(0, 10);
+    return !!s.met.hex;
+  }
   function interact() {
     var d = DIRS[me.dir], tx = me.x + d[0], ty = me.y + d[1], i;
     var fallen = !inside && (bodyAt(tx, ty) || bodyAt(me.x, me.y));
@@ -1218,9 +1245,8 @@
       if (n.wright) return shipwright();
       if (n.store) return openCounter(n.store);
       if (n.scene === 'hex') {
-        if (!s.met.hex && api.talk) { api.talk(); return; }
-        var after = s.flags['hex-closed'] ? HEX_COLD : HEX_AFTER;
-        return say([after[Math.floor(Math.random() * after.length)]], 'Hex');
+        if (!metHex() && api.talk) { api.talk(); return; }
+        return say([hexLine()], 'Hex');
       }
       /* someone running a game on the street */
       if (n.game) return openTable(n.game, n.house || 'street');
@@ -4353,6 +4379,7 @@
   /* ── what ui.js calls ────────────────────────────────────── */
   function show(state, hooks) {
     s = state; api = hooks || {};
+    metHex();
     if (!world) {
       world = city = M.build();
       deco = cityDeco = decorate(world);

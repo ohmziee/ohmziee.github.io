@@ -200,6 +200,9 @@ a{color:var(--lavender)}
 .ask input{flex:1;min-width:0;background:var(--void);border:1px solid var(--violet);color:var(--ice);font:inherit;font-size:1.05rem;padding:.55rem .7rem;letter-spacing:.05em}
 .ask input:focus{outline:none;border-color:var(--live)}
 .ask input:disabled{opacity:.5}
+.stage .leave{align-self:flex-end;margin-bottom:.4rem;background:none;border:1px solid var(--violet);color:var(--lavender);padding:.3rem .7rem;font-family:var(--font-display);font-weight:700;font-size:.7rem;letter-spacing:.15em;cursor:pointer}
+.stage .leave:hover,.stage .leave:focus-visible{border-color:var(--lavender);color:#f4f6ff}
+.stage .leave[hidden]{display:none}
 .ask button{background:rgba(124,255,178,.06);border:1px solid var(--live);color:var(--live);padding:0 1rem;font-family:var(--font-display);font-weight:700;letter-spacing:.15em}
 
 /* ── nova city: the street, seen from above ── */

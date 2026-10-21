@@ -141,7 +141,16 @@
   function showStage() {
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.hide();
     $('chip').hidden = true; $('stage').hidden = false;
+    $('stageLeave').hidden = !window.MFWorld;
   }
+  /* in nova city a talk can be left halfway (WALK AWAY, or Esc); what it
+     would have given waits for the next time */
+  function walkAway() {
+    if (!window.MFWorld || $('stage').hidden) return;
+    asking = false; $('ask').hidden = true;
+    s.scene = null; if (store) MF.save(s, store); setWho('', ''); showWorld();
+  }
+  $('stageLeave').addEventListener('click', function (e) { e.stopPropagation(); walkAway(); });
   /* ── nova city ──────────────────────────────────────────────
      overworld.js walks them around; talking to someone with a scene comes
      back here, and the end of a scene goes back out to the street. */
@@ -415,7 +424,7 @@
   box.addEventListener('click', advance);
   document.addEventListener('keydown', function (e) {
     if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
-    if (e.key === 'Escape') { if (!$('shop').hidden) return leaveShop(); return; }
+    if (e.key === 'Escape') { if (!$('shop').hidden) return leaveShop(); return walkAway(); }
     if ($('stage').hidden) return;               /* out in the street, the keys are the world's */
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); advance(); return; }
     if (current && current.kind === 'choose' && /^[1-9]$/.test(e.key)) {
