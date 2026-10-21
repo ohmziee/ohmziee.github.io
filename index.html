@@ -804,6 +804,9 @@ body.stormmax #radioPanel,body.stormmax #radioTab{border-color:var(--storm-accen
   #radio .r-tracks{max-height:22vh}
   /* body-prefixed: the base #ghostie rule comes later in the sheet */
   body #ghostie{z-index:31;bottom:calc(4px + env(safe-area-inset-bottom,0px) + var(--gh-lift,0px))}
+  /* a page in the frame drops her to 26 (over the page, under the docks);
+     here she perches on the bar itself, so she stays over it */
+  body #pageView.open ~ #ghostie{z-index:31}
   body #term.open ~ #ghostie{z-index:41}
   #bytes .b-main{padding-bottom:calc(var(--bar-h) + 3rem)}
   #pageView{bottom:var(--bar-h)}
