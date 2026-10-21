@@ -1861,7 +1861,7 @@
        running, so a press of any length is B (a finger on glass is slow) */
     if (!bTap.busy && !bTap.moved && (phone || Date.now() - bTap.at < 260) && active) phoneTap();
   }
-  var phone = null, pPrev = {}, pDrawn = 0;
+  var phone = null, pPrev = {}, pRep = {}, pDrawn = 0;
   var APPS = [['id', 'ID', '#ff9de2', '◉'], ['inv', 'INV', '#7cc8ff', '▦'], ['clock', 'CLOCK', '#ffe97c', '◷'], ['map', 'MAP', '#7cffb2', '⌖'], ['mail', 'MAIL', '#ff8a6b', '✉'], ['sys', 'SYS', '#b9a8ff', '⚙']];
   /* DEV: the owner's test drawer, only on a phone that holds the owner key */
   function apps() { return isDev() ? APPS.concat([['dev', 'DEV', '#ff4f6d', '⚑']]) : APPS; }
@@ -1900,7 +1900,14 @@
     if (id === 'dev' && window.MFUI) window.MFUI.fillDev();
   }
   function tickPhone(now) {
-    function edge(k) { var e = !!held[k] && !pPrev[k]; pPrev[k] = !!held[k]; return e; }
+    /* a press, and then, held, a repeat every 110ms after 380ms */
+    function edge(k) {
+      if (!held[k]) { pPrev[k] = false; pRep[k] = 0; return false; }
+      if (!pPrev[k]) { pPrev[k] = true; pRep[k] = now + 380; return true; }
+      if (!pRep[k]) pRep[k] = now + 380;            /* held since before the phone opened */
+      if (now >= pRep[k]) { pRep[k] = now + 110; return true; }
+      return false;
+    }
     var up = edge('up'), dn = edge('down'), lf = edge('left'), rt = edge('right'), a = pressedA;
     pressedA = false;
     if (phone.app === 'home') {
@@ -1937,11 +1944,14 @@
     }
     if (now - pDrawn > 1000 && phone.app !== 'map') { pDrawn = now; drawPhoneBar(); if (phone.app === 'clock' || (phone.app === 'id' && phone.tab === 'vitals')) drawPhone(); }
   }
-  /* holding ▲ ▼ scrolls a screen that has nothing to pick on it */
-  var HOME_COLS = 3;
+  /* holding ▲ ▼ scrolls a screen that has nothing to pick on it, picking
+     up speed the longer it's held */
+  var HOME_COLS = 3, sHeld = 0;
   function scrollHeld() {
     var d = (held.down ? 1 : 0) - (held.up ? 1 : 0);
-    if (d) $('wPhoneScreen').scrollTop += d * 5;
+    if (!d) { sHeld = 0; return; }
+    sHeld++;
+    $('wPhoneScreen').scrollTop += d * Math.min(16, 5 + sHeld / 4);
   }
   function drawPhoneBar() {
     var c = novaNow();
@@ -1963,9 +1973,24 @@
     shelveSave();
     scr.innerHTML = '';
     drawPhoneIn(scr, hint);
-    /* the same screen redrawn keeps its scroll, unless a pick moved it */
-    if (as === drawnAs && !scr.querySelector('.crow.sel, .icell.sel')) scr.scrollTop = keep;
+    /* the same screen redrawn keeps its scroll, then the pick is brought
+       into sight */
+    scr.scrollTop = as === drawnAs ? keep : 0;
+    showPicked(scr);
     drawnAs = as;
+  }
+  /* scroll the phone (only the phone: scrollIntoView would drag the page
+     around it too) so the pick shows; in INV, its details under the grid
+     as well, as long as the pick itself stays on screen */
+  function showPicked(scr) {
+    var on = scr.querySelector('.crow.sel, .icell.sel');
+    if (!on) return;
+    var base = scr.getBoundingClientRect().top - scr.scrollTop, m = 6;
+    function top(el) { return el.getBoundingClientRect().top - base; }
+    var t = top(on) - m, b = top(on) + on.offsetHeight + m, det = on.classList.contains('icell') && scr.querySelector('.idet');
+    if (det) b = Math.max(b, top(det) + det.offsetHeight + m);
+    if (b - scr.scrollTop > scr.clientHeight) scr.scrollTop = Math.min(t, b - scr.clientHeight);
+    if (t < scr.scrollTop) scr.scrollTop = t;
   }
   function drawPhoneIn(scr, hint) {
     if (phone.app === 'home') {
@@ -2207,7 +2232,13 @@
       if (a) runInv(es[phone.isel], phone.act);
       return;
     }
-    if (lf || rt || up || dn) { invStep(lf ? -1 : rt ? 1 : 0, up ? -1 : dn ? 1 : 0); drawPhone(); }
+    /* ▲ ▼ past the top or bottom row scrolls on, to what's under the grid */
+    if (lf || rt || up || dn) {
+      var was = phone.isel; invStep(lf ? -1 : rt ? 1 : 0, up ? -1 : dn ? 1 : 0);
+      phone.iend = (up || dn) && phone.isel === was;
+      if (!phone.iend) drawPhone();
+    }
+    if (phone.iend && (held.up || held.down)) scrollHeld(); else phone.iend = false;
     if (a && es[phone.isel] && invInfo(es[phone.isel]).acts.length) { phone.act = 0; drawPhone(); }
   }
   function drawInv(scr) {
@@ -2267,8 +2298,6 @@
     if (SH.FISH && Object.keys(s.fishlog || {}).length) { var fl = document.createElement('div'); fl.className = 'inote'; fl.textContent = 'fish log: ' + Object.keys(s.fishlog).length + ' of ' + Object.keys(SH.FISH).length + ' kinds'; box.appendChild(fl); }
     scr.appendChild(box);
     phone.cells = cellsEl.map(function (b) { return b ? { x: b.offsetLeft + b.offsetWidth / 2, y: b.offsetTop + b.offsetHeight / 2 } : { x: -1e6, y: -1e6 }; });
-    var on = cellsEl[phone.isel];
-    if (on && on.scrollIntoView && phone.act < 0) on.scrollIntoView({ block: 'nearest' });
   }
 
   /* ── the ID app: you, your level and level-up pick (ID), your vitals,
@@ -2365,8 +2394,6 @@
       rows();
     }
     scr.appendChild(box);
-    var on = box.querySelector('.crow.sel');
-    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
   }
   /* the hud's warning opens straight onto VITALS */
   function openVitals() {
