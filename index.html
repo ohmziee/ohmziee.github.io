@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-toiCMQExZaVH+w3pkBeR8GVdOQPM7Tg/GmTYXMgda70=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kikMz4YHaJWKyArSwhkwCuut1JmzL7xGVYxWKJYyd3I=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -669,8 +669,12 @@ body.stormmax .socials h3{color:var(--storm-accent)}
 /* mini: just the bar and the screen. the screen keeps youtube's 200px
    minimum, so it can keep playing while it is small */
 #radio.mini #radioPanel{width:min(360px,calc(100vw - 2rem))}
-#radio.mini .r-now,#radio.mini .r-ctl,#radio.mini .r-find,#radio.mini .r-results,#radio.mini .r-back,
+#radio.mini .r-now,#radio.mini .r-find,#radio.mini .r-results,#radio.mini .r-back,
 #radio.mini .r-tracks,#radio.mini .r-src,#radio.mini #radioList{display:none}
+/* mini keeps a slim row of controls, so it can still tune in */
+#radio.mini .r-ctl{padding:.4rem .75rem .5rem}
+#radio.mini .r-ctl button{padding:.3rem .5rem}
+#radio.mini #jukeOne{display:none}
 #radioTab .r-tabnow{max-width:13rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 .7rem/1 var(--font-mono);letter-spacing:.06em;color:var(--rain)}
 #radioTab .r-tabnow:empty{display:none}
 /* 200px tall at the narrowest, the minimum youtube allows */
@@ -2563,7 +2567,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   try {
     /* on by default; only a visitor who switched it off stays off */
     var ambPref = localStorage.getItem('exiled.ambience');
-    if(ambPref === null || ambPref === '1'){
+    /* the radio switched off takes the ambience with it, so it shows off too */
+    if((ambPref === null || ambPref === '1') && localStorage.getItem('exiled.radioPref') !== 'off'){
       /* shown as on straight away; the sound itself starts at the first tap
          that isn't in the ambience box (that one does its own thing) */
       ambAll.setAttribute('aria-pressed', 'true'); ambPaint();
@@ -4790,6 +4795,13 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   try { radioPref = localStorage.getItem('exiled.radioPref') || ''; } catch(e){}
   function radioRemember(v){
     if(radioPref === v) return;
+    /* back on air after an off (TUNE IN, a track, the switch): the ambience
+       comes back with it, unless the visitor turned that off themselves */
+    if(v === 'on' && radioPref === 'off' && !amb.on){
+      var ap = null;
+      try { ap = localStorage.getItem('exiled.ambience'); } catch(e){}
+      if(ap === null || ap === '1') ambSet(true);
+    }
     radioPref = v;
     try { localStorage.setItem('exiled.radioPref', v); } catch(e){}
   }
