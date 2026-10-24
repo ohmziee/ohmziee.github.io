@@ -4462,12 +4462,13 @@
   function online(now) {
     if (now - onT < 500) return;
     onT = now;
-    var n = L.on && L.live && (!inside || inside.place) ? L.list().length : -1;
+    /* the whole game, not just this street: lobby.js counts everyone playing */
+    var n = L.on && L.live ? L.count() : -1;
     if (n === onShown) return;
     onShown = n;
     var el = $('wOn');
     el.hidden = n < 0;
-    el.textContent = n === 0 ? 'just you here' : n === 1 ? '1 other here' : n + ' others here';
+    el.textContent = n === 0 ? 'just you online' : n === 1 ? '1 other online' : n + ' others online';
   }
   /* a hidden tab doesn't hold a seat in the street */
   document.addEventListener('visibilitychange', function () { if (active) goOnline(); });

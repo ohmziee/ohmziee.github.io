@@ -5,7 +5,9 @@
    stand, which way you face and how you look goes out.
 
    One channel per district (later, per interior), so a player only hears
-   from the island they are on. A step goes out at most twice a second and
+   from the island they are on. On top of that everyone sits in one more
+   channel, EVERYONE, that carries nothing but presence: it is only there
+   to count who is playing anywhere at all. A step goes out at most twice a second and
    only while walking; standing still costs nothing.
 
    Handing something over (overworld.js does the asking and the pockets):
@@ -24,6 +26,8 @@
   var ws = null, room = '', joinRef = 0, ref = 0, beat = 0, retry = 0, retryT = 0;
   var want = false, sid = '', pass = null, me = null, others = {}, lastSent = 0, sendT = 0, pending = null;
   var pubKey = null, checked = {};
+  /* the whole-game headcount: presence key → metas held */
+  var EVERYONE = 'realtime:t2d-everyone', allRef = 0, everyone = {};
 
   function hex(n) { var a = new Uint8Array(n), s = ''; root.crypto.getRandomValues(a); for (var i = 0; i < n; i++) s += ('0' + a[i].toString(16)).slice(-2); return s; }
   function topic() { return 'realtime:t2d-' + room; }
@@ -128,12 +132,29 @@
     send({ topic: topic(), event: 'phx_join', ref: String(joinRef), join_ref: String(joinRef),
            payload: { config: { broadcast: { self: false, ack: false }, presence: { key: sid, enabled: true }, private: false } } });
   }
+  function joinAll() {
+    if (!ws || ws.readyState !== 1) return;
+    allRef = ++ref;
+    send({ topic: EVERYONE, event: 'phx_join', ref: String(allRef), join_ref: String(allRef),
+           payload: { config: { broadcast: { self: false, ack: false }, presence: { key: sid, enabled: true }, private: false } } });
+  }
+  function headcount(state, leaves) {
+    Object.keys(state || {}).forEach(function (id) { everyone[id] = (everyone[id] || 0) + ((state[id].metas || []).length || 1); });
+    Object.keys(leaves || {}).forEach(function (id) { if ((everyone[id] = (everyone[id] || 0) - ((leaves[id].metas || []).length || 1)) <= 0) delete everyone[id]; });
+  }
   function leave() {
     if (room && ws && ws.readyState === 1) send({ topic: topic(), event: 'phx_leave', ref: String(++ref), join_ref: String(joinRef), payload: {} });
     others = {};
   }
   function onMessage(e) {
     var m; try { m = JSON.parse(e.data); } catch (x) { return; }
+    if (m && m.topic === EVERYONE) {
+      if (m.event === 'phx_reply' && m.ref === String(allRef) && m.payload && m.payload.status === 'ok')
+        send({ topic: EVERYONE, event: 'presence', ref: String(++ref), join_ref: String(allRef), payload: { type: 'presence', event: 'track', payload: {} } });
+      else if (m.event === 'presence_state') { everyone = {}; headcount(m.payload); }
+      else if (m.event === 'presence_diff') headcount(m.payload && m.payload.joins, m.payload && m.payload.leaves);
+      return;
+    }
     if (!m || m.topic !== topic()) return;
     if (m.event === 'phx_reply' && m.ref === String(joinRef) && m.payload && m.payload.status === 'ok') { retry = 0; track(); return; }
     if (m.event === 'presence_state') return onPresence(m.payload);
@@ -153,12 +174,12 @@
     try { ws = new root.WebSocket(URL_.replace('https:', 'wss:') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(KEY) + '&vsn=1.0.0'); }
     catch (e) { ws = null; return later(); }
     ws.onopen = function () {
-      join();
+      join(); joinAll();
       clearInterval(beat);
       beat = setInterval(function () { send({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++ref) }); }, BEAT_MS);
     };
     ws.onmessage = onMessage;
-    ws.onclose = function () { clearInterval(beat); ws = null; others = {}; later(); };
+    ws.onclose = function () { clearInterval(beat); ws = null; others = {}; everyone = {}; later(); };
     ws.onerror = function () { try { ws.close(); } catch (e) {} };
   }
   function later() {
@@ -178,6 +199,8 @@
   function stop() {
     want = false; clearTimeout(retryT); retryT = 0; clearTimeout(sendT); sendT = 0;
     leave(); room = '';
+    if (ws && ws.readyState === 1) send({ topic: EVERYONE, event: 'phx_leave', ref: String(++ref), join_ref: String(allRef), payload: {} });
+    everyone = {};
     if (ws) { var w = ws; ws = null; w.onclose = null; try { w.close(); } catch (e) {} }
     clearInterval(beat); others = {};
   }
@@ -192,9 +215,11 @@
     say();
   }
   function restyle(look) { if (me) { me.look = look; track(); } }
+  /* everyone else playing right now, wherever they are */
+  function count() { return Object.keys(everyone).filter(function (id) { return id !== sid; }).length; }
   function list() { return Object.keys(others).map(function (id) { return others[id]; }).filter(function (o) { return o.x >= 0; }); }
 
-  var api = root.MFLobby = { start: start, stop: stop, setRoom: setRoom, moved: moved, restyle: restyle, step: step, list: list, tell: tell, onGive: null,
+  var api = root.MFLobby = { start: start, stop: stop, setRoom: setRoom, moved: moved, restyle: restyle, step: step, list: list, count: count, tell: tell, onGive: null,
                    get on() { return want; }, get live() { return !!(ws && ws.readyState === 1); },
                    _: { nameOf: nameOf, passText: passText, onMessage: onMessage, place: place, meet: meet, setSid: function (v) { sid = v; }, setPub: function (j) { PUB = j; pubKey = null; checked = {}; } } };
 })(typeof window !== 'undefined' ? window : globalThis);
