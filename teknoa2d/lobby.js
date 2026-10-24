@@ -67,10 +67,13 @@
   function place(o, x, y, d, b) {
     x = cell(x); y = cell(y);
     if (x < 0 || y < 0) return;
-    if (FACE[d]) o.dir = d;
+    /* the way they face once they get there: a turn that came with the
+       last step must outlast the walk, or they'd face the way they walked */
+    if (FACE[d]) o.td = d;
     o.boat = !!b;
     /* far off (they ran, or this is the first word): just put them there */
-    if (o.x < 0 || Math.abs(x - o.x) + Math.abs(y - o.y) > 8) { o.x = o.tx = x; o.y = o.ty = y; o.fx = x; o.fy = y; o.t = 1; return; }
+    if (o.x < 0 || Math.abs(x - o.x) + Math.abs(y - o.y) > 8) { o.x = o.tx = x; o.y = o.ty = y; o.fx = x; o.fy = y; o.t = 1; if (o.td) o.dir = o.td; return; }
+    if (x === o.tx && y === o.ty && o.x === x && o.y === y && o.t >= 1 && o.td) o.dir = o.td;
     o.tx = x; o.ty = y;
   }
   function meet(id, meta) {
@@ -91,7 +94,7 @@
     Object.keys(others).forEach(function (id) {
       var o = others[id];
       if (o.t < 1) { o.t = Math.min(1, o.t + dt * Math.max(speed, (Math.abs(o.tx - o.x) + Math.abs(o.ty - o.y) + 1) * 2.2)); return; }
-      if (o.x === o.tx && o.y === o.ty) return;
+      if (o.x === o.tx && o.y === o.ty) { if (o.td) o.dir = o.td; return; }
       o.fx = o.x; o.fy = o.y;
       if (o.x !== o.tx) { o.dir = o.tx > o.x ? 'right' : 'left'; o.x += o.tx > o.x ? 1 : -1; }
       else { o.dir = o.ty > o.y ? 'down' : 'up'; o.y += o.ty > o.y ? 1 : -1; }

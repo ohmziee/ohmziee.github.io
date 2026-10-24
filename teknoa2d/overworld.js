@@ -2864,6 +2864,14 @@
 
   /* ── the loop ────────────────────────────────────────────── */
   var SPEED = 4.5;                                   /* tiles a second; B doubles it */
+  /* from standing, a tap only turns you; a press held this long walks.
+     once walking, a held direction keeps going with no wait */
+  var TURN_MS = 130, pressAt = 0, walking = false;
+  function face(dir) {
+    if (me.dir === dir) return;
+    me.dir = dir; s.world = here();
+    if (L) L.moved(me.x, me.y, dir, me.sail ? 1 : 0);
+  }
   var last = 0, npcTick = 0;
   var wakes = [], wakeAt = 0;
   function update(now) {
@@ -2917,7 +2925,13 @@
     }
     if (!me.moving) {
       var dir = held.up ? 'up' : held.down ? 'down' : held.left ? 'left' : held.right ? 'right' : '';
-      if (dir) tryMove(dir);
+      if (!dir) { pressAt = 0; walking = false; }
+      else if (walking) tryMove(dir);
+      else {
+        if (!pressAt) pressAt = now;
+        face(dir);
+        if (now - pressAt >= TURN_MS) { walking = true; tryMove(dir); }
+      }
     }
     tickTalk(now);
     tickLaw(dt, now);
@@ -4492,5 +4506,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving, spot: !!m.spot }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; }, get torchLit() { return torchLit; }, get seen() { return seen(); } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving, spot: !!m.spot }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; }, get me() { return { x: me.x, y: me.y, d: me.dir, moving: me.moving }; }, get torchLit() { return torchLit; }, get seen() { return seen(); } };
 })();
