@@ -1,0 +1,10 @@
+[
+  {
+    "id": "0001",
+    "date": "2026-09-18",
+    "type": "transmission",
+    "title": "first recovered byte",
+    "text": "The site came online tonight. Rain, static, one ghost. Nothing else here yet. That is not a bug.",
+    "tags": ["log", "origin"]
+  }
+]

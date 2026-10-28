@@ -1,0 +1,502 @@
+/* EXiLED teknoa 2d — the rules. No DOM in here: ui.js draws, this decides.
+   The same file runs in the browser and under node for the tests.
+
+   State is one plain object, saved whole. Scenes come from scenes.js,
+   compiled from teknoa2d/content/*.scene by teknoa2d/build.mjs.
+
+   A scene: { id, beats: [...], choices: [...], ask, go }
+     ask     { seal, ok, no }      a typed answer checked against a wiki seal
+     beat    { who, mood, text }   a line of dialogue (who) or narration (no who)
+             { fx: [...] }         effects applied when the beat is reached
+     choice  { text, to, when: [...], fx: [...] }
+     go      the scene to run when the beats end and there are no choices
+
+   conditions  flag:x  item:x  trait:x  origin:x  met:x  home:x  aff:hex>=3  joules>=50   (! in front negates)
+   effects     flag x  unflag x  give x  take x  trait x  aff hex +2  meet hex  pay 25  charge 25  home redrum
+
+   Money is the Teknoan Joule, the official currency of Teknoa, written ⚡. */
+(function (root) {
+  var VERSION = 1;
+  var SAVE_KEY = 'exiled.mf.save';
+
+  function newState() {
+    return { v: VERSION, scene: null, beat: 0, player: { handle: '', origin: '', look: {}, power: '', side: '' },
+             flags: {}, items: {}, traits: {}, aff: {}, met: {}, seen: {},
+             world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
+             homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
+             res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
+             yard: {},                                       /* materials left with a boat builder, per yard: { slip: { scrap: 12 } } */
+             fishlog: {},                                    /* every kind of fish ever caught, and how many */
+             wear: {},                                       /* uses left in each rod */
+             torch: 0,                                       /* seconds of flashlight battery left */
+             ibc: 0, ibcPaid: 0,                             /* an IBC's core (IBC_CORES index), and charge already paid for, in % */
+             torchOff: 0,                                    /* 1 when the flashlight is switched off */
+             safe: [],                                       /* the inventory's safe slots: item kinds a mugger can't take */
+             equip: '',                                      /* the weapon in hand (combat.js WEAPONS); '' is fists */
+             worn: '',                                       /* the layer you have on against the weather (LAYERS); '' is none */
+             dev: {},                                        /* the owner's test switches (ui.js DEV drawer) */
+             stash: {}, hold: { items: {}, res: {} },        /* each apartment's chest, the boat's hold */
+             treasury: { week: -1, spent: 0, arrears: 0 },   /* the nova city week last billed, joules spent since, unpaid tax */
+             inbox: [],                                      /* letters on the phone: { id, from, day, title, body, read } */
+             lotto: [],                                      /* tickets waiting on their draw: { day, nums, house } */
+             law: { siren: 0, heat: 0, fine: 0, cool: 0, crimes: {}, jail: { until: 0, bail: 0, room: '' } },  /* how badly the law wants you, and any cell you're in (law.js) */
+             body: { food: 100, drink: 100, health: 100, sta: 100, int: 100, buff: '', buffT: 0, rested: -1, temp: 37 },  /* hunger, thirst, health, stamina, intelligence, a dish's perk and its seconds left, the nova day you last slept, body temperature °C */
+             core: { hp: 0, sta: 0, int: 0 },                /* level-up picks: each one raises that maximum by CORE_STEP */
+             xp: { total: 0, by: {} },                       /* experience, and how much came from each source (level.js) */
+             skills: {},                                     /* exp in each trait: atk, def, stl ... (level.js TRAITS) */
+             perks: {},                                      /* perks taken from the trait trees (level.js PERKS) */
+             joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
+  }
+
+  /* ── joules ──────────────────────────────────────────────── */
+  var START_JOULES = 100, MAX_JOULES = 999999;
+  function joules(s) { var n = Math.floor(+s.joules || 0); return n > 0 ? Math.min(n, MAX_JOULES) : 0; }
+  function earn(s, n) { s.joules = Math.min(MAX_JOULES, joules(s) + Math.max(0, Math.floor(+n || 0))); return s.joules; }
+  /* all or nothing: false, and nothing taken, if they cannot cover it */
+  function spend(s, n) {
+    n = Math.max(0, Math.floor(+n || 0));
+    if (joules(s) < n) return false;
+    s.joules = joules(s) - n;
+    if (s.treasury) s.treasury.spent = (s.treasury.spent || 0) + n;   /* for the weekly letter */
+    return true;
+  }
+  function fmtJ(n) { return '⚡' + String(Math.floor(+n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  /* ── conditions ─────────────────────────────────────────── */
+  var AFF = /^aff:([a-z0-9-]+)(>=|<=|>|<|=)(-?\d+)$/, JOU = /^joules(>=|<=|>|<|=)(\d+)$/;
+  function test(s, cond) {
+    var neg = cond.charAt(0) === '!', c = neg ? cond.slice(1) : cond, ok;
+    var m = AFF.exec(c), j = JOU.exec(c);
+    if (j) m = [c, '', j[1], j[2]];
+    if (m) {
+      var v = j ? joules(s) : s.aff[m[1]] || 0, n = +m[3];
+      ok = m[2] === '>=' ? v >= n : m[2] === '<=' ? v <= n : m[2] === '>' ? v > n : m[2] === '<' ? v < n : v === n;
+    } else {
+      var i = c.indexOf(':'), kind = c.slice(0, i), name = c.slice(i + 1);
+      if (kind === 'flag') ok = !!s.flags[name];
+      else if (kind === 'item') ok = !!s.items[name];
+      else if (kind === 'trait') ok = !!s.traits[name];
+      else if (kind === 'met') ok = !!s.met[name];
+      else if (kind === 'home') ok = !!s.homes[name];
+      else if (kind === 'origin') ok = s.player.origin === name;
+      else throw new Error('unknown condition: ' + cond);
+    }
+    return neg ? !ok : ok;
+  }
+  function all(s, conds) {
+    for (var i = 0; i < (conds || []).length; i++) if (!test(s, conds[i])) return false;
+    return true;
+  }
+
+  /* ── effects ────────────────────────────────────────────── */
+  function apply(s, fx, now) {
+    var p = fx.split(/\s+/), op = p[0], name = p[1];
+    if (op === 'flag') s.flags[name] = 1;
+    else if (op === 'unflag') delete s.flags[name];
+    else if (op === 'give') s.items[name] = (s.items[name] || 0) + 1;
+    else if (op === 'take') { if (s.items[name] > 1) s.items[name]--; else delete s.items[name]; }
+    else if (op === 'trait') s.traits[name] = 1;
+    else if (op === 'aff') s.aff[name] = Math.max(-10, Math.min(10, (s.aff[name] || 0) + (+p[2] || 0)));
+    /* meeting someone is the hook the wiki's per-character seal hangs on
+       (phase 4): the date is what the entry's stamp will show */
+    else if (op === 'pay') earn(s, p[1]);
+    /* a choice that charges should be gated on joules>=N; if it is not, it
+       takes what they have rather than going negative */
+    else if (op === 'charge') { if (!spend(s, p[1])) s.joules = 0; }
+    else if (op === 'home') s.homes[name] = 1;
+    else if (op === 'meet') { if (!s.met[name]) s.met[name] = new Date(now || Date.now()).toISOString().slice(0, 10); }
+    else throw new Error('unknown effect: ' + fx);
+  }
+  function applyAll(s, list, now) { for (var i = 0; i < (list || []).length; i++) apply(s, list[i], now); }
+
+  /* the same handle rules as the live chat and the terminal, so a handle
+     carried over from either comes out identical */
+  function cleanHandle(raw) {
+    return String(raw || '').trim().replace(/\s+/g, '_').replace(/[^\w.-]/g, '').slice(0, 25);
+  }
+  /* Chippin' In is done once there is a handle and an origin */
+  function chippedIn(s) { return !!(s.player.handle && s.player.origin); }
+
+  /* ── text ───────────────────────────────────────────────── */
+  function fill(s, text) {
+    return String(text).replace(/\$handle\b/g, s.player.handle || 'stranger');
+  }
+
+  /* ── running a scene ────────────────────────────────────────
+     enter() puts the player at the top of a scene. step() advances one
+     beat and returns what to show: a line, the choices, or the end. Effect
+     beats are applied and skipped over, never shown. */
+  function enter(s, scenes, id) {
+    if (!scenes[id]) throw new Error('no such scene: ' + id);
+    s.scene = id; s.beat = 0; s.seen[id] = 1;
+  }
+  function view(s, scenes, now) {
+    var sc = scenes[s.scene];
+    if (!sc) return { kind: 'end' };
+    while (s.beat < sc.beats.length && sc.beats[s.beat].fx) { applyAll(s, sc.beats[s.beat].fx, now); s.beat++; }
+    if (s.beat < sc.beats.length) {
+      var b = sc.beats[s.beat];
+      return { kind: 'line', who: b.who || '', mood: b.mood || '', text: fill(s, b.text) };
+    }
+    var open = [];
+    for (var i = 0; i < sc.choices.length; i++) {
+      if (all(s, sc.choices[i].when)) open.push({ index: i, text: fill(s, sc.choices[i].text) });
+    }
+    if (open.length) return { kind: 'choose', choices: open };
+    if (sc.ask) return { kind: 'ask', seal: sc.ask.seal };
+    if (sc.go) return { kind: 'go', to: sc.go };
+    return { kind: 'end' };
+  }
+  function next(s) { s.beat++; }
+  function choose(s, scenes, index, now) {
+    var c = scenes[s.scene] && scenes[s.scene].choices[index];
+    if (!c || !all(s, c.when)) throw new Error('that choice is not open');
+    applyAll(s, c.fx, now);
+    if (c.to) enter(s, scenes, c.to); else { s.scene = null; s.beat = 0; }
+  }
+
+  /* a typed answer: the UI checks it against the wiki's seal (it is the
+     character's key, so nothing here knows it) and reports back */
+  function answer(s, scenes, right) {
+    var sc = scenes[s.scene];
+    if (!sc || !sc.ask) throw new Error('nothing is being asked');
+    enter(s, scenes, right ? sc.ask.ok : sc.ask.no);
+  }
+  /* how a typed answer is read: case, spacing and punctuation never matter */
+  function normalAnswer(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+
+  /* ── saves ──────────────────────────────────────────────────
+     localStorage holds the live run. The save code is the same state as
+     text, so a run can move between devices without an account. The
+     checksum catches a mangled paste, not a determined editor: it is a
+     game, and editing your own save is allowed. */
+  function sum(t) {
+    var h = 2166136261;
+    for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return ('0000000' + h.toString(16)).slice(-8);
+  }
+  function b64e(t) { return typeof btoa === 'function' ? btoa(unescape(encodeURIComponent(t))) : Buffer.from(t, 'utf8').toString('base64'); }
+  function b64d(t) { return typeof atob === 'function' ? decodeURIComponent(escape(atob(t))) : Buffer.from(t, 'base64').toString('utf8'); }
+  function clean(o) {
+    var s = newState();
+    if (!o || typeof o !== 'object' || o.v !== VERSION) throw new Error('not a teknoa 2d save');
+    for (var k in s) if (k !== 'scene' && o[k] !== undefined && o[k] !== null && typeof o[k] === typeof s[k]) s[k] = o[k];
+    if (typeof o.scene === 'string') s.scene = o.scene;     /* a string, or null once a run has ended */
+    s.joules = joules(s);
+    /* a run from before money existed gets the purse a new arrival gets */
+    if (o.joules === undefined && o.player && o.player.handle && o.player.origin) s.joules = START_JOULES;
+    if (!s.found || typeof s.found.day !== 'string' || !s.found.got || typeof s.found.got !== 'object') s.found = { day: '', got: {} };
+    if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
+    Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
+    s.boat = s.boat ? 1 : 0;
+    s.torch = Math.max(0, Math.min(3600, +s.torch || 0));
+    s.torchOff = s.torchOff ? 1 : 0;
+    s.safe = s.safe.filter(function (k, i, a) { return typeof k === 'string' && k && a.indexOf(k) === i; }).slice(0, SAFE_SLOTS);
+    var tr = s.treasury;
+    s.treasury = { week: Math.floor(+tr.week) >= -1 ? Math.floor(+tr.week) : -1, spent: Math.max(0, Math.floor(+tr.spent || 0)), arrears: Math.max(0, Math.floor(+tr.arrears || 0)) };
+    s.inbox = (Array.isArray(s.inbox) ? s.inbox : []).filter(function (m) { return m && typeof m.title === 'string' && typeof m.body === 'string'; }).slice(-40);
+    function counts(o) { var out = {}; Object.keys(o && typeof o === 'object' ? o : {}).forEach(function (k) { var n = Math.floor(+o[k] || 0); if (n > 0) out[k] = n; }); return out; }
+    function box(b) { return { items: counts(b && b.items), res: counts(b && b.res) }; }
+    s.hold = box(s.hold);
+    var yd = s.yard; s.yard = {}; Object.keys(yd).forEach(function (k) { var c = counts(yd[k]); if (Object.keys(c).length) s.yard[k] = c; });
+    Object.keys(s.stash).forEach(function (k) { s.stash[k] = box(s.stash[k]); });
+    Object.keys(s.wear).forEach(function (k) { var n = Math.floor(+s.wear[k] || 0); if (n > 0) s.wear[k] = n; else delete s.wear[k]; });
+    var co = s.core;
+    s.core = {}; Object.keys(CORE).forEach(function (k) { s.core[k] = Math.max(0, Math.min(MAX_PICKS, Math.floor(+co[k] || 0))); });
+    var b = s.body, num = function (v, d, top) { v = +v; return isFinite(v) ? Math.max(0, Math.min(top || 100, v)) : d; };
+    s.body = { food: num(b.food, 100), drink: num(b.drink, 100), health: num(b.health, maxOf(s, 'hp'), maxOf(s, 'hp')),
+               sta: num(b.sta, maxOf(s, 'sta'), maxOf(s, 'sta')), int: num(b.int, maxOf(s, 'int'), maxOf(s, 'int')),
+               buff: typeof b.buff === 'string' ? b.buff : '', buffT: Math.max(0, +b.buffT || 0), rested: isFinite(+b.rested) ? Math.floor(+b.rested) : -1,
+               temp: isFinite(+b.temp) ? Math.max(CORE_MIN, Math.min(CORE_MAX, +b.temp)) : NORMAL_C };
+    s.skills = counts(s.skills);
+    s.perks = {}; Object.keys(o.perks && typeof o.perks === 'object' ? o.perks : {}).forEach(function (k) { if (o.perks[k]) s.perks[k] = 1; });
+    /* sources this build doesn't know are kept: a newer build may */
+    var xb = s.xp.by && typeof s.xp.by === 'object' ? s.xp.by : {};
+    s.xp = { total: Math.max(0, Math.floor(+s.xp.total || 0)), by: counts(xb) };
+    if (root.MFLaw) s.law = root.MFLaw.tidy(s.law);
+    s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
+    var p = s.player;
+    s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
+                 look: p.look && typeof p.look === 'object' ? p.look : {}, power: p.power === 'ibc' || p.power === 'ade' ? p.power : '',
+                 /* a product: walked out on corpocult, or still theirs */
+                 side: p.side === 'loyal' || p.side === 'defector' ? p.side : '' };
+    /* the first four origins were all from earth (brooklyn): they become
+       sapiens and get one chance to pick again (ui.js) */
+    if (OLD_ORIGINS[s.player.origin]) { s.player.origin = 'sapien'; s.flags['origin-repick'] = 1; }
+    /* earthlings were renamed sapiens (Oms, 2026-10-14): same people, same perks */
+    if (s.player.origin === 'earthling') s.player.origin = 'sapien';
+    return s;
+  }
+  /* ── safe slots: SAFE_SLOTS kinds of thing, the whole stack of each, that
+     a mugging leaves alone. a slot frees itself once the stack is gone ── */
+  var SAFE_SLOTS = 3;
+  function held(s, k) { return (s.items && s.items[k] > 0) || (s.res && s.res[k] > 0); }
+  function safeKeys(s) { return (s.safe || []).filter(function (k) { return held(s, k); }); }
+  function isSafe(s, k) { return safeKeys(s).indexOf(k) >= 0; }
+  function toggleSafe(s, k) {
+    if (isSafe(s, k)) { s.safe = safeKeys(s).filter(function (x) { return x !== k; }); return { ok: true, safe: false }; }
+    if (!held(s, k)) return { ok: false, why: 'you have none of that' };
+    if (safeKeys(s).length >= SAFE_SLOTS) return { ok: false, why: 'the safe slots are full' };
+    s.safe = safeKeys(s).concat([k]);
+    return { ok: true, safe: true };
+  }
+  function exportCode(s) { var j = JSON.stringify(s); return 'MF1.' + b64e(j) + '.' + sum(j); }
+  function importCode(code) {
+    var m = /^MF1\.([A-Za-z0-9+/=]+)\.([0-9a-f]{8})$/.exec(String(code).replace(/\s+/g, ''));
+    if (!m) throw new Error('not a save code');
+    var j = b64d(m[1]);
+    if (sum(j) !== m[2]) throw new Error('save code is damaged');
+    return clean(JSON.parse(j));
+  }
+  function save(s, store) { try { store.setItem(SAVE_KEY, JSON.stringify(s)); return true; } catch (e) { return false; } }
+  function load(store) {
+    try { var t = store.getItem(SAVE_KEY); return t ? clean(JSON.parse(t)) : null; } catch (e) { return null; }
+  }
+  function wipe(store) { try { store.removeItem(SAVE_KEY); } catch (e) {} }
+
+  /* ── hunger and thirst ───────────────────────────────────────
+     they drain only while the game is being played (overworld.js calls
+     drain with the seconds that passed). running drains faster. under WEAK
+     you can't run and the games get harder; at 0 you faint */
+  var FOOD_SECS = 45 * 60, DRINK_SECS = 30 * 60, WEAK = 20, WAKE = 40;
+  /* temp (°C), if given: what it feels like on you (feels below). your body
+     temperature moves with it, and its stage (STAGES) makes you hungrier,
+     thirstier, slower, and at the far ends costs health */
+  function drain(s, secs, factor, temp) {
+    var b = s.body, f = (factor || 1) * Math.max(0, +secs || 0);
+    if (temp !== undefined) warmTo(s, temp, Math.max(0, +secs || 0) / 60);
+    var st = stage(s) || {}, cold = st.hunger || 1, heat = st.thirst || 1;
+    if (ibc(s)) {
+      /* a battery core: one charge, no hunger or thirst. the starter lasts as
+         long as a full stomach; a bigger core lasts its cap times longer */
+      b.food = Math.max(0, b.food - 100 * f / (FOOD_SECS * ibcCore(s).cap)); b.drink = 100;
+    } else {
+      b.food = Math.max(0, b.food - 100 * f * cold / FOOD_SECS);
+      b.drink = Math.max(0, b.drink - 100 * f * heat / DRINK_SECS);
+    }
+    if (b.buffT > 0) { b.buffT = Math.max(0, b.buffT - (+secs || 0)); if (!b.buffT) b.buff = ''; }
+    /* health: starving or parched wears it down, bitter cold or heat too.
+       otherwise it mends on its own, slowly (faster well fed), but only up
+       to HP_MEND of the max: past that it takes meds, the clinic or a bed */
+    var mins = Math.max(0, +secs || 0) / 60, hp = b.health === undefined ? 100 : b.health, top = maxOf(s, 'hp');
+    if (weak(s)) hp -= 2 * mins;
+    if (st.hp) hp -= st.hp * mins;
+    if (st.hp || st.noregen) { /* too hot or too cold to mend */ }
+    else if (!weak(s) && hp < top * HP_MEND) hp = Math.min(top * HP_MEND, hp + (b.food > 60 && b.drink > 60 ? 2 : 1) * HP_REGEN * mins);
+    b.health = Math.max(0, Math.min(top, hp));
+    /* brainpower: the mind comes back on its own, very slowly, all the way
+       (a night's sleep or caffeine is quicker) */
+    b.int = Math.min(maxOf(s, 'int'), num0(b.int, maxOf(s, 'int')) + 100 * (+secs || 0) / INT_SECS);
+    return b.health <= 0 ? 'collapse' : b.food <= 0 || b.drink <= 0 ? 'faint' : weak(s) || st.severe ? 'weak' : '';
+  }
+
+  /* ── heat and cold ───────────────────────────────────────────
+     feels(): what the air feels like on you. the air, then wet weather
+     chills (WX_C), the midday sun warms (SUN_C), a fire beside you warms a
+     lot (FIRE_C); indoors is just the room. band(): what you can stand
+     without your body noticing, COMFORT moved by your origin (an AI shrugs
+     off cold) and by what you wear (wear(): warm lets you bear the cold,
+     and makes heat worse by half as much; cool the other way round).
+     body.temp starts at NORMAL_C. outside the band it moves CORE_RATE °C a
+     minute for every degree out; inside it, back towards normal by
+     CORE_BACK a minute. STAGES read off it, the worst first.
+     PLACEHOLDER numbers, all of them */
+  var NORMAL_C = 37, COMFORT = [16, 31], CORE_RATE = 0.025, CORE_BACK = 0.3, CORE_MIN = 30, CORE_MAX = 43;
+  var WX_C = { clear: 0, drizzle: -2, rain: -4, storm: -6, fog: -1 }, SUN_C = 3, FIRE_C = 10, AI_COLD = 20;
+  var STAGES = [
+    { id: 'hypothermic', below: 34,   name: 'hypothermic', hunger: 1.5,  hp: 2, slow: 1, severe: 1, say: 'you can\'t feel your hands. you can\'t stop shaking.\nget warm now: inside, or by a fire.' },
+    { id: 'cold',        below: 35.5, name: 'cold',        hunger: 1.5,  noregen: 1, slow: 1, say: 'your teeth won\'t stop.\nyou need somewhere warm, or something warmer on.' },
+    { id: 'chilly',      below: 36.5, name: 'chilly',      hunger: 1.25, say: 'a chill gets under your clothes.' },
+    { id: 'heatstroke',  above: 40,   name: 'heatstroke',  thirst: 1.75, hp: 2, slow: 1, severe: 1, say: 'your head is pounding. the street tilts.\nget out of the heat now: inside, or in the water.' },
+    { id: 'hot',         above: 38.5, name: 'overheating', thirst: 1.5,  noregen: 1, slow: 1, say: 'sweat in your eyes. your heart is going.\nfind shade, or shed a layer.' },
+    { id: 'warm',        above: 37.5, name: 'warm',        thirst: 1.25, say: 'the heat sits on you.' }];
+  /* what you wear against the weather, in °C: the top from your look
+     (CLOTHES, by avatar.js top), plus one layer you've put on (LAYERS, sold
+     as shops.js GEAR, s.worn). an ape's fur counts too (ORIGINS warm).
+     PLACEHOLDER numbers */
+  var CLOTHES = { tee: {}, tank: { cool: 3 }, hoodie: { warm: 3 }, jacket: { warm: 4 }, turtleneck: { warm: 2 }, coat: { warm: 6 } };
+  var LAYERS = { thermal: { warm: 6 }, parka: { warm: 12 }, coolvest: { cool: 8 }, sunhat: { cool: 3 } };
+  function worn(s) { var k = s.worn; return LAYERS[k] && s.items && s.items[k] > 0 ? k : ''; }
+  function putOn(s, k) {
+    if (!k) { s.worn = ''; return { ok: true }; }
+    if (!LAYERS[k]) return { ok: false, why: 'you can\'t wear that' };
+    if (!(s.items && s.items[k] > 0)) return { ok: false, why: 'you don\'t have one' };
+    s.worn = k; return { ok: true };
+  }
+  function wear(s) {
+    var top = CLOTHES[s.player && s.player.look && s.player.look.top] || {}, l = LAYERS[worn(s)] || {}, fx = originFx(s);
+    return { warm: (top.warm || 0) + (l.warm || 0) + (fx.warm || 0), cool: (top.cool || 0) + (l.cool || 0) };
+  }
+  function band(s) {
+    var w = wear(s), fx = originFx(s);
+    return [COMFORT[0] - (fx.cold ? AI_COLD : 0) - w.warm + w.cool / 2, COMFORT[1] + w.cool - w.warm / 2];
+  }
+  /* ctx: { indoors, weather, sun (clear and midday, outdoors), fire (one beside you) } */
+  function feels(air, ctx) {
+    ctx = ctx || {};
+    if (ctx.indoors) return air;
+    return air + (WX_C[ctx.weather] || 0) + (ctx.sun ? SUN_C : 0) + (ctx.fire ? FIRE_C : 0);
+  }
+  function bodyTemp(s) { var t = +s.body.temp; return isFinite(t) ? t : NORMAL_C; }
+  function warmTo(s, felt, mins) {
+    var t = bodyTemp(s), bd = band(s);
+    if (felt < bd[0]) t -= CORE_RATE * (bd[0] - felt) * mins;
+    else if (felt > bd[1]) t += CORE_RATE * (felt - bd[1]) * mins;
+    else t = t < NORMAL_C ? Math.min(NORMAL_C, t + CORE_BACK * mins) : Math.max(NORMAL_C, t - CORE_BACK * mins);
+    s.body.temp = Math.max(CORE_MIN, Math.min(CORE_MAX, t));
+    return s.body.temp;
+  }
+  function stage(s) {
+    var t = bodyTemp(s);
+    for (var i = 0; i < STAGES.length; i++) { var g = STAGES[i]; if (g.below !== undefined ? t < g.below : t >= g.above) return g; }
+    return null;
+  }
+  function num0(v, d) { return v === undefined || !isFinite(+v) ? d : +v; }
+  function hurt(s, n) { s.body.health = Math.max(0, num0(s.body.health, maxOf(s, 'hp')) - n); return s.body.health; }
+  function heal(s, n) { s.body.health = Math.min(maxOf(s, 'hp'), num0(s.body.health, maxOf(s, 'hp')) + n); return s.body.health; }
+
+  /* ── origins: where the player comes from (content/origins.scene has the
+     words). each can: scale exp (xp), start traits at a level (start),
+     shift a vital's maximum (max), add carry kg (carry), shrug off cold
+     (cold), train some traits faster (train), start with more joules
+     (joules), offer a power source (power). level.js start() applies
+     the one-off parts at Chippin' In ───────────────────────────────── */
+  var ORIGINS = {
+    /* start: traits at that level from day one; train: those traits'
+       exp comes in that much faster (level.js award) */
+    sapien:    { start: { def: 5, crf: 5 }, train: { def: 1.25, crf: 1.25 } },
+    simian:    { start: { atk: 5 }, carry: 15, warm: 3 },
+    ai:        { cold: 1, max: { int: 10 }, power: ['ade', 'ibc'] },
+    novan:     { start: { stl: 5, prs: 10 }, train: { stl: 1.25, prs: 1.25 } },
+    product:   { max: { hp: -20 }, joules: 600, side: ['defector', 'loyal'] }
+  };
+  /* an AI's power: an artificial digestive engine eats like anyone, an
+     internal battery core runs on charge (homes, hospital, police) */
+  /* a product's side: walked out on corpocult, or still working for them
+     against teknoa (combat.js hostile reads it). PLACEHOLDER words */
+  var SIDE = { defector: { name: 'walked out', what: 'you left corpocult behind. their agents know a barcode on sight, and they want their property back.' },
+               loyal:    { name: 'still theirs', what: 'you work for corpocult, quietly, against teknoa. their agents leave you be. everyone else had better not find out.' } };
+  var POWER = { ade: { name: 'artificial digestive engine (ADE)', what: 'you eat and drink like anyone else.' },
+                ibc: { name: 'internal battery core (IBC)', what: 'no hunger, no thirst: you run on charge, and charge costs joules. charging points: your home, the hospital, the police. the hospital fits bigger cores.' } };
+  var OLD_ORIGINS = { local: 1, runner: 1, defector: 1, ghost: 1 }, COLD_AI = -6;
+  /* IBC cores: cap is how many starter charges one holds (and how much
+     longer it lasts). a full starter charge costs IBC_FULL joules, about
+     what a sapien spends on a full stomach and a drink; a bigger core costs
+     cap times that to fill. the hospital fits the next one (shops.js
+     clinic). PLACEHOLDER names and prices */
+  var IBC_CORES = [{ name: 'starter core', cap: 1, price: 0 },
+                   { name: 'core mk II', cap: 1.5, price: 600 },
+                   { name: 'core mk III', cap: 2, price: 1500 },
+                   { name: 'core mk IV', cap: 3, price: 4000 }], IBC_FULL = 30;
+  function ibcCore(s) { return IBC_CORES[Math.max(0, Math.min(IBC_CORES.length - 1, Math.floor(+s.ibc || 0)))]; }
+  /* plugged in: up to pct more charge, paid a joule at a time as it goes
+     in. returns the % that went in (less, or 0, when the joules run out) */
+  function charge(s, pct) {
+    var b = s.body, want = Math.max(0, Math.min(+pct || 0, 100 - b.food)), per = 100 / (IBC_FULL * ibcCore(s).cap);
+    s.ibcPaid = Math.max(0, +s.ibcPaid || 0);
+    while (s.ibcPaid + 1e-9 < want && spend(s, 1)) s.ibcPaid += per;
+    var got = s.ibcPaid + 1e-9 >= want ? want : s.ibcPaid;
+    b.food = Math.min(100, b.food + got); s.ibcPaid = Math.max(0, s.ibcPaid - got);
+    return got;
+  }
+  /* the hospital fits the next core up. the charge you had moves across */
+  function upgradeCore(s) {
+    var i = Math.floor(+s.ibc || 0), next = IBC_CORES[i + 1];
+    if (!ibc(s)) return { ok: false, why: 'you don\'t run on a core' };
+    if (!next) return { ok: false, why: 'that\'s the biggest core there is' };
+    if (!spend(s, next.price)) return { ok: false, why: 'not enough joules', price: next.price };
+    s.body.food = s.body.food * IBC_CORES[i].cap / next.cap; s.ibc = i + 1;
+    return { ok: true, price: next.price, name: next.name };
+  }
+  function originFx(s) { return ORIGINS[s.player && s.player.origin] || {}; }
+  function ibc(s) { return !!(s.player && s.player.origin === 'ai' && s.player.power === 'ibc'); }
+  /* where people can tell you come from: an ape or an android body shows,
+     sapiens and novans give themselves away the moment they talk, and a
+     product passes for human unless the barcode shows (A is MFAvatar) */
+  function knownOrigin(s, A) {
+    var o = s.player && s.player.origin;
+    if (!ORIGINS[o]) return '';
+    if (o !== 'product') return o;
+    return A && A.stampShows && A.stampShows(s.player.look) ? 'product' : '';
+  }
+
+  /* ── the three core vitals. every level-up the player picks one and its
+     maximum goes up by CORE_STEP (level.js pickCore) ─────────────────── */
+  /* name: the maximum, raised at level-up. pool: what you spend and get back
+     (using your mind tires it like running tires the body) */
+  var CORE = { hp: { name: 'health', pool: 'health', icon: '♥', key: 'health' }, sta: { name: 'stamina', pool: 'stamina', icon: '💪', key: 'sta' }, int: { name: 'intelligence', pool: 'brainpower', icon: '🧠', key: 'int' } };
+  var CORE_BASE = 100, CORE_STEP = 10, MAX_PICKS = 98;
+  function maxOf(s, k) { return CORE_BASE + ((originFx(s).max || {})[k] || 0) + CORE_STEP * Math.max(0, Math.floor(+(s.core && s.core[k]) || 0)); }
+  function vital(s, k) { return num0(s.body[CORE[k].key], maxOf(s, k)); }
+  /* put some back, never past the top */
+  function restore(s, k, n) { s.body[CORE[k].key] = Math.max(0, Math.min(maxOf(s, k), vital(s, k) + (+n || 0))); return s.body[CORE[k].key]; }
+
+  /* stamina: sprinting burns it, easing off brings it back. at 0 you're
+     winded (overworld.js keeps you walking until it's back to RUN_AGAIN) */
+  /* INT_SECS: empty to full brainpower on its own. HP_REGEN: health a minute
+     on its own (twice that well fed), never past HP_MEND of the max */
+  var STA_RUN = 5, STA_BACK = 2.5, RUN_AGAIN = 25, INT_SECS = 120 * 60, HP_REGEN = 0.5, HP_MEND = 0.75;
+  function exert(s, secs, running) {
+    var t = Math.max(0, +secs || 0), back = weak(s) || (stage(s) || {}).slow ? STA_BACK / 2 : STA_BACK;
+    return restore(s, 'sta', running ? -STA_RUN * t : back * t);
+  }
+  /* a physical feat that costs stamina up front: false, and nothing spent, if they can't */
+  function strain(s, n) { if (vital(s, 'sta') < n) return false; restore(s, 'sta', -n); return true; }
+  /* an intelligence check: a sharp enough mind (intelligence of `need`, `cost`
+     brainpower left) skips the minigame and spends `cost` brainpower on it */
+  function intCheck(s, need, cost) {
+    cost = cost || 0;
+    if (maxOf(s, 'int') < need || vital(s, 'int') < cost) return false;
+    restore(s, 'int', -cost);
+    return true;
+  }
+  /* a night's sleep: stamina and the mind come back in full */
+  function rest(s) { restore(s, 'sta', maxOf(s, 'sta')); restore(s, 'int', maxOf(s, 'int')); s.body.temp = NORMAL_C; }
+  function weak(s) { return s.body.food < WEAK || s.body.drink < WEAK; }
+  /* after a faint: back on your feet, not full */
+  function revive(s) { s.body.food = Math.max(s.body.food, WAKE); s.body.drink = Math.max(s.body.drink, WAKE); s.body.buff = ''; s.body.buffT = 0; s.body.temp = NORMAL_C; }
+  /* eating or drinking: food/drink points, and maybe a perk for some seconds.
+     mind: intelligence back (caffeine and the like) */
+  function consume(s, food, drink, buff, secs, mind) {
+    s.body.food = Math.min(100, s.body.food + (food || 0));
+    s.body.drink = Math.min(100, s.body.drink + (drink || 0));
+    if (mind) restore(s, 'int', mind);
+    if (buff) { s.body.buff = buff; s.body.buffT = secs || 300; }
+    return s.body;
+  }
+  function buff(s, name) { return s.body.buff === name && s.body.buffT > 0; }
+
+  /* ── nova city time: one clock for everyone, worked out from real time.
+     a day lasts SPEEDUP times less than ours: 2 real hours ───────────── */
+  var SPEEDUP = 12, EPOCH = Date.UTC(2026, 0, 1);
+  function clock(ms, shiftMins) {
+    var mins = Math.floor((ms - EPOCH) * SPEEDUP / 60000) + (shiftMins || 0);
+    var day = Math.floor(mins / 1440), m = ((mins % 1440) + 1440) % 1440, hour = Math.floor(m / 60), minute = m % 60;
+    var phase = hour >= 21 || hour < 5 ? 'night' : hour < 7 ? 'dawn' : hour < 18 ? 'day' : 'dusk';
+    return { mins: mins, day: day, hour: hour, minute: minute, phase: phase, text: ('0' + hour).slice(-2) + ':' + ('0' + minute).slice(-2) };
+  }
+  /* °C: coolest before dawn, hottest mid-afternoon, a little different each day.
+     where: a district id, 'bay', 'jormun', 'indoors' */
+  var WHERE_C = { worldwood: 2, naturia: -2, haven: -1, redrum: 1, yucayeque: 1, majinryu: 0, vistadelsol: 0, bay: -4, jormun: -6 };
+  function temperature(c, where) {
+    var t = c.hour + c.minute / 60, base = 24.5 + 6.5 * Math.sin((t - 9) / 24 * 2 * Math.PI);
+    var h = Math.imul(c.day ^ 0x9e3779b9, 2654435761) >>> 0, wobble = (h % 61) / 10 - 3;
+    var v = base + wobble + (WHERE_C[where] || 0);
+    if (where === 'indoors') v = Math.max(22, Math.min(26, base + wobble));
+    return Math.round(v);
+  }
+
+  root.MF = { VERSION: VERSION, SAVE_KEY: SAVE_KEY, newState: newState, test: test, apply: apply,
+              SPEEDUP: SPEEDUP, clock: clock, temperature: temperature,
+              NORMAL_C: NORMAL_C, COMFORT: COMFORT, CORE_RATE: CORE_RATE, CORE_BACK: CORE_BACK, WX_C: WX_C, SUN_C: SUN_C, FIRE_C: FIRE_C, AI_COLD: AI_COLD, STAGES: STAGES,
+              CLOTHES: CLOTHES, LAYERS: LAYERS, worn: worn, putOn: putOn, wear: wear, band: band, feels: feels, bodyTemp: bodyTemp, warmTo: warmTo, stage: stage,
+              FOOD_SECS: FOOD_SECS, DRINK_SECS: DRINK_SECS, WEAK: WEAK, WAKE: WAKE, drain: drain, weak: weak, revive: revive, consume: consume, buff: buff, hurt: hurt, heal: heal,
+              ORIGINS: ORIGINS, POWER: POWER, SIDE: SIDE, COLD_AI: COLD_AI, IBC_CORES: IBC_CORES, IBC_FULL: IBC_FULL, ibcCore: ibcCore, charge: charge, upgradeCore: upgradeCore, originFx: originFx, ibc: ibc, knownOrigin: knownOrigin,
+              SAFE_SLOTS: SAFE_SLOTS, safeKeys: safeKeys, isSafe: isSafe, toggleSafe: toggleSafe,
+              CORE: CORE, CORE_BASE: CORE_BASE, CORE_STEP: CORE_STEP, MAX_PICKS: MAX_PICKS, maxOf: maxOf, vital: vital, restore: restore,
+              STA_RUN: STA_RUN, STA_BACK: STA_BACK, RUN_AGAIN: RUN_AGAIN, INT_SECS: INT_SECS, HP_REGEN: HP_REGEN, HP_MEND: HP_MEND, exert: exert, strain: strain, intCheck: intCheck, rest: rest,
+              START_JOULES: START_JOULES, joules: joules, earn: earn, spend: spend, fmtJ: fmtJ,
+              cleanHandle: cleanHandle, chippedIn: chippedIn, answer: answer, normalAnswer: normalAnswer,
+              enter: enter, view: view, next: next, choose: choose,
+              exportCode: exportCode, importCode: importCode, save: save, load: load, wipe: wipe };
+})(typeof window !== 'undefined' ? window : globalThis);

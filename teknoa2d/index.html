@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co wss://jmksgecmpzrsivujutma.supabase.co; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TEKNOA 2D // EXiLED</title>
+<meta name="description" content="nova city, from above.">
+<meta name="robots" content="noindex">
+<!-- the card a shared link shows (discord, imessage, x) -->
+<meta property="og:title" content="TEKNOA 2D // EXiLED">
+<meta property="og:description" content="nova city, from above. walk it, work it, survive it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="EXiLED">
+<meta property="og:url" content="https://ohmziee.github.io/teknoa2d/">
+<meta property="og:image" content="https://ohmziee.github.io/teknoa2d/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="a pixel-art city street at midnight: the arcade, two food carts, streetlights on wet pavement">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#05060B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="teknoa2d.css">
+<!-- opened on its own, this hops into the main page's frame so the radio,
+     rain, chat and ghostie come along; inside it, << EXiLED closes the frame -->
+<script src="../wiki/shell.js"></script>
+<script src="engine.js" defer></script>
+<script src="level.js" defer></script>
+<script src="avatar.js" defer></script>
+<script src="icons.js" defer></script>
+<script src="gangs.js" defer></script>
+<script src="foes.js" defer></script>
+<script src="combat.js" defer></script>
+<script src="streets.js" defer></script>
+<script src="law.js" defer></script>
+<script src="shops.js" defer></script>
+<script src="world.js" defer></script>
+<script src="region.js" defer></script>
+<script src="backup.js" defer></script>
+<script src="minigames.js" defer></script>
+<script src="casino.js" defer></script>
+<script src="lobby.js" defer></script>
+<script src="art.js" defer></script>
+<script src="tiles.js" defer></script>
+<script src="marks.js" defer></script>
+<script src="overworld.js" defer></script>
+<script src="scenes.js" defer></script>
+<script src="../wiki/seal.js" defer></script>
+<script src="ui.js" defer></script>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <header class="mbar">
+    <a class="back" href="../index.html">&lt;&lt; EXiLED</a>
+    <span class="chan">TEKNOA 2D</span>
+  </header>
+
+  <!-- shown until ui.js takes over; stays up only if the game did not load -->
+  <main id="locked" class="locked">
+    <p class="k">NO SIGNAL</p>
+    <p>the city did not come through.<br>try again in a moment.</p>
+    <p><a href="../index.html">&lt;&lt; back to the storm</a></p>
+  </main>
+
+  <main id="chip" class="chip" hidden>
+    <h1 class="chip-title">CHIPPIN' IN</h1>
+    <p class="dim">teknoa needs to know who just arrived.</p>
+    <div class="chip-cols">
+      <section class="chip-face" aria-label="your operator">
+        <div class="avatar" id="avBig"></div>
+        <div class="walkers" id="avWalk" aria-hidden="true"></div>
+        <button type="button" id="avRand">RANDOMIZE</button>
+      </section>
+      <section class="chip-form">
+        <label for="handle">HANDLE</label>
+        <input id="handle" maxlength="25" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <h2>ORIGIN</h2>
+        <div id="origins" class="origins" role="radiogroup" aria-label="origin"></div>
+        <h2>LOOK</h2>
+        <p class="dim" id="lookWait">pick where you come from first: it decides your body.</p>
+        <div id="slots"></div>
+        <p class="msg" id="chipMsg" role="status"></p>
+        <button type="button" id="chipGo" class="go">CHIP IN</button>
+      </section>
+    </div>
+  </main>
+
+  <main id="stage" class="stage" hidden>
+    <button type="button" class="leave" id="stageLeave" hidden>WALK AWAY ✕</button>
+    <section class="signal" aria-hidden="true">
+      <div class="who-card" id="whoCard"><div class="who-face"><img id="whoImg" alt="" decoding="async"><img class="f-blink" id="whoBlink" alt="" decoding="async" hidden><img class="f-talk" id="whoTalk" alt="" decoding="async" hidden></div><span class="who-name" id="whoBig"></span><span class="who-mood" id="whoMood"></span></div>
+    </section>
+    <section class="box" id="box" aria-live="polite">
+      <p class="speaker" id="speaker"></p>
+      <p class="line" id="line"></p>
+      <ol class="choices" id="choices"></ol>
+      <div class="ask" id="ask" hidden>
+        <input id="askIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="your answer">
+        <button type="button" id="askGo">SAY IT</button>
+      </div>
+      <p class="more" id="more" aria-hidden="true">&#9660;</p>
+    </section>
+  </main>
+
+  <main id="world" class="world" hidden tabindex="-1" aria-label="nova city">
+    <div class="wscreen">
+      <canvas id="wCanvas" aria-label="nova city, seen from above"></canvas>
+      <div class="wj" aria-label="teknoan joules"><span id="wJ">⚡0</span><span class="gain" id="wJGain" aria-live="polite"></span><span class="gain xp" id="wXPGain" aria-live="polite"></span></div>
+      <div class="won" id="wOn" hidden aria-live="polite"></div>
+      <div class="wbody" id="wBody" aria-label="time, stamina and warnings"><span class="tm" id="wTime"></span><span class="bf" id="wBuff"></span><span class="eye" id="wEye" hidden role="img" aria-label="out of sight"><i></i></span><span class="siren" id="wSiren" hidden aria-label="wanted"><i></i><i></i><i></i><i></i><i></i></span><span class="sta" id="wSta" hidden><b aria-label="stamina">💪</b><span class="bar"><i class="st" id="wStaBar"></i></span></span><button type="button" class="torch" id="wTorch" hidden>🔦</button><button type="button" class="alert" id="wAlert" hidden></button></div>
+      <div class="wcard" id="wCard" hidden><img id="wCardImg" alt="" decoding="async"><div class="wcard-t"><b id="wCardName"></b><span id="wCardSub"></span></div></div>
+      <div class="wcounter wtable" id="wTable" hidden><b id="wTableT"></b><pre class="tview" id="wTableV"></pre><div class="tbet"><button type="button" id="wTableLess">◀</button><span id="wTableBet"></span><button type="button" id="wTableMore">▶</button></div><div class="clist" id="wTableActs"></div><p id="wTableM" aria-live="polite"></p><button type="button" class="cleave" id="wTableX">LEAVE (B)</button></div>
+      <div class="wcounter" id="wCounter" hidden><b id="wCounterT"></b><div class="ctabs" id="wCounterTabs" hidden><button type="button" data-tab="buy">BUY</button><button type="button" data-tab="sell">SELL</button></div><div class="clist" id="wCounterList"></div><p id="wCounterM" aria-live="polite"></p><button type="button" class="cleave" id="wCounterX">LEAVE (B)</button></div>
+      <div class="wmini" id="wMini" hidden aria-live="polite"><b id="wMiniT"></b><div class="mtrack" id="wMiniTrack"><span class="mzone" id="wMiniZone"></span><span class="mmark" id="wMiniMark"></span></div><div class="mlanes" id="wMiniLanes" hidden></div><p id="wMiniH"></p></div>
+      <div class="wmail" id="wMail" hidden>✉ mail from nova city · PHONE</div>
+      <div class="wphone" id="wPhone" hidden aria-label="your phone"><div class="pbar" id="wPhoneBar"></div><div class="pscreen" id="wPhoneScreen"></div><div class="phint" id="wPhoneHint"></div></div>
+      <div class="wtalk" id="wTalk" hidden><b id="wWho"></b><p id="wLine"></p><div class="wmenu" id="wMenu" role="menu" hidden></div><span class="more" aria-hidden="true">&#9660;</span></div>
+    </div>
+    <div class="whud" id="wHud"></div>
+    <p class="whelp">arrows / wasd move &middot; z / enter talk &middot; hold x to run &middot; c / tab: phone</p>
+    <div class="wpad" id="wPad" aria-hidden="true">
+      <div class="dpad"><button type="button" data-k="up">&#9650;</button><button type="button" data-k="left">&#9664;</button><button type="button" data-k="right">&#9654;</button><button type="button" data-k="down">&#9660;</button></div>
+      <div class="mid"><button type="button" data-k="start" aria-label="phone">PHONE</button></div>
+      <div class="ab"><button type="button" data-k="b">B</button><button type="button" data-k="a">A</button></div>
+    </div>
+  </main>
+
+  <main id="shop" class="chip shop" hidden aria-labelledby="shopName">
+    <h1 class="chip-title" id="shopName"></h1>
+    <p class="dim" id="shopLine"></p>
+    <div class="chip-cols">
+      <section class="chip-face" aria-label="how you will look">
+        <div class="avatar" id="shopAv"></div>
+        <div class="walkers" id="shopWalk" aria-hidden="true"></div>
+        <button type="button" id="shopUndo">AS YOU WERE</button>
+      </section>
+      <section class="chip-form">
+        <h2 id="shopWhat"></h2>
+        <div id="shopSlots"></div>
+        <div class="bill">
+          <ul id="shopBill"></ul>
+          <p class="tot"><span>TOTAL</span><b id="shopTotal"></b></p>
+          <p class="tot have"><span>YOU HAVE</span><b id="shopHave"></b></p>
+        </div>
+        <p class="msg" id="shopMsg" role="status"></p>
+        <button type="button" id="shopPay" class="go">PAY</button>
+        <button type="button" id="shopLeave" class="leave">LEAVE</button>
+      </section>
+    </div>
+  </main>
+
+
+
+  <!-- the owner's test drawer: the phone's DEV app (overworld.js), only on a
+       browser that holds the owner key. it waits on this shelf otherwise -->
+  <div id="devShelf" hidden>
+  <div class="pdev" id="dev" aria-label="test tools">
+    <p class="dim">owner test tools. everything here only changes this browser's run.</p>
+    <h2>JOULES</h2>
+    <div class="devrow"><button type="button" data-dev="j1k">+⚡1,000</button><button type="button" data-dev="j10k">+⚡10,000</button><button type="button" data-dev="j100k">+⚡100,000</button><button type="button" data-dev="j0">⚡0</button></div>
+    <h2>GIVE</h2>
+    <div class="devrow"><button type="button" data-dev="mats">MATERIALS x20</button><button type="button" data-dev="rods">ALL RODS</button><button type="button" data-dev="arms">ALL WEAPONS</button><button type="button" data-dev="boat">BOAT</button><button type="button" data-dev="homes">ALL APARTMENTS</button></div>
+    <div class="devrow"><button type="button" data-dev="fish">ONE OF EVERY FISH</button><button type="button" data-dev="food">FOOD x3</button><button type="button" data-dev="curios">CURIOS</button><button type="button" data-dev="clear">EMPTY POCKETS</button></div>
+    <h2>BODY</h2>
+    <div class="devrow"><button type="button" data-dev="xp500">+500 EXP</button><button type="button" data-dev="traits">ALL TRAITS +5 LV</button><button type="button" data-dev="relevel">RESET LEVELS</button></div>
+    <div class="devrow"><button type="button" data-dev="full">FULL</button><button type="button" data-dev="weak">WEAK</button><button type="button" data-dev="faint">ABOUT TO FAINT</button><button type="button" data-dev="hurt">HEALTH 10</button><button type="button" data-dev="drained">STA + BRAIN 5</button><button type="button" data-dev="nohunger" id="devNoHunger">HUNGER: ON</button><button type="button" data-dev="noweight" id="devNoWeight">CARRY LIMIT: ON</button></div>
+    <h2>FOES</h2>
+    <div class="devrow"><select id="devFoe" aria-label="which foe"><option value="">whoever fits here</option><option>bandit</option><option>zombie</option><option>skeleton</option><option>rogueai</option><option>hacker</option><option>aimugger</option><option>vampire</option><option>werewolf</option><option>agent</option><option>vigilante</option><option>gang:intergang</option><option>gang:electricdead</option><option>gang:buzzeddragons</option><option>gang:foojeez</option><option>gang:revengers</option><option>gang:nullifiers</option></select><button type="button" data-dev="foe">SPAWN</button><button type="button" data-dev="peace" id="devPeace">FOES: ON</button></div>
+    <div class="devrow"><button type="button" data-dev="siren">SIREN +1</button><button type="button" data-dev="siren0">SIREN 0</button><button type="button" data-dev="caught">CAUGHT</button><button type="button" data-dev="free">SENTENCE SERVED</button></div>
+    <h2>WORLD</h2>
+    <div class="devrow"><button type="button" data-dev="piles">RESET TODAY'S PILES</button><button type="button" data-dev="lotto">TICKETS → YESTERDAY</button></div>
+    <div class="devrow"><button type="button" data-dev="h1">TIME +1H</button><button type="button" data-dev="h6">TIME +6H</button><button type="button" data-dev="noon">NOON</button><button type="button" data-dev="midnight">MIDNIGHT</button><button type="button" data-dev="real">REAL TIME</button><button type="button" data-dev="bill">BILL NOW</button></div>
+    <div class="devrow"><button type="button" data-dev="air-5">AIR -5°C</button><button type="button" data-dev="air45">AIR 45°C</button><button type="button" data-dev="airreal" id="devAir">AIR: REAL</button><button type="button" data-dev="body37">BODY 37°C</button></div>
+    <div class="devrow"><select id="devTo" aria-label="teleport to"></select><button type="button" data-dev="tp">GO</button></div>
+    <p class="msg" id="devMsg" role="status"></p>
+  </div>
+  </div>
+
+  <!-- SYS is a phone app (overworld.js). This hidden shelf holds its SAVE
+       screen while it is not on the phone, so ui.js can always reach it -->
+  <div id="sysShelf" hidden>
+  <div class="psave" id="sysSave">
+    <h2>BACKUP</h2>
+    <p class="dim">your run, your wiki keys and the doors you opened live in this browser only. clearing site data erases them. keep a copy somewhere.</p>
+    <textarea id="code" rows="4" readonly spellcheck="false" aria-label="your backup code"></textarea>
+    <button type="button" id="copyBtn">COPY</button>
+    <button type="button" id="dlBtn">DOWNLOAD FILE</button>
+    <h2>RESTORE</h2>
+    <textarea id="paste" rows="4" spellcheck="false" aria-label="paste a backup code"></textarea>
+    <button type="button" id="loadBtn">RESTORE</button>
+    <button type="button" id="fileBtn">LOAD A FILE</button>
+    <input type="file" id="fileIn" accept=".save,.txt,text/plain" hidden>
+    <p class="msg" id="sysMsg" role="status"></p>
+  </div>
+  </div>
+</body>
+</html>

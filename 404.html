@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-zzgm6lr4YRd2EVI5JXENqzQmrVSD7D6YCYDlAjoon6w='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 // you shouldn't be here</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#05060B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%2305060B'/%3E%3Crect x='2' y='7' width='12' height='1' fill='%23FF2E4D'/%3E%3Crect x='3' y='6' width='10' height='1' fill='%23FF2E4D'/%3E%3Crect x='4' y='5' width='8' height='1' fill='%23FF7A8A'/%3E%3Crect x='2' y='8' width='12' height='1' fill='%23FF2E4D'/%3E%3Crect x='4' y='9' width='8' height='1' fill='%23FF7A8A'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23DCE3FF'/%3E%3Crect x='7' y='7' width='2' height='2' fill='%2305060B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--void:#05060B;--blood:#FF2E4D;--dim:#7A1F2E;--ice:#DCE3FF;--rain:#7A82A0;--font-display:'Rajdhani',Arial,sans-serif;--font-mono:'Share Tech Mono',"Courier New",monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--ice);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--blood);outline-offset:4px}
+#static{position:fixed;inset:0;z-index:1;pointer-events:none;width:100vw;height:100vh;image-rendering:pixelated;opacity:.16}
+.scanlines{position:fixed;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.32) 2px 3px);mix-blend-mode:multiply}
+.vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,transparent 30%,rgba(5,6,11,.95) 100%)}
+main{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;padding:clamp(.6rem,2.5vh,2rem) 4vw clamp(3rem,8vh,5rem)}
+.hall{width:min(94vw,1100px);position:relative}
+.hall img{width:100%;height:auto;display:block;mask-image:radial-gradient(ellipse at center,#000 52%,transparent 98%);-webkit-mask-image:radial-gradient(ellipse at center,#000 52%,transparent 98%)}
+.hall .ghost{position:absolute;inset:0;background-size:100% auto;background-repeat:no-repeat;background-position:center;opacity:0;pointer-events:none;mask-image:radial-gradient(ellipse at center,#000 52%,transparent 98%);-webkit-mask-image:radial-gradient(ellipse at center,#000 52%,transparent 98%)}
+.hall.tear .ghost.a{opacity:.8;transform:translateX(-10px);clip-path:polygon(0 22%,100% 22%,100% 38%,0 38%);filter:hue-rotate(200deg)}
+.hall.tear .ghost.b{opacity:.8;transform:translateX(12px);clip-path:polygon(0 58%,100% 58%,100% 70%,0 70%);filter:invert(.2)}
+.log{margin-top:clamp(.6rem,2vh,1.4rem);max-width:60ch;font-size:clamp(.72rem,1.3vw,.86rem);letter-spacing:.1em;line-height:1.9;color:var(--rain);text-align:center}
+.log b{font-weight:400;color:var(--blood)}
+.log .path{color:var(--ice);word-break:break-all}
+.out{margin-top:2rem;display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center}
+.out a{border:1px solid var(--dim);padding:.7rem 1.1rem;font-size:.72rem;letter-spacing:.16em;color:var(--ice);transition:border-color .2s,color .2s}
+.out a:hover{border-color:var(--blood);color:var(--blood)}
+.out a.dead{color:var(--rain);border-color:rgba(74,80,104,.5);cursor:not-allowed}
+#ghostie{position:fixed;right:clamp(.6rem,2vw,1.6rem);bottom:clamp(.6rem,2vh,1.4rem);z-index:4;width:clamp(56px,8vw,96px);filter:drop-shadow(0 0 14px rgba(255,46,77,.5)) saturate(.6);animation:bob 5s ease-in-out infinite;cursor:pointer;user-select:none}
+#ghostie .frame{position:relative;width:100%;aspect-ratio:256/263}
+#ghostie img{width:100%;display:block;position:absolute;inset:0;opacity:0}
+#ghostie img.show{opacity:1}
+#ghostie .say{position:absolute;right:105%;bottom:55%;white-space:nowrap;font-size:.68rem;letter-spacing:.1em;color:var(--ice);background:rgba(11,13,26,.94);border:1px solid var(--dim);padding:.4rem .6rem;opacity:0;transition:opacity .25s;pointer-events:none}
+#ghostie .say.on{opacity:1}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}#static{display:none}}
+</style>
+</head>
+<body>
+<canvas id="static" aria-hidden="true"></canvas>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<main>
+  <div class="hall" id="hall">
+    <div class="ghost a" aria-hidden="true"></div>
+    <div class="ghost b" aria-hidden="true"></div>
+    <img src="/img/404.webp" alt="Error 404. Page not found. You shouldn't be here." width="1408" height="768">
+  </div>
+  <p class="log" id="log"></p>
+  <div class="out">
+    <a href="/">back to the signal</a>
+    <a href="/#terminal">open the terminal</a>
+    <a class="dead" aria-disabled="true" title="not yet">deeper</a>
+  </div>
+</main>
+<div id="ghostie" role="img" aria-label="ghostie">
+  <span class="say" id="say"></span>
+  <div class="frame">
+    <img class="f-idle show" src="/img/ghostie-idle.webp" alt="">
+    <img class="f-closed" src="/img/ghostie-closed.webp" alt="">
+    <img class="f-talk" src="/img/ghostie-talk.webp" alt="">
+  </div>
+</div>
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var path = location.pathname.replace(/^\/+/, '');
+  var id = Math.random().toString(16).slice(2,6).toUpperCase() + '-' + Math.random().toString(16).slice(2,6).toUpperCase();
+  document.getElementById('log').innerHTML =
+    '<b>404</b> // <span class="path">/' + path.replace(/[&<>]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]; }) + '</span> does not exist. yet.<br>' +
+    'incident logged as <b>' + id + '</b>. the walls heard you looking.<br>' +
+    'this corridor is not finished. it goes further than it should.';
+
+  var hall = document.getElementById('hall'), img = hall.querySelector('img');
+  hall.querySelectorAll('.ghost').forEach(function(g){ g.style.backgroundImage = 'url(' + img.src + ')'; });
+  function tear(){ hall.classList.add('tear'); setTimeout(function(){ hall.classList.remove('tear'); }, 80 + Math.random()*140); }
+  if(!reduce){ setTimeout(tear, 600); setInterval(function(){ if(Math.random() < .45) tear(); }, 3200); }
+
+  if(!reduce){
+    var c = document.getElementById('static'), ctx = c.getContext('2d'); c.width = 200; c.height = 112;
+    (function noise(){
+      var d = ctx.createImageData(c.width, c.height), a = d.data;
+      for(var i = 0; i < a.length; i += 4){ var v = Math.random()*255; a[i] = v; a[i+1] = v*.25; a[i+2] = v*.35; a[i+3] = 255; }
+      ctx.putImageData(d, 0, 0); setTimeout(noise, 70);
+    })();
+  }
+
+  var gh = document.getElementById('ghostie'), say = document.getElementById('say');
+  var gf = { idle: gh.querySelector('.f-idle'), closed: gh.querySelector('.f-closed'), talk: gh.querySelector('.f-talk') }, talking = false;
+  function gframe(k){ for(var f in gf) gf[f].classList.toggle('show', f === k); }
+  function blink(){ if(!talking){ gframe('closed'); setTimeout(function(){ if(!talking) gframe('idle'); }, 140); } setTimeout(blink, 1500 + Math.random()*3000); }
+  function speak(t){ talking = true; say.textContent = t; say.classList.add('on'); var n = 0, iv = setInterval(function(){ gframe(n++ % 2 ? 'idle' : 'talk'); }, 130); setTimeout(function(){ clearInterval(iv); gframe('idle'); talking = false; say.classList.remove('on'); }, 2600); }
+  var lines = ['you shouldn\'t be here.', 'this isn\'t my corridor either.', 'go back. or don\'t.', 'the walls are listening.', 'nothing is deleted. only exiled.', 'i can\'t follow you past this point.'];
+  gh.addEventListener('click', function(){ if(!talking) speak(lines[Math.floor(Math.random()*lines.length)]); });
+  if(!reduce){ setTimeout(blink, 2000); setTimeout(function(){ speak('you shouldn\'t be here.'); }, 2400); }
+})();
+</script>
+</body>
+</html>

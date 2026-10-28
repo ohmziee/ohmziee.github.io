@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>404 Not Found</title>
+<link rel="stylesheet" href="mindscape.css">
+<!-- opened on its own, this hops into the main page's frame -->
+<script src="../wiki/shell.js"></script>
+<script src="pages.js" defer></script>
+<script src="mindscape.js" defer></script>
+</head>
+<body>
+  <!-- what anyone who has not broken the seal sees: nothing worth a second look -->
+  <main id="denied" class="denied" hidden>
+    <h1>Not Found</h1>
+    <p>The requested URL was not found on this server.</p>
+    <hr>
+    <address>Apache Server at ohmziee.github.io Port 443</address>
+  </main>
+
+  <div class="browser" id="browser" hidden>
+    <div class="chrome">
+      <div class="titlebar"><span class="t">mindscape</span><a class="wake" href="../index.html">[ wake up ]</a></div>
+      <div class="toolbar">
+        <button type="button" id="back" aria-label="back" disabled>&#9664; back</button>
+        <button type="button" id="fwd" aria-label="forward" disabled>forward &#9654;</button>
+        <button type="button" id="reload" aria-label="reload">reload</button>
+        <button type="button" id="hum" aria-pressed="false">hum: off</button>
+      </div>
+      <form class="addrbar" id="addrForm" autocomplete="off"><label for="addr">Address</label><input id="addr" spellcheck="false" autocapitalize="off"></form>
+      <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+    </div>
+    <main class="page" id="page" aria-live="polite"></main>
+    <div class="statusbar" id="status" role="status">Done</div>
+  </div>
+  <div class="flicker" aria-hidden="true"></div>
+</body>
+</html>
