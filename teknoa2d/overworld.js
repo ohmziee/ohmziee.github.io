@@ -4168,6 +4168,42 @@
     return c.hour < 12 ? 'fog' : 'drizzle';
   }
   var sky = { rain: 0, fog: 0, dim: 0, at: 0, bolt: 0, splashes: [] };
+  /* the grade, last over every frame: the canvas's own contrast and
+     saturation (a css filter, so the gpu does it; rain and fog wash it out),
+     neon that still reads by day, and a vignette that closes in at night */
+  var vignCv = null, gradeCss = '';
+  function grade(now, cx, cy, dk) {
+    var W = VW * TS, Hh = VH * TS, wet = inside ? 0 : Math.max(sky.rain, sky.fog), off = s.dev && s.dev.nograde;
+    var con = inside ? 1.08 : 1.1 - 0.04 * dk, sat = (inside ? 1.12 : 1.16 + 0.12 * dk) - 0.3 * wet;
+    var css = off ? 'none' : 'contrast(' + con.toFixed(2) + ') saturate(' + sat.toFixed(2) + ')';
+    if (css !== gradeCss) { gradeCss = css; canvas.style.setProperty('--grade', css); }
+    if (off) return;
+    /* daylight is warm in the lights and cool in the shade */
+    if (!inside && dk < 1) {
+      ctx.globalCompositeOperation = 'soft-light';
+      ctx.fillStyle = 'rgba(255,196,130,' + (0.22 * (1 - dk) * (1 - wet)).toFixed(3) + ')'; ctx.fillRect(0, 0, W, Hh);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    if (!inside && dk < 1) {
+      ctx.globalCompositeOperation = 'lighter';
+      world.marks.forEach(function (m) {
+        var col = MARK_GLOW[m.id];
+        if (!col || m.fire) return;
+        var r = Math.max(m.w, m.h) * 9 + 8, mx = (m.x + m.w / 2) * TS - cx, my = m.y * TS - cy + m.h * TS * 0.35;
+        if (mx < -r || my < -r || mx > W + r || my > Hh + r) return;
+        ctx.globalAlpha = 0.2 * (1 - dk) * (1 - 0.5 * wet); ctx.drawImage(disc(r, col), Math.round(mx) - r, Math.round(my) - r, r * 2, r * 2);
+      });
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+    if (!vignCv || vignCv.width !== W * ART || vignCv.height !== Hh * ART) {
+      vignCv = document.createElement('canvas'); vignCv.width = W * ART; vignCv.height = Hh * ART;
+      var g = vignCv.getContext('2d'), R = Math.sqrt(W * W + Hh * Hh) / 2 * ART;
+      var vg = g.createRadialGradient(W * ART / 2, Hh * ART / 2, R * 0.45, W * ART / 2, Hh * ART / 2, R);
+      vg.addColorStop(0, 'rgba(6,4,18,0)'); vg.addColorStop(0.6, 'rgba(6,4,18,.45)'); vg.addColorStop(1, 'rgba(6,4,18,1)');
+      g.fillStyle = vg; g.fillRect(0, 0, W * ART, Hh * ART);
+    }
+    ctx.globalAlpha = inside ? 0.6 : 0.45 + 0.25 * dk; ctx.drawImage(vignCv, 0, 0, W, Hh); ctx.globalAlpha = 1;
+  }
   function drawWeather(now, cx, cy) {
     var W = VW * TS, Hh = VH * TS, w = WEATHER[weatherAt(novaNow())];
     var dt = Math.min(0.05, (now - (sky.at || now)) / 1000), k = sky.at ? 1 - Math.exp(-dt * 0.6) : 1;
@@ -4391,7 +4427,7 @@
     }
     /* the hour's light over everything (night lets the city's lights
        through), and the rain the main page has */
-    if (inside) { ctx.fillStyle = 'rgba(5,6,11,.1)'; ctx.fillRect(0, 0, VW * TS, VH * TS); return; }
+    if (inside) { ctx.fillStyle = 'rgba(5,6,11,.1)'; ctx.fillRect(0, 0, VW * TS, VH * TS); grade(now, cx, cy, 0); return; }
     ambient(now, cx, cy, x0, y0, ppx, ppy);
     drawAmbient(now, cx, cy, false);
     var nc = novaNow(), dk = darkness(nc);
@@ -4402,6 +4438,7 @@
     drawFight(cx, cy, now, ppx, ppy);
     drawAir(cx, cy, now);
     drawWeather(now, cx, cy);
+    grade(now, cx, cy, dk);
   }
 
   function loop(now) {

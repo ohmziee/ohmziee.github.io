@@ -488,6 +488,7 @@
     else if (act === 'faint') { s.body.food = 0.3; s.body.drink = 50; }
     else if (act === 'nohunger') s.dev.nohunger = !s.dev.nohunger;
     else if (act === 'noweight') s.dev.noweight = !s.dev.noweight;
+    else if (act === 'nograde') s.dev.nograde = !s.dev.nograde;
     else if (act === 'h1' || act === 'h6') s.dev.shift = (s.dev.shift || 0) + (act === 'h1' ? 60 : 360);
     else if (act === 'noon' || act === 'midnight') { var c0 = MF.clock(Date.now(), 0); s.dev.shift = ((act === 'noon' ? 720 : 1440) - (c0.hour * 60 + c0.minute) + 1440) % 1440; }
     else if (act === 'real') s.dev.shift = 0;
@@ -520,6 +521,7 @@
     $('devNoHunger').textContent = 'HUNGER: ' + (s.dev.nohunger ? 'OFF' : 'ON');
     $('devPeace').textContent = 'FOES: ' + (s.dev.peace ? 'OFF' : 'ON');
     $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev.noweight ? 'OFF' : 'ON');
+    $('devGrade').textContent = 'GRADE: ' + (s.dev.nograde ? 'OFF' : 'ON');
     $('devAir').textContent = 'AIR: ' + (typeof s.dev.temp === 'number' ? s.dev.temp + '°C' : 'REAL');
     if (store) MF.save(s, store);
     if (window.MFWorld && window.MFWorld.active) window.MFWorld.refresh();
@@ -531,6 +533,7 @@
     $('devNoHunger').textContent = 'HUNGER: ' + (s.dev && s.dev.nohunger ? 'OFF' : 'ON');
     $('devPeace').textContent = 'FOES: ' + (s.dev && s.dev.peace ? 'OFF' : 'ON');
     $('devNoWeight').textContent = 'CARRY LIMIT: ' + (s.dev && s.dev.noweight ? 'OFF' : 'ON');
+    $('devGrade').textContent = 'GRADE: ' + (s.dev && s.dev.nograde ? 'OFF' : 'ON');
   }
 
   /* SYS is a phone app (overworld.js): its SAVE screen is filled fresh each

@@ -208,7 +208,7 @@ a{color:var(--lavender)}
 /* ── nova city: the street, seen from above ── */
 .world{flex:1;display:flex;flex-direction:column;align-items:center;gap:.6rem;padding:.8rem;outline:none}
 .wscreen{position:relative;box-sizing:content-box;width:min(100%,960px,calc((100dvh - 10rem) * 320 / 192));aspect-ratio:320/192;border:2px solid #dce3ff;outline:2px solid var(--violet);background:#000;overflow:hidden;box-shadow:0 0 40px -12px rgba(159,140,255,.5)}
-.wscreen canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.wscreen canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:var(--grade,none)}
 .wcard{position:absolute;inset:0;opacity:0;transition:opacity .45s ease;pointer-events:none}
 .wcard.in{opacity:1}
 .wcard.out{opacity:0}
