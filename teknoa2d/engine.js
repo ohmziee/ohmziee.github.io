@@ -46,6 +46,8 @@
              xp: { total: 0, by: {} },                       /* experience, and how much came from each source (level.js) */
              skills: {},                                     /* exp in each trait: atk, def, stl ... (level.js TRAITS) */
              perks: {},                                      /* perks taken from the trait trees (level.js PERKS) */
+             pets: { land: null, air: null, sea: null },     /* a companion per family, or null (companions.js) */
+             lure: { item: '', species: '', until: 0 },      /* the lure in use: which item, for which animal, until when */
              joules: 0, found: { day: '', got: {} } };       /* ⚡ in hand; the loose joules picked up today */
   }
 
@@ -222,6 +224,7 @@
     var xb = s.xp.by && typeof s.xp.by === 'object' ? s.xp.by : {};
     s.xp = { total: Math.max(0, Math.floor(+s.xp.total || 0)), by: counts(xb) };
     if (root.MFLaw) s.law = root.MFLaw.tidy(s.law);
+    if (root.MFCompanions) { s.pets = root.MFCompanions.tidy(s.pets); s.lure = root.MFCompanions.tidyLure(s.lure); }
     s.lotto = (Array.isArray(s.lotto) ? s.lotto : []).filter(function (t) { return t && typeof t.day === 'string' && Array.isArray(t.nums) && t.nums.length === 3; }).slice(-50);
     var p = s.player;
     s.player = { handle: cleanHandle(p.handle), origin: typeof p.origin === 'string' ? p.origin : '',
