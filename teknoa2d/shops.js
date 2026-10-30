@@ -206,7 +206,8 @@
     mackerel:  { name: 'a nova mackerel', what: 'the bay\'s everyday fish. good grilled.', tier: 'common', price: 12 },
     squid:     { name: 'a shimmer squid', what: 'changes colour every time you blink.', tier: 'uncommon', price: 30 },
     bass:      { name: 'a council bass', what: 'it looks like it\'s judging you. in triplicate.', tier: 'uncommon', price: 28 },
-    tuna:      { name: 'an aurora tuna', what: 'streaks of green and violet down its side.', tier: 'rare', price: 120 },
+    tuna:      { name: 'a teknoan tuna', what: 'built like a torpedo. only a deep-sea reel holds it.', tier: 'uncommon', price: 60 },
+    salmon:    { name: 'an aurora salmon', what: 'streaks of green and violet down its side.', tier: 'rare', price: 120 },
     parrot:    { name: 'a reef parrotfish', what: 'crunches coral. loudly.', tier: 'common', price: 12 },
     mangocrab: { name: 'a mango crab', what: 'orange, sweet-smelling, very friendly. vistadelsol, basically.', tier: 'uncommon', price: 25 },
     sunray:    { name: 'a sun ray', what: 'warm to the touch, even at night.', tier: 'rare', price: 100 },
@@ -216,12 +217,12 @@
     loopeel:   { name: 'an ouroboros eel', what: 'caught it biting its own tail. it did not let go.', tier: 'rare', price: 200 },
     glassfish: { name: 'an abyssal glassfish', what: 'you can see straight through it. it can see straight through you.', tier: 'legendary', price: 400 }
   };
-  /* the spots, and who bites there (weights) */
+  /* the spots, and who bites there (weights; a third number is the rod level it takes) */
   var ZONES = {
     harbour: { name: 'the harbour', what: 'the shallows off the districts', table: [['boot', 6], ['can', 6], ['sardine', 40], ['dockeel', 30], ['slickcarp', 14], ['minnow', 4]] },
     glow:    { name: 'naturia\'s glow-waters', what: 'off naturia', table: [['glowfin', 50], ['mosstrout', 30], ['lanternray', 8], ['starkoi', 1.5], ['boot', 3]] },
     redrum:  { name: 'the redrum shallows', what: 'off redrum', table: [['rustgill', 45], ['knifepike', 25], ['redsnapper', 6], ['can', 10], ['boot', 8]] },
-    bay:     { name: 'the nova bay', what: 'deep water inside the bay', table: [['mackerel', 50], ['squid', 22], ['bass', 18], ['tuna', 6]] },
+    bay:     { name: 'the nova bay', what: 'deep water inside the bay', table: [['mackerel', 50], ['squid', 22], ['bass', 18], ['tuna', 16, 2], ['salmon', 6]] },
     reef:    { name: 'the vistadelsol reef', what: 'off vistadelsol\'s coast and islets', table: [['parrot', 45], ['mangocrab', 30], ['sunray', 8], ['grouper', 1.5]] },
     jormun:  { name: 'the jörmun ocean', what: 'the open sea, past the bay', table: [['herring', 45], ['lanterneye', 28], ['loopeel', 10], ['glassfish', 2.5]] }
   };
@@ -229,7 +230,7 @@
   /* what bites: the spot's table, rare and legendary helped by the rod, legendary by the small hours */
   function pickFish(zone, rng, rodLevel, hour) {
     var z = ZONES[zone] || ZONES.harbour, total = 0;
-    var rows = z.table.map(function (r) {
+    var rows = z.table.filter(function (r) { return !r[2] || (rodLevel || 0) >= r[2]; }).map(function (r) {
       var t = FISH[r[0]].tier, w = r[1];
       if (t === 'rare') w *= 1 + 0.6 * (rodLevel || 0);
       if (t === 'legendary') w *= (1 + (rodLevel || 0)) * (hour !== undefined && hour < 5 ? 2 : 1);

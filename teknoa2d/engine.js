@@ -26,6 +26,7 @@
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
              yard: {},                                       /* materials left with a boat builder, per yard: { slip: { scrap: 12 } } */
+             fishVer: 2,                                     /* 2: the aurora tuna is the salmon (clean) */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
              wear: {},                                       /* uses left in each rod */
              torch: 0,                                       /* seconds of flashlight battery left */
@@ -197,6 +198,13 @@
     s.inbox = (Array.isArray(s.inbox) ? s.inbox : []).filter(function (m) { return m && typeof m.title === 'string' && typeof m.body === 'string'; }).slice(-40);
     function counts(o) { var out = {}; Object.keys(o && typeof o === 'object' ? o : {}).forEach(function (k) { var n = Math.floor(+o[k] || 0); if (n > 0) out[k] = n; }); return out; }
     function box(b) { return { items: counts(b && b.items), res: counts(b && b.res) }; }
+    /* the aurora tuna became the aurora salmon (Oms, 2026-10-29): "tuna" is now the teknoan tuna */
+    if (o.fishVer !== 2) {
+      [s.items, s.fishlog, s.hold && s.hold.items].concat(Object.keys(s.stash).map(function (k) { return s.stash[k] && s.stash[k].items; })).forEach(function (b) {
+        if (b && typeof b === 'object' && b.tuna) { b.salmon = (b.salmon || 0) + b.tuna; delete b.tuna; }
+      });
+      s.safe = s.safe.map(function (k) { return k === 'tuna' ? 'salmon' : k; });
+    }
     s.hold = box(s.hold);
     var yd = s.yard; s.yard = {}; Object.keys(yd).forEach(function (k) { var c = counts(yd[k]); if (Object.keys(c).length) s.yard[k] = c; });
     Object.keys(s.stash).forEach(function (k) { s.stash[k] = box(s.stash[k]); });
