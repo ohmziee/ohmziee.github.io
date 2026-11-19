@@ -400,6 +400,7 @@
   }
   function treeArt(x, y, tk, v) {
     var kd = treeKind(x, y), di = world.dist ? world.dist[tk] : -1;
+    if (kd === 'banana' && !inside && bananaPicked(tk)) kd = 'banana-bare';
     return kd ? window.MFTrees.canvas(kd, di, v, pal(di)) : treeCanvas(di, v);
   }
 
@@ -1292,6 +1293,8 @@
       if (!me.sail && rod) return cast(tx, ty, rod);
       if (!me.sail && s.boat) return setSail(tx, ty);
     }
+    /* a banana tree: shake it (trees.js grows them in vistadelsol) */
+    if (!inside && tx >= 0 && ty >= 0 && tx < world.W && ty < world.H && world.tile[ty * world.W + tx] === T.TREE && treeKind(tx, ty) === 'banana') return shakeBanana(tx, ty);
     /* walking into a shop's front opens it too; an apartment's door sells
        itself or lets you in; furniture has something to say */
     var m = markAt(tx, ty);
@@ -1586,6 +1589,30 @@
     wallet((how ? how + ' ' : '') + '+' + n + ' ' + (RS[p.kind] ? RS[p.kind].name : p.kind));
     exp('gather', { perfect: how === 'PERFECT' });
     if (api && api.save) api.save();
+  }
+
+  /* ── banana trees: A shakes one. BANANA_ODDS a banana drops and the
+     tree is bare till the next nova day (s.picked); else nothing falls.
+     each shake costs a little stamina, so it isn't free to spam ── */
+  var BANANA_ODDS = 0.25, SHAKE_STA = 3;
+  var SHAKE_MISS = ['you shake the trunk. the leaves rustle.\nnothing falls.', 'the tree sways. the bunch holds on.\nnot today, maybe. try again.', 'something scuttles off through the leaves.\nno banana.', 'a leaf drops on your head.\njust the leaf.'];
+  function bananaPicked(k) {
+    var day = novaNow().day;
+    if (!s.picked || s.picked.day !== day) s.picked = { day: day, got: {} };
+    return !!s.picked.got[k];
+  }
+  function shakeBanana(x, y) {
+    var k = y * world.W + x;
+    if (bananaPicked(k)) return say(['picked clean. the bunch grows back by tomorrow.']);
+    if (!window.MF.strain(s, SHAKE_STA)) return say(['you\'re spent. catch your breath first.\n(' + SHAKE_STA + ' stamina to shake a tree)']);
+    drawBody();
+    if (Math.random() >= BANANA_ODDS) { if (api && api.save) api.save(); return say([SHAKE_MISS[Math.floor(Math.random() * SHAKE_MISS.length)]]); }
+    s.picked.got[k] = 1;
+    s.items = s.items || {}; s.items.banana = (s.items.banana || 0) + 1;
+    wallet('+1 banana');
+    exp('gather', {});
+    if (api && api.save) api.save();
+    return say(['you shake the trunk and a banana drops into your hand.\nthat was the last ripe one on this tree. (+1 banana)']);
   }
 
   /* ── the counter: general stores and pawn shops ────────────
@@ -4649,5 +4676,5 @@
   function refresh() { if (!active) return; wallet(); drawBody(); }
   /* the boat's hold, from INV, while you're out on it */
   function openHold() { if (active && me.sail) openCounter('stash:hold'); }
-  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving, spot: !!m.spot }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; }, get me() { return { x: me.x, y: me.y, d: me.dir, moving: me.moving }; }, get untouchable() { return performance.now() < dodgeUntil; }, get swings() { return swingLog.slice(); }, get torchLit() { return torchLit; }, get seen() { return seen(); } };
+  window.MFWorld = { show: show, hide: hide, preview: preview, openPhone: openPhone, devFoe: devFoe, devLaw: devLaw, get foes() { return mobs.map(function (m) { return { name: m.f.name, id: m.f.id, hp: m.f.hp, max: m.f.max, level: m.f.level, x: m.x, y: m.y, civ: !!m.civ, foe: !!m.foe, law: m.law || '', armed: !!m.f.armed, leaving: !!m.leaving, spot: !!m.spot }; }); }, get lawSees() { return lawSees(); }, get helis() { return helis.map(function (h) { return { kind: h.kind, leaving: !!h.leaving, sees: heliSees(h) }; }); }, get charges() { return charges.length; }, get bodies() { return bodies.map(function (b) { return { x: b.x, y: b.y, dead: b.dead, kind: b.n.kind }; }); }, get crowd() { return cityNpcs ? cityNpcs.filter(function (n) { return window.MFLaw && window.MFLaw.attackable(n); }).map(function (n) { return { x: n.x, y: n.y, kind: n.kind, run: !!n.run }; }) : []; }, setOffline: setOffline, refresh: refresh, openHold: openHold, get sailing() { return active && me.sail; }, get offline() { return offline(); }, get active() { return active; }, get me() { return { x: me.x, y: me.y, d: me.dir, moving: me.moving }; }, get untouchable() { return performance.now() < dodgeUntil; }, get swings() { return swingLog.slice(); }, get torchLit() { return torchLit; }, get seen() { return seen(); }, treeAt: function (x, y) { var k = y * world.W + x; if (world.tile[k] !== T.TREE) return ''; var kd = treeKind(x, y) || 'old'; return kd === 'banana' && !inside && bananaPicked(k) ? 'banana-bare' : kd; } };
 })();

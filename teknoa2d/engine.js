@@ -25,6 +25,7 @@
              world: { x: -1, y: -1, d: 'down' },            /* where they stand in nova city (in: the apartment they're inside) */
              homes: {}, wake: '',                            /* the apartments they hold keys to; the one whose bed they last slept in */
              res: {}, boat: 0, gathered: { day: '', got: {} },  /* materials in hand, the boat, the piles picked up today */
+             picked: { day: -1, got: {} },                   /* banana trees shaken bare this nova day: { day, got: { tile index: 1 } } */
              yard: {},                                       /* materials left with a boat builder, per yard: { slip: { scrap: 12 } } */
              fishVer: 2,                                     /* 2: the aurora tuna is the salmon (clean) */
              fishlog: {},                                    /* every kind of fish ever caught, and how many */
@@ -190,6 +191,7 @@
     if (o.joules === undefined && o.player && o.player.handle && o.player.origin) s.joules = START_JOULES;
     if (!s.found || typeof s.found.day !== 'string' || !s.found.got || typeof s.found.got !== 'object') s.found = { day: '', got: {} };
     if (!s.gathered || typeof s.gathered.day !== 'string' || !s.gathered.got || typeof s.gathered.got !== 'object') s.gathered = { day: '', got: {} };
+    if (!s.picked || typeof s.picked.day !== 'number' || !s.picked.got || typeof s.picked.got !== 'object') s.picked = { day: -1, got: {} };
     Object.keys(s.res).forEach(function (k) { var n = Math.floor(+s.res[k] || 0); if (n > 0) s.res[k] = Math.min(n, 9999); else delete s.res[k]; });
     s.boat = s.boat ? 1 : 0;
     s.torch = Math.max(0, Math.min(3600, +s.torch || 0));

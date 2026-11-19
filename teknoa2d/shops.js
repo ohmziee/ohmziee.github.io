@@ -299,6 +299,8 @@
     grilled2: { name: 'a good grilled fish', what: 'thick and flaky. worth the wait.', food: 45, drink: 0, price: 0 },
     grilled3: { name: 'a rare fish, grilled', what: 'you can feel your hands go steady just smelling it.', food: 65, drink: 5, price: 0, buff: 'steady line', secs: 480 },
     feast:    { name: 'a legendary feast', what: 'one fish, cooked right, enough for a table. you eat it alone.', food: 90, drink: 20, price: 0, buff: 'fast feet', secs: 600 },
+    /* off a banana tree in vistadelsol (overworld.js shakeBanana); the monkey lure too (companions.js) */
+    banana:   { name: 'a banana', what: 'straight off a vistadelsol tree. something in the palms is watching you hold it.', food: 12, drink: 2, price: 0 },
     charred:  { name: 'charred fruit', what: 'sweet and smoky. sticky fingers.', food: 18, drink: 8, price: 0 },
     stew:     { name: 'a fish stew', what: 'fish, fruit, whatever\'s in the cupboard. it works.', food: 60, drink: 30, price: 0 },
     juice:    { name: 'fresh juice', what: 'three fruits\' worth. the pulp is the point.', food: 10, drink: 60, price: 0 },

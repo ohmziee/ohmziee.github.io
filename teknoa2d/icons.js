@@ -90,7 +90,7 @@
     croissant: ['bun', '#e8b060'], soup: ['bowl', '#c06a3a'], fryup: ['pot', '#f2c94c'], pie: ['bun', '#a0402a'],
     noodles: ['bowl', '#ffd27c'], ramen: ['bowl', '#f2b45a'], wontons: ['bowl', '#f0dcc0'], stew: ['pot', '#a0522d'], feast: ['pot', '#d98a3a'],
     patty: ['bun', '#e2a23a'], cocobread: ['bun', '#f0d9a8'], bao: ['bun', '#f6efe0'], dumplings: ['bun', '#efe2c8'], sandwich: ['bun', '#d9a860'],
-    skewer: ['skewer', '#b5552d'], bar: ['bar', '#a86a3a'], mango: ['fruit', '#ffb02e'], berries: ['berries', '#7a4adf'],
+    skewer: ['skewer', '#b5552d'], bar: ['bar', '#a86a3a'], mango: ['fruit', '#ffb02e'], banana: ['fruit', '#f0d04a'], berries: ['berries', '#7a4adf'],
     grilled1: ['fish', '#b8743a'], grilled2: ['fish', '#a0602a'], grilled3: ['fish', '#8a4a1e'], charred: ['fish', '#3a2a22'],
     boot: ['boot', '#5a4632'], can: ['can', '#8a8f99'],
     rod: ['rod', '#a07a4a'], tuned: ['rod', '#7cc8ff'], jormun: ['rod', '#f2c94c'],

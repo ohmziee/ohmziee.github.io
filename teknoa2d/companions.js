@@ -15,7 +15,8 @@
    rolls the look and stats once, at befriending; both are then kept as
    rolled, so editing a trait list never changes an animal someone has.
    PLACEHOLDER: base stats are empty until Oms designs them (step 8); the
-   chicken and banana lures have no item yet (step 2). */
+   chicken lure waits for the bird expansion; bananas drop from banana trees
+   (overworld.js shakeBanana). */
 (function (root) {
   'use strict';
   var FAMILIES = ['land', 'air', 'sea'];
