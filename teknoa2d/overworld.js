@@ -390,6 +390,19 @@
     return (treeCache[key] = c);
   }
 
+  /* a tree's sprite: the 32px art (trees.js: broad, pine, palm, banana by
+     where it grows), else the old 16px blob */
+  function treeKind(x, y) {
+    if (!window.MFTrees || ART < 2 || !world) return null;
+    var k = y * world.W + x, m = world.treeK || (world.treeK = {});
+    /* rooms (the great tree's hall) have no districts: plain trees */
+    return m[k] || (m[k] = world.dist ? window.MFTrees.kind(world, x, y, T) : 'broad');
+  }
+  function treeArt(x, y, tk, v) {
+    var kd = treeKind(x, y), di = world.dist ? world.dist[tk] : -1;
+    return kd ? window.MFTrees.canvas(kd, di, v, pal(di)) : treeCanvas(di, v);
+  }
+
   /* once per map: every block of buildings gets one roof colour and one
      door, so a block reads as a building, not a quilt of tiles */
   var deco = null;
@@ -4382,8 +4395,8 @@
     for (y = y0; y <= y0 + VH + 1 && y < world.H; y++) for (x = Math.max(0, x0 - 1); x <= x0 + VW + 1 && x < world.W; x++) {
       var tk = y * world.W + x;
       if (world.tile[tk] !== T.TREE) continue;
-      var th = hash(x + 101, y + 57), tv = Math.floor(th * 40);
-      who.push({ x: x * TS + ((tv >> 3) % 3) - 1, y: y * TS - 0.5, tree: treeCanvas(world.dist[tk], tv % 5 + 5 * ((tv >> 2) & 1)) });
+      var th = hash(x + 101, y + 57), tv = Math.floor(th * 40), tvar = tv % 5 + 5 * ((tv >> 2) & 1);
+      who.push({ x: x * TS + ((tv >> 3) % 3) - 1, y: y * TS - 0.5, tree: treeArt(x, y, tk, tvar) });
     }
     var lean = now < swingFx + 120 ? (COMBO[comboN] === 'thrust' ? 3 : 1) : 0, ld = DIRS[me.dir];
     who.push({ x: ppx + ld[0] * lean, y: ppy + ld[1] * lean, img: sprite(playerLook(), me.dir, me.sail ? 0 : me.moving ? walkFrame(true, me.t, me.step) : idleFrame(now, 0)), me: 1, boat: me.sail });
@@ -4401,7 +4414,12 @@
     });
     ctx.globalAlpha = 1;
     who.forEach(function (p) {
-      if (p.tree) { ctx.drawImage(p.tree, Math.round(p.x - cx) - 2, Math.round(p.y + 0.5 - cy) + TS - TREE_H + 1); return; }
+      if (p.tree) {
+        /* the 32px trees (trees.js) say their own size; the old ones are 16px */
+        var tc = p.tree, tw = tc.uw || tc.width, thh = tc.uh || tc.height;
+        ctx.drawImage(tc, Math.round(p.x - cx) - (tc.ox != null ? tc.ox : 2), Math.round(p.y + 0.5 - cy) + TS - thh + 1, tw, thh);
+        return;
+      }
       var bob = p.boat ? Math.floor(now / 450) % 2 : 0;
       if (!p.boat) {
         /* a small oval under the feet */
