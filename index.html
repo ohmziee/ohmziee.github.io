@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-jUnWkufqGzjDlEAqXzBQlL3wjBb72sWxoXREJi3XVSc=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ivjEIaAqIsHYm56baF8yrrI6v53OmkBuSdNi+0WWCTk=' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://i.ytimg.com; connect-src 'self' https://jmksgecmpzrsivujutma.supabase.co https://www.googleapis.com https://www.youtube.com; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self'; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; upgrade-insecure-requests">
 <!-- the shell writes real addresses (/wiki/hex.html) into the address bar
      while this page stays loaded; the base keeps every relative link and
      file on this page resolving from the site root regardless -->
@@ -1316,6 +1316,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
         <button type="button" id="ambOn-waves" aria-pressed="false">WAVES</button><input type="range" id="ambVol-waves" min="0" max="100" value="50" aria-label="waves volume">
         <button type="button" id="ambOn-loons" aria-pressed="false">LOONS</button><input type="range" id="ambVol-loons" min="0" max="100" value="50" aria-label="loons volume">
         <button type="button" id="ambOn-frogs" aria-pressed="false">FROGS</button><input type="range" id="ambVol-frogs" min="0" max="100" value="50" aria-label="frogs volume">
+        <button type="button" id="ambOn-ocean" aria-pressed="false">OCEAN</button><input type="range" id="ambVol-ocean" min="0" max="100" value="50" aria-label="ocean volume">
+        <button type="button" id="ambOn-birds" aria-pressed="false">BIRDS</button><input type="range" id="ambVol-birds" min="0" max="100" value="50" aria-label="birds volume">
       </div>
     </div>
     <p class="j-note r-juke" id="jukeNote"></p>
@@ -2143,41 +2145,50 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
 
   /* ── the night, heard ───────────────────────────────────────
      AMBIENCE, at the foot of the radio, is a small mixer: rain, crickets,
-     waves, loons and frogs, each with a switch and a level, under an ALL
-     row (one switch, one master level). Nothing is downloaded: every sound
-     is made here with Web Audio, so there are no files and nothing to
-     license.
-     Rain is on by default and follows the rain level exactly (the slider,
-     or `rain N` in the terminal): 0 is silence, low numbers a soft drizzle
-     with the odd far-off roll, 100 a downpour with thunder close and often.
-     Each lightning strike is answered a beat late, nearer strikes sooner.
-     The other four start off.
-     So that all five at once still sound like one night and not a zoo:
-     - each keeps to its own part of the spectrum: waves low, frogs and
-       loons in the middle, crickets high, rain a wash over the top
+     waves, loons, frogs, ocean and birds, each with a switch and a level,
+     under an ALL row (one switch, one master level).
+     Rain is made here with Web Audio and is on by default. It follows the
+     rain level exactly (the slider, or `rain N` in the terminal): 0 is
+     silence, low numbers a soft drizzle with the odd far-off roll, 100 a
+     downpour with thunder close and often. Each lightning strike is
+     answered a beat late, nearer strikes sooner.
+     The other six are field recordings (Pixabay, free to use), cut to short
+     loops and matched in loudness (-24 LUFS, the loon -22), served from
+     jukebox/ambient/ beside the radio's tracks. They start off, and a file
+     is only fetched when its layer is first switched on. The loops are
+     decoded at 22 kHz (half the memory) and sewn end to start with a
+     crossfade, so they never click, and each starts at a random point. A
+     layer switched off lets go of its sound 20 seconds later.
+     So that all of them at once still sound like one night and not a zoo:
      - they share one bus: the more that are on, the further each is pulled
        back, and a soft compressor glues the sum
-     - crickets, frogs and loons share one reverb, as if heard across the
-       same lake, the loons furthest off
-     - a loon's call is the only solo: the frogs and crickets hush a little
-       under it, and the frogs take turns instead of croaking over each other
+     - a loon's call is the only solo: crickets, frogs and birds hush a
+       little under it. One recording, so it is kept rare: the first call
+       15 to 40 seconds after switching on (so the switch is answered), then
+       one every 2.5 to 6 minutes, never two in a row, each a touch higher
+       or lower, nearer or further, from the left or the right
      Browsers hold sound back until the visitor's first tap or key, so it
      starts then. It sits lower while the radio plays and keeps going in a
      background tab. Remembered: exiled.ambience (ALL on/off), exiled.ambVol
      (the master level) and exiled.ambMix (each layer's switch and level). */
-  var ambKinds = ['rain', 'crickets', 'waves', 'loons', 'frogs'];
+  var ambKinds = ['rain', 'crickets', 'waves', 'loons', 'frogs', 'ocean', 'birds'];
   /* base: the gain that puts a layer at its half-way level on a par with
      the rest. room: how much of the mix it takes when on, so a busy layer
      pulls the others back more than a sparse one. send: how much goes to
-     the shared reverb. duck: hushed under a loon. soon: built but not offered
-     yet (until it sounds real): its row is hidden and it stays off */
+     the shared reverb (the recordings carry their own space, so little).
+     duck: hushed under a loon. file: its recording in jukebox/ambient/.
+     seam: a loop, crossfaded over this many seconds (none: a one-shot).
+     soon: built but not offered yet: its row is hidden and it stays off */
   var ambSpec = {
-    rain:     { base: 1,    room: 1,   send: 0,   on: true },
-    crickets: { base: .1,   room: .6,  send: .3,  duck: true, soon: true },
-    waves:    { base: .5,   room: 1,   send: .08, soon: true },
-    loons:    { base: .25,  room: .35, send: .9, soon: true },
-    frogs:    { base: .72,  room: .7,  send: .35, duck: true, soon: true }
+    rain:     { base: 1,   room: 1,   send: 0,   on: true },
+    crickets: { base: 1,   room: .6,  send: .05, duck: true, file: 'crickets', seam: 2 },
+    waves:    { base: 1.2, room: 1,   send: 0,   file: 'waves', seam: 2.5 },
+    loons:    { base: .6,  room: .3,  send: .25, file: 'loon' },
+    frogs:    { base: 1,   room: .7,  send: .08, duck: true, file: 'frogs', seam: 2 },
+    ocean:    { base: 1.8, room: 1,   send: 0,   file: 'ocean', seam: 3 },
+    birds:    { base: 1.4, room: .7,  send: .05, duck: true, file: 'birds', seam: 3 }
   };
+  var ambDir = 'jukebox/ambient/';
   var amb = { ac: null, on: false, vol: .5, master: null, out: null, mix: null, verb: null, body: null, bodyF: null, hiss: null, hissF: null,
               thunder: null, rumble: null, white: null, lastBoom: 0, layer: {} };
   ambKinds.forEach(function(k){ amb.layer[k] = { on: !!ambSpec[k].on, vol: .5, g: null, duck: null, next: -1 }; });
@@ -2259,181 +2270,100 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     s2.connect(hp); hp.connect(amb.hissF); amb.hissF.connect(amb.hiss); amb.hiss.connect(R);
     amb.thunder = ac.createGain(); amb.thunder.gain.value = 1.3; amb.thunder.connect(R);
     s1.start(0); s2.start(0, 1.7);
-    /* the always-running layers are only built once they are offered */
-    if(!ambSpec.crickets.soon) ambCrickets(ac);
-    if(!ambSpec.waves.soon) ambWaves(ac);
   }
-  /* crickets: three close ones, each a pure high tone chirped in short
-     pulses at its own pace, over a far trilling chorus */
-  function ambCrickets(ac){
-    var L = amb.layer.crickets;
-    L.voices = [[4380, .62, -.55], [4710, .55, .15], [5020, .7, .6]].map(function(c){
-      var o = ac.createOscillator(); o.frequency.value = c[0];
-      var e = ac.createGain(); e.gain.value = 0;
-      var p = ambPan(ac, c[2]);
-      o.connect(e); e.connect(p); p.connect(L.duck); o.start(0);
-      return { o: o, e: e, f: c[0], period: c[1], pulses: 3 + (c[0] > 4600 ? 1 : 0), next: -1 };
-    });
-    L.far = ac.createGain(); L.far.gain.value = .25; L.far.connect(L.duck);
-    [[5480, 46, -.3], [5810, 53, .35]].forEach(function(c){
-      var o = ac.createOscillator(); o.frequency.value = c[0];
-      var am = ac.createGain(); am.gain.value = .5;
-      var lfo = ac.createOscillator(); lfo.type = 'square'; lfo.frequency.value = c[1];
-      var depth = ac.createGain(); depth.gain.value = .5;
-      lfo.connect(depth); depth.connect(am.gain);
-      var p = ambPan(ac, c[2]);
-      o.connect(am); am.connect(p); p.connect(L.far); o.start(0); lfo.start(0);
-    });
+  /* decoded at 22 kHz where the browser allows it (half the memory of the
+     page's own rate; nothing out here sings above 11 kHz) */
+  function ambDecode(ab){
+    function dec(c, data){
+      return new Promise(function(ok, no){
+        var p = c.decodeAudioData(data, ok, no);
+        if(p && p.then) p.then(ok, no);
+      });
+    }
+    var O = window.OfflineAudioContext || window.webkitOfflineAudioContext, low = null;
+    try { if(O) low = new O(2, 1, 22050); } catch(e){}
+    if(!low) return dec(amb.ac, ab);
+    return dec(low, ab.slice(0)).catch(function(){ return dec(amb.ac, ab); });
   }
-  function ambPlanCrickets(L, now, until){
-    L.voices.forEach(function(v){
-      if(v.next < now) v.next = now + Math.random() * .6;
-      while(v.next < until){
-        var s = v.next, a = .9 + Math.random() * .1;
-        v.o.frequency.setValueAtTime(v.f * (1 + (Math.random() - .5) * .012), s);
-        for(var p = 0; p < v.pulses; p++){
-          var t = s + p * .034;
-          v.e.gain.setValueAtTime(0, t);
-          v.e.gain.linearRampToValueAtTime(a, t + .005);
-          v.e.gain.linearRampToValueAtTime(a * .7, t + .017);
-          v.e.gain.linearRampToValueAtTime(0, t + .023);
-        }
-        /* now and then one stops to listen */
-        v.next = s + v.period * (.96 + Math.random() * .08) + (Math.random() < .035 ? 2 + Math.random() * 5 : 0);
+  /* a loop sewn end to start: the last few seconds fade out over the first
+     few fading in, so the wrap lands mid-sound and never clicks. The mp3's
+     own padding at either end is trimmed off first */
+  function ambSeam(b, secs){
+    var r = b.sampleRate, trim = Math.floor(r * .06), x = Math.floor(r * secs), m = b.length - 2 * trim, n = m - x;
+    if(n <= x) return b;
+    var out = amb.ac.createBuffer(b.numberOfChannels, n, r);
+    for(var ch = 0; ch < b.numberOfChannels; ch++){
+      var a = b.getChannelData(ch), d = out.getChannelData(ch), i;
+      for(i = x; i < n; i++) d[i] = a[trim + i];
+      for(i = 0; i < x; i++){
+        var t = i / x * Math.PI / 2;
+        d[i] = a[trim + i] * Math.sin(t) + a[trim + n + i] * Math.cos(t);
       }
+    }
+    return out;
+  }
+  function ambLoad(k){
+    var L = amb.layer[k], S = ambSpec[k];
+    if(L.buf || L.loading || Date.now() < (L.retry || 0)) return;
+    L.loading = true;
+    fetch(ambDir + S.file + '.mp3').then(function(r){
+      if(!r.ok) throw new Error('ambience ' + r.status);
+      return r.arrayBuffer();
+    }).then(ambDecode).then(function(b){
+      L.loading = false; L.fails = 0;
+      L.buf = S.seam ? ambSeam(b, S.seam) : b;
+      ambPlan();
+    }).catch(function(){
+      /* offline or a bad file: try again later, backing off */
+      L.loading = false; L.fails = (L.fails || 0) + 1;
+      L.retry = Date.now() + Math.min(300, 20 * L.fails) * 1000;
     });
-    /* the far chorus drifts nearer and further */
-    L.far.gain.setTargetAtTime(.12 + Math.random() * .22, now, 2.5);
   }
-  /* waves: a breaker every 7 to 13 seconds, the wash swelling in and
-     brightening as it rises, a spray of foam where it breaks, and a low
-     undertow under it all */
-  function ambWaves(ac){
-    var L = amb.layer.waves;
-    var s1 = ac.createBufferSource(); s1.buffer = amb.white; s1.loop = true;
-    L.lp = ac.createBiquadFilter(); L.lp.type = 'lowpass'; L.lp.frequency.value = 350; L.lp.Q.value = .4;
-    L.swell = ac.createGain(); L.swell.gain.value = .1;
-    s1.connect(L.lp); L.lp.connect(L.swell); L.swell.connect(L.duck);
-    var s2 = ac.createBufferSource(); s2.buffer = amb.white; s2.loop = true;
-    var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
-    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6500;
-    L.foam = ac.createGain(); L.foam.gain.value = 0;
-    s2.connect(hp); hp.connect(lp); lp.connect(L.foam); L.foam.connect(L.duck);
-    var s3 = ac.createBufferSource(); s3.buffer = amb.white; s3.loop = true;
-    var low = ac.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 160;
-    var under = ac.createGain(); under.gain.value = .5;
-    s3.connect(low); low.connect(under); under.connect(L.duck);
-    s1.start(0, .4); s2.start(0, 2.2); s3.start(0, 3.1);
-  }
-  function ambPlanWaves(L, now, until){
-    if(L.next < now) L.next = now + .3;
-    while(L.next < until){
-      var s = L.next, rise = 2.6 + Math.random() * 2, period = 7 + Math.random() * 6, peak = .55 + Math.random() * .45;
-      L.swell.gain.setTargetAtTime(peak, s, rise / 3);
-      L.lp.frequency.setTargetAtTime(700 + peak * 900, s, rise / 3);
-      L.foam.gain.setTargetAtTime(peak * .32, s + rise - .4, .25);
-      L.foam.gain.setTargetAtTime(0, s + rise + .4, 1 + Math.random() * .6);
-      L.swell.gain.setTargetAtTime(.1, s + rise, period * .2);
-      L.lp.frequency.setTargetAtTime(320, s + rise, period * .25);
-      L.next = s + period;
+  /* a loop layer: fetched when first wanted, running (under its fader)
+     while on, let go of 20 seconds after it is switched off */
+  function ambLoop(k, now){
+    var L = amb.layer[k];
+    if(L.on && L.vol > 0){
+      L.offAt = 0;
+      if(!L.buf){ ambLoad(k); return; }
+      if(!L.src){
+        var s = amb.ac.createBufferSource(); s.buffer = L.buf; s.loop = true;
+        s.connect(L.duck); s.start(now + .05, Math.random() * L.buf.duration);
+        L.src = s;
+      }
+    } else if(L.src || L.buf){
+      if(!L.offAt) L.offAt = now;
+      else if(now - L.offAt > 20){
+        if(L.src){ try { L.src.stop(); } catch(e){} L.src.disconnect(); L.src = null; }
+        L.buf = null; L.offAt = 0;
+      }
     }
   }
-  /* loons: the wail (two or three long notes, each higher) or the tremolo
-     (a quick warble), far across the water. Sometimes another answers from
-     the other side. The frogs and crickets hush a little under a call */
-  function ambLoon(ac, s, pan){
-    var L = amb.layer.loons, ws = Math.random() < .62, f = (ws ? 610 : 880) * (1 + Math.random() * .09), d;
-    var o = ac.createOscillator();
-    o.setPeriodicWave(ac.createPeriodicWave(new Float32Array([0, 1, .2, .07, .02]), new Float32Array(5)));
-    var vib = ac.createOscillator(); vib.frequency.value = 5 + Math.random();
-    var vibG = ac.createGain(); vibG.gain.value = f * .007;
-    vib.connect(vibG); vibG.connect(o.frequency);
-    var e = ac.createGain(); e.gain.value = 0;
-    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
-    var p = ambPan(ac, pan);
-    o.connect(e); e.connect(lp); lp.connect(p); p.connect(L.duck);
-    var F = o.frequency, G = e.gain;
-    if(ws){
-      var notes = Math.random() < .5 ? 3 : 2;
-      F.setValueAtTime(f * .86, s); F.setTargetAtTime(f, s, .09);
-      F.setTargetAtTime(f * 1.5, s + 1.15, .12);
-      if(notes > 2) F.setTargetAtTime(f * 1.68, s + 2.35, .1);
-      d = notes > 2 ? 3.6 : 2.6;
-      F.setTargetAtTime(f * 1.3, s + d - .3, .14);
-      G.setTargetAtTime(.8, s, .14); G.setTargetAtTime(1, s + 1.15, .3); G.setTargetAtTime(0, s + d - .2, .22);
-    } else {
-      d = 1.8 + Math.random() * .8;
-      var trem = ac.createOscillator(); trem.frequency.value = 8 + Math.random() * 2.5;
-      var tremG = ac.createGain(); tremG.gain.value = .45;
-      var am = ac.createGain(); am.gain.value = .55;
-      trem.connect(tremG); tremG.connect(am.gain);
-      e.disconnect(); e.connect(am); am.connect(lp);
-      F.setValueAtTime(f, s); F.setTargetAtTime(f * 1.08, s + .3, .25); F.setTargetAtTime(f * .95, s + d * .7, .3);
-      G.setTargetAtTime(.75, s, .08); G.setTargetAtTime(0, s + d - .15, .14);
-      trem.start(s); trem.stop(s + d + 1.5);
-    }
-    o.start(s); vib.start(s); o.stop(s + d + 1.5); vib.stop(s + d + 1.5);
-    [amb.layer.crickets, amb.layer.frogs].forEach(function(H){
-      if(!H.duck) return;
-      H.duck.gain.setTargetAtTime(.55, s, .5);
+  /* one call: a touch higher or lower, nearer or further, left or right.
+     The layers that duck hush a little under it */
+  function ambLoon(L, s){
+    var ac = amb.ac, src = ac.createBufferSource(); src.buffer = L.buf;
+    var rate = .95 + Math.random() * .08; src.playbackRate.value = rate;
+    var g = ac.createGain(); g.gain.value = .7 + Math.random() * .3;
+    var p = ambPan(ac, (Math.random() < .5 ? -1 : 1) * (.3 + Math.random() * .5));
+    src.connect(g); g.connect(p); p.connect(L.duck); src.start(s);
+    var d = L.buf.duration / rate;
+    ambKinds.forEach(function(k){
+      var H = amb.layer[k];
+      if(!ambSpec[k].duck || !H.duck) return;
+      H.duck.gain.setTargetAtTime(.65, s, .5);
       H.duck.gain.setTargetAtTime(1, s + d, 1.4);
     });
-    return d;
   }
   function ambPlanLoons(L, now, until){
-    /* the first call comes soon, so switching them on is answered */
-    if(L.next < now) L.next = now + 3 + Math.random() * 5;
+    if(!L.buf){ ambLoad('loons'); return; }
+    if(L.next < now) L.next = now + 15 + Math.random() * 25;
     while(L.next < until){
-      var s = L.next, pan = (Math.random() < .5 ? -1 : 1) * (.35 + Math.random() * .5);
-      var d = ambLoon(amb.ac, s, pan);
-      if(Math.random() < .4) d += 2 + Math.random() * 3 + ambLoon(amb.ac, s + d + 2 + Math.random() * 3, -pan * .8);
-      L.next = s + d + 22 + Math.random() * 38;
+      ambLoon(L, L.next);
+      L.next += 150 + Math.random() * 210;
     }
   }
-  /* frogs: four tree frogs with their own pitch and rasp, taking turns at
-     "rib-bit" with the odd lull, and now and then a bullfrog low under them */
-  var ambFrogs = [[1050, 52, -.6, 2], [1320, 64, .45, 2], [880, 44, .1, 1], [1520, 71, -.2, 2]];
-  function ambCroak(ac, s, fr){
-    var L = amb.layer.frogs, o = ac.createOscillator(); o.type = 'square'; o.frequency.value = fr[1];
-    var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fr[0] * (1 + (Math.random() - .5) * .06); bp.Q.value = 5;
-    var e = ac.createGain(); e.gain.value = 0;
-    var p = ambPan(ac, fr[2]);
-    o.connect(bp); bp.connect(e); e.connect(p); p.connect(L.duck);
-    var bursts = fr[3] === 2 ? [[0, .1], [.15, .12]] : [[0, .19]], end = 0;
-    bursts.forEach(function(b){
-      var t = s + b[0];
-      e.gain.setTargetAtTime(1, t, .008);
-      e.gain.setTargetAtTime(0, t + b[1], .016);
-      o.frequency.setValueAtTime(fr[1], t);
-      o.frequency.linearRampToValueAtTime(fr[1] * 1.14, t + b[1]);
-      end = b[0] + b[1];
-    });
-    o.start(s); o.stop(s + end + .25);
-    return end;
-  }
-  function ambBull(ac, s){
-    var L = amb.layer.frogs, o = ac.createOscillator(); o.type = 'sawtooth';
-    var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = 3;
-    var e = ac.createGain(); e.gain.value = 0;
-    var p = ambPan(ac, (Math.random() - .5) * .8);
-    o.connect(lp); lp.connect(e); e.connect(p); p.connect(L.duck);
-    var f = 86 + Math.random() * 18, n = 2 + Math.floor(Math.random() * 2), t = s;
-    for(var i = 0; i < n; i++){
-      o.frequency.setValueAtTime(f * 1.1, t); o.frequency.linearRampToValueAtTime(f * .9, t + .45);
-      e.gain.setTargetAtTime(.5, t, .04); e.gain.setTargetAtTime(0, t + .38, .06);
-      t += .7;
-    }
-    o.start(s); o.stop(t + .4);
-  }
-  function ambPlanFrogs(L, now, until){
-    if(L.next < now){ L.next = now + .2; L.bull = now + 6 + Math.random() * 10; }
-    while(L.next < until){
-      var d = ambCroak(amb.ac, L.next, ambFrogs[Math.floor(Math.random() * ambFrogs.length)]);
-      L.next += d + .12 + Math.random() * .55 + (Math.random() < .07 ? 1.5 + Math.random() * 3 : 0);
-    }
-    while(L.bull < until){ ambBull(amb.ac, L.bull); L.bull += 14 + Math.random() * 20; }
-  }
-  var ambPlans = { crickets: ambPlanCrickets, waves: ambPlanWaves, loons: ambPlanLoons, frogs: ambPlanFrogs };
+  var ambPlans = { loons: ambPlanLoons };
   /* events are written three seconds ahead, so a background tab's slow
      timers never leave a gap */
   function ambPlan(){
@@ -2441,7 +2371,8 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
     var now = amb.ac.currentTime;
     ambKinds.forEach(function(k){
       var L = amb.layer[k];
-      if(ambPlans[k] && L.on && L.vol > 0) ambPlans[k](L, now, now + 3);
+      if(ambSpec[k].seam) ambLoop(k, now);
+      else if(ambPlans[k] && L.on && L.vol > 0) ambPlans[k](L, now, now + 3);
     });
   }
   setInterval(ambPlan, 1000);
