@@ -21,6 +21,7 @@
   function hex(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
   /* f under 1 darkens, over 1 mixes toward white */
   function tone(h, f) { return hex(rgb(h).map(function (v) { return f > 1 ? v + (255 - v) * (f - 1) : v * f; })); }
+  function mix(a, b, t) { var x = rgb(a), y = rgb(b); return hex(x.map(function (v, i) { return v + (y[i] - v) * t; })); }
   function ramp(h) { return [tone(h, 0.55), tone(h, 0.75), h, tone(h, 1.18), tone(h, 1.38)]; }
 
   /* wall: brick | glass | stucco | timber | concrete | wood (brick is its
@@ -39,6 +40,8 @@
     var m = MATS[id] || { road: p.road, pave: p.ground, wall: 'plain', brick: p.wall, roof: p.roof, grass: p.grass, trim: tone(p.wall, 1.3), door: '#3e2618' };
     return (mats[id] = { road: ramp(m.road), pave: ramp(m.pave), wall: m.wall, brick: ramp(m.brick), roof: ramp(m.roof), roofKind: m.roofKind || 'tar', grass: ramp(m.grass), trim: m.trim, door: ramp(m.door) });
   }
+  var BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  function dith(x, y) { return (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16; }
   function hash(a, b) { var h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 
   function draw(g, t, di, v, m, wave, rv, door, X) {
@@ -88,6 +91,47 @@
       return true;
     }
 
+    if (t === T.GROUND && (!id || id === 'naturia')) {
+      /* the wild ground (the prettier batch, item 1): packed dirt out in
+         vistadelsol, a forest floor in naturia. flat in the middle with
+         everything kept off the edges, so tiles meet without seams */
+      var forest = id === 'naturia', D = ramp(forest ? mix(tone(p.ground, 1.3), '#4a3a26', 0.5) : p.ground);
+      px(D[2], 0, 0, C, C);
+      /* mottling: a few soft patches, their rims dithered */
+      for (i = 0; i < 3; i++) {
+        var mr = 4 + hash(v, i + 40) * 5, mx = 6 + hash(i + 3, v) * 20, my = 6 + hash(v + 9, i) * 20, mc = hash(i, v + 77) < 0.5 ? D[1] : D[3];
+        for (y = Math.max(0, Math.floor(my - mr)); y < Math.min(C, my + mr); y++) for (x = Math.max(0, Math.floor(mx - mr)); x < Math.min(C, mx + mr); x++) {
+          var dr = Math.hypot(x + 0.5 - mx, (y + 0.5 - my) * 1.3) / mr;
+          if (dr < 1 && dith(x, y) > dr * 0.9) px(mc, x, y);
+        }
+      }
+      /* grit */
+      for (i = 0; i < 18; i++) px(hash(v + 5, i) < 0.5 ? D[1] : D[3], (hash(i * 7, v) * C) | 0, (hash(v * 3, i + 2) * C) | 0);
+      /* pebbles: a lit top-left, a dark underside */
+      var nP = 2 + ((hash(v, 91) * 5) | 0);
+      for (i = 0; i < nP; i++) {
+        var pxx = 3 + ((hash(i + 11, v) * 25) | 0), pyy = 3 + ((hash(v, i + 13) * 25) | 0), big = hash(i, v + 4) < 0.35;
+        px(D[0], pxx, pyy + 1 + (big ? 1 : 0), big ? 3 : 2, 1);
+        px(forest ? D[3] : tone(D[3], 1.08), pxx, pyy, big ? 3 : 2, big ? 2 : 1);
+        px(D[4], pxx, pyy);
+      }
+      if (forest) {
+        /* leaf litter and moss; now and then a glowing mushroom */
+        var lc = [tone(p.leaf, 0.45), tone(p.tree, 1.4), tone('#6a5a2a', 0.9)];
+        for (i = 0; i < 7; i++) { var lx = 2 + ((hash(i, v + 21) * 27) | 0), ly = 2 + ((hash(v + 23, i) * 27) | 0); px(lc[i % 3], lx, ly, 2, 1); px(tone(lc[i % 3], 0.7), lx + 1, ly + 1); }
+        for (i = 0; i < 5; i++) px(tone(p.leaf, 0.6), 4 + ((hash(i + 50, v) * 24) | 0), 4 + ((hash(v, i + 52) * 24) | 0));
+        if (v % 9 === 4) {
+          var gx = 9 + (v % 13), gy = 12 + (v % 9), gc = p.glow[v % p.glow.length];
+          px(tone(gc, 0.35), gx - 1, gy + 2, 5, 1);
+          px('#d8e8e0', gx + 1, gy + 1, 1, 2); px(OUT, gx - 1, gy - 1, 5, 2); px(gc, gx, gy - 1, 3, 1); px(tone(gc, 1.4), gx, gy - 1); px(tone(gc, 0.6), gx - 1, gy, 5, 1);
+        }
+      } else {
+        /* dry cracks on some tiles, a sprig of grass on others */
+        if (v % 5 === 1) { var cx0 = 8 + (v % 11), cy0 = 9 + (v % 7); for (i = 0; i < 9; i++) { px(D[0], cx0 + i, cy0 + Math.round(Math.sin(i * 1.7 + v) * 1.2)); if (i === 4) px(D[0], cx0 + i, cy0 + 2, 1, 2); } }
+        if (v % 4 === 2) { var sx = 6 + (v % 19), sy = 8 + (v % 15); px(tone(p.leaf, 0.8), sx, sy, 1, 3); px(p.leaf, sx + 1, sy - 1, 1, 4); px(tone(p.leaf, 0.8), sx + 2, sy + 1, 1, 2); }
+      }
+      return true;
+    }
     if (t === T.GROUND || t === T.STALL) {
       var q = M.pave;
       if (!id || id === 'naturia') return false;
@@ -216,29 +260,32 @@
       return true;
     }
     if (t === T.MAINLAND) {
-      /* vistadelsol's bush: too thick to walk through, round clumps lit from
-         the top left with leaf flecks in them, now and then a palm */
-      px('#12291a', 0, 0, C, C);
+      /* vistadelsol's bush: too thick to walk through. overlapping clumps of
+         leaves, back to front, each lit from the top left with a ragged rim
+         and a dark edge only on its shadow side; the odd flower */
+      var BU = ['#12291a', '#164424', '#1f5a2e', '#2f7a38', '#4f9a50', '#8ad87a'];
+      px(BU[0], 0, 0, C, C);
       var seed = v * 2654435761 >>> 0;
       function rnd() { seed = (seed * 1103515245 + 12345) >>> 0; return (seed >>> 8) / 16777216; }
-      var clumps = 3 + Math.floor(rnd() * 3);
-      for (var cI = 0; cI < clumps; cI++) {
-        var cr = 5 + rnd() * 4, ccx = cr + 1 + rnd() * (C - 2 * cr - 2), ccy = cr + 1 + rnd() * (C - 2 * cr - 2), base = cI % 2 ? '#1f5a2e' : '#2a6a34';
-        for (y = 0; y < C; y++) for (x = 0; x < C; x++) {
-          var ddx = x + 0.5 - ccx, ddy = y + 0.5 - ccy, dd = Math.sqrt(ddx * ddx + ddy * ddy);
-          if (dd > cr + 0.8) continue;
-          var lit = ddx + ddy;
-          px(dd > cr - 0.5 ? OUT : lit < -cr * 0.75 ? '#8ad87a' : lit < -cr * 0.3 ? '#4f9a50' : lit > cr * 0.55 ? '#164424' : hash(x + v, y + cI) < 0.08 ? '#4f9a50' : base, x, y);
+      var cl = [], nC = 7 + Math.floor(rnd() * 3);
+      for (i = 0; i < nC; i++) { var cr = 5 + rnd() * 4; cl.push([2 + rnd() * 28, 2 + rnd() * 28, cr]); }
+      cl.sort(function (a, b) { return a[1] - b[1]; });
+      cl.forEach(function (c, ci) {
+        for (y = Math.max(0, Math.floor(c[1] - c[2] - 1)); y < Math.min(C, c[1] + c[2] + 1); y++) for (x = Math.max(0, Math.floor(c[0] - c[2] - 1)); x < Math.min(C, c[0] + c[2] + 1); x++) {
+          var ddx = (x + 0.5 - c[0]) / c[2], ddy = (y + 0.5 - c[1]) / c[2], rr = ddx * ddx + ddy * ddy;
+          if (rr > 1 || (rr > 0.8 && hash(x * 13 + v, y * 7 + ci) < 0.45)) continue;
+          if (rr > 0.78 && ddx + ddy > 0.35) { px(OUT, x, y); continue; }
+          var lt = -(ddx * 0.6 + ddy * 0.8) * 0.5 + 0.5, band = lt * 4.2 + dith(x, y) - 0.4;
+          px(BU[Math.max(1, Math.min(4, Math.round(band)))], x, y);
         }
-      }
-      if (v % 6 === 0) {
-        /* a palm: a bent, ringed trunk and a star of fronds */
-        for (y = 12; y < 28; y++) { var tx = 15 + Math.round((y - 12) * -0.12); px(OUT, tx - 1, y, 4, 1); px(y % 3 ? '#6a4628' : '#4a2e18', tx, y, 2, 1); }
-        [[-8, 1], [8, 1], [-6, -4], [6, -4], [-4, 5], [4, 5], [0, -6]].forEach(function (f) {
-          for (var q = 1; q <= 6; q++) { var fx = 15 + Math.round(f[0] * q / 6), fy = 11 + Math.round(f[1] * q / 6) + (q > 3 && f[1] >= 0 ? 1 : 0); px(OUT, fx, fy + 1); px(q > 4 ? '#2a6a34' : '#3f9a4a', fx, fy); }
-        });
-        px('#8ad87a', 15, 10, 2, 1);
-      }
+        for (var kk = 0; kk < c[2]; kk++) {
+          var ax = c[0] + (hash(kk * 3 + ci, v + 11) - 0.5) * c[2] * 1.4, ay = c[1] + (hash(kk * 5 + ci, v + 23) - 0.5) * c[2] * 1.4;
+          if (ax < 0 || ay < 0 || ax >= C || ay >= C) continue;
+          var up = (ax - c[0]) + (ay - c[1]) < -1;
+          px(up ? BU[5] : BU[1], ax, ay, up ? 2 : 1, 1);
+        }
+      });
+      if (v % 7 === 3) [[7, 9], [21, 6], [15, 22]].forEach(function (f, fi) { var fc = fi % 2 ? '#ffd36a' : '#ff8ac8'; px(fc, f[0], f[1]); px(fc, f[0] - 1, f[1] + 1); px(fc, f[0] + 1, f[1] + 1); px(fc, f[0], f[1] + 2); px('#fff3c0', f[0], f[1] + 1); });
       return true;
     }
     if (t === T.BRIDGE) {
@@ -389,7 +436,7 @@
     if (t === T.SAND) return tone('#7a6a4c', 0.8);
     if (t === T.MAINLAND) return '#12291a';
     if (t === T.GRASS || t === T.TREE) return M.grass[2];
-    if (t === T.GROUND || t === T.STALL) return id && id !== 'naturia' ? M.pave[2] : p.ground;
+    if (t === T.GROUND || t === T.STALL) return id && id !== 'naturia' ? M.pave[2] : id === 'naturia' ? mix(tone(p.ground, 1.3), '#4a3a26', 0.5) : p.ground;
     if (t === T.ROAD) return M.road[2];
     return null;
   }
