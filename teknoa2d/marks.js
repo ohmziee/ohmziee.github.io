@@ -193,6 +193,50 @@
         K.neon('PAWN', W / 2, rh + 18, '#ffd36a', 1, false);
       } }, d);
     },
+    /* the walk-up: redrum's apartment tower by the lighthouse. a tar roof
+       with a water tank and an aerial, floor on floor of windows (some lit,
+       some with a box fan or a plant), a fire escape zigzagging down the
+       side, and a lit glass lobby on the ground floor under its neon */
+    walkup: function (g, W, H, d) {
+      var K = kit(g), R = ramp('#5a3a3a'), RF = ramp('#221d42'), rh = 14, x, y, f;
+      K.roof('tar', RF, W, rh);
+      /* the water tank and the aerial, on the roof */
+      K.px(OUT, 12, 0, 22, 12); K.px('#6a4a32', 13, 1, 20, 10); K.px('#8a6a44', 13, 1, 20, 2); for (x = 15; x < 33; x += 4) K.px('#4a3020', x, 3, 1, 8);
+      K.px(OUT, W - 22, 0, 3, rh); K.px('#a3aec4', W - 21, 1, 1, rh - 2); K.px('#ff2a4a', W - 22, 0, 3, 2);
+      K.wall('brick', R, 0, rh, W, H - rh, 7);
+      K.px(tone('#5a3a3a', 1.3), 0, rh, W, 2);
+      /* the floors: a ledge between each, four windows a floor */
+      var lobbyTop = H - 40, floors = Math.floor((lobbyTop - rh - 4) / 26);
+      for (f = 0; f < floors; f++) {
+        y = rh + 6 + f * 26;
+        K.px(R[0], 0, y + 22, W, 1); K.px(R[3], 0, y + 23, W, 1);
+        for (var i = 0; i < 4; i++) {
+          var wx = 8 + i * 28, h1 = hash(i + f * 5, 41), lit = h1 < 0.55 ? (h1 < 0.15 ? '#ff9de2' : h1 < 0.3 ? '#9fd0ff' : '#ffd98a') : null;
+          K.windowAt(wx, y + 4, 14, 14, lit, '#9c6a5a');
+          if (h1 > 0.82) { K.px(OUT, wx + 3, y + 12, 8, 6); K.px('#c8ccd8', wx + 4, y + 13, 6, 4); K.px('#8a92a6', wx + 6, y + 14, 2, 2); }       /* a box fan */
+          else if (h1 > 0.7) { K.px('#2f7a38', wx + 2, y + 15, 10, 3); K.px('#4f9a50', wx + 4, y + 13, 3, 2); K.px('#6a3a22', wx + 2, y + 18, 10, 1); }  /* a plant on the sill */
+        }
+      }
+      /* the fire escape, down the right side: landings and ladders */
+      for (f = 0; f < floors; f++) {
+        y = rh + 6 + f * 26 + 20;
+        K.px('#3a3448', W - 14, y, 14, 2); K.px('#8a92a6', W - 14, y, 14, 1);
+        for (x = W - 14; x < W; x += 3) K.px('#8a92a6', x, y - 6, 1, 6);
+        K.px('#8a92a6', W - 14, y - 6, 14, 1);
+        var lx = f % 2 ? W - 12 : W - 4;
+        for (var ly = y + 2; ly < y + 24 && ly < lobbyTop; ly += 3) K.px('#8a92a6', lx, ly, 3, 1);
+      }
+      /* the ground floor: a lit glass lobby, the sign over it */
+      K.px(OUT, 0, lobbyTop, W, 2); K.px(tone('#5a3a3a', 1.3), 0, lobbyTop + 2, W, 2);
+      K.px(OUT, 6, lobbyTop + 10, W - 12, 26); K.px('#2a2240', 7, lobbyTop + 11, W - 14, 24);
+      for (x = 7; x < W - 7; x += 1) if ((x - 7) % 18 < 16) K.px(x < d[0] - 2 || x > d[1] + 2 ? '#ffd98a' : '#2a2240', x, lobbyTop + 12, 1, 22);
+      for (x = 7; x < W - 7; x += 18) K.px(OUT, x + 16, lobbyTop + 11, 2, 24);
+      K.px('#fff3c0', 8, lobbyTop + 12, 6, 1);
+      K.neon('THE WALK-UP', W >> 1, lobbyTop + 4, '#ffe97c', 1, false);
+      K.px('#c8ccd8', d[1] + 3, H - 18, 3, 5); K.px('#7cf5ff', d[1] + 4, H - 17, 1, 1);                            /* the buzzer */
+      K.door(d[0], d[1], H, 'glass', '#ffe97c');
+      K.frame(W, H);
+    },
     apt: function (g, W, H, d) {
       front(g, W, H, { wall: '#5a3a3a', roof: '#221d42', doorGlow: '#ffe97c', paint: function (K, W, H, rh) {
         for (var i = 0; i < 4; i++) K.windowAt(6 + i * 23, 24, 10, 12, (i * 7 + W) % 3 ? '#ffd98a' : null, '#9c6a5a');
@@ -463,6 +507,26 @@
       K.px(OUT, 2, 0, W - 4, 13); K.px('#1c1736', 3, 1, W - 6, 11);
       for (var x = 6; x < W - 6; x += 9) { K.oval(['#ffd36a', '#ff4fd8', '#7cffb2', '#7cf5ff', '#ff8a6b'][(x / 9 | 0) % 5], x, 7, 3, 3); }
       K.text('PRIZES', W / 2 - 11, 19, '#ffe97c', 1);
+    },
+    mailboxes: function (g, W, H) {
+      /* a wall of little brass doors, a few with letters poking out */
+      var K = kit(g), B = ramp('#b08a44'), n = 0;
+      K.px(OUT, 2, 2, W - 4, H - 6); K.px('#3a2e22', 3, 3, W - 6, H - 8);
+      for (var y = 4; y < H - 8; y += 8) for (var x = 4; x < W - 7; x += 9) {
+        K.px(B[2], x, y, 8, 7); K.px(B[3], x, y, 8, 1); K.px(B[0], x + 1, y + 3, 6, 1); K.px(B[4], x + 6, y + 4, 1, 1);
+        if (hash(x, y) < 0.25) K.px('#f4f6ff', x + 2, y - 1, 4, 2);
+        n++;
+      }
+    },
+    vending: function (g, W, H) {
+      /* a lit front of cans and bottles, the slot, a coin panel */
+      var K = kit(g); shadow(K, 3, H - 3, W - 6);
+      K.px(OUT, 4, 0, W - 8, H - 2); K.px('#c4473a', 5, 1, W - 10, H - 4); K.px('#e86a5a', 5, 1, W - 10, 1);
+      K.px(OUT, 7, 3, W - 18, H - 12); K.px('#dce8ff', 8, 4, W - 20, H - 14);
+      var cols = ['#ff4fd8', '#7cf5ff', '#ffd36a', '#7cffb2'];
+      for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) { K.px(cols[(r + c) % 4], 9 + c * 4, 6 + r * 6, 3, 4); K.px('#f4f6ff', 9 + c * 4, 6 + r * 6, 1, 1); }
+      K.px(OUT, 7, H - 9, W - 18, 4); K.px('#1a1420', 8, H - 8, W - 20, 2);
+      K.px('#2a2240', W - 10, 4, 4, 10); K.px('#7cffb2', W - 9, 6, 2, 1); K.px('#c8ccd8', W - 9, 9, 2, 3);
     },
     lift: function (g, W, H) {
       var K = kit(g); K.px(OUT, 4, 0, W - 8, H - 2); K.px('#a3aec4', 5, 1, W - 10, H - 4); K.px('#c8ccd8', 5, 1, W - 10, 2);

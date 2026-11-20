@@ -79,8 +79,8 @@
      side. PLACEHOLDER names and lines: flavour, not canon. Price is ⚡, at
      roughly ⚡270 of loose joules a day */
   var HOMES = {
-    redrum:    { name: 'the walk-up', where: 'redrum, round the back of the arcade', price: 900,
-                 sign: 'rooms upstairs. cash. no questions.', view: 'the arcade sign, through the bars.\nthe knife flickers. it never quite goes out.' },
+    redrum:    { name: 'the walk-up', where: 'redrum, the tower up by the lighthouse', price: 900,
+                 sign: 'flats upstairs. cash. no questions.', view: 'the arcade sign, through the bars.\nthe knife flickers. it never quite goes out.' },
     yucayeque: { name: 'casa del patio', where: 'yucayeque, by the market', price: 1200,
                  sign: 'rooms over the courtyard. ask for the abuela.', view: 'porch lights and somebody\'s radio.\na drum, far off, keeping time for the whole street.' },
     naturia:   { name: 'the treehouse flats', where: 'naturia, under the canopy', price: 1400,
@@ -327,6 +327,7 @@
   };
   /* the places that serve it: street carts, a market stall, restaurants */
   var VENDORS = {
+    'walkup-vending': { kind: 'vendor', name: 'VENDING MACHINE', district: 'redrum', line: 'it hums. the buttons are sticky. it takes joules.', menu: ['soda', 'buzz', 'ramune'] },
     'patty-cart':   { kind: 'vendor', name: 'PATTY CART', district: 'yucayeque', line: 'hot patties. hotter if you complain.', menu: ['patty', 'cocobread', 'sorrel'] },
     'noodle-cart':  { kind: 'vendor', name: 'NEON NOODLES', district: 'worldwood', line: 'noodles in ninety seconds. the soda\'s faster.', menu: ['noodles', 'soda'] },
     'dumpling-cart':{ kind: 'vendor', name: 'DUMPLINGS', district: 'majinryu', line: 'this cart doesn\'t move. that\'s how you know.', menu: ['dumplings', 'barley'] },

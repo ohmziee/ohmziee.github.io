@@ -658,10 +658,44 @@
       shopKeepers.push({ id: 'shop-' + sp.id, x: door.x + 1, y: door.y, dir: 'down', look: sp.art === 'threads' ? 'tailor' : sp.art, shop: sp.id, still: true });
     });
 
+    /* the walk-up: redrum's apartments are a tower now (Oms, 2026-11-19), on
+       the headland lawn up and to the left of the lighthouse with grass
+       between them. its door opens on a shared lobby (ROOMS.walkup); the
+       lift there takes a key holder up to their own flat (HOME_LOBBY) */
+    var WU_W = 4, WU_H = 6, wu = null, WU_GAP = 3;
+    var nb = marks.filter(function (k) { return k.id === 'noorborj'; })[0], nbx = nb ? nb.x : tipX - 1, nby = nb ? nb.y : top + 1;
+    for (var gy = nby; gy <= nby + 16 && !wu; gy++) for (var gx = nbx - WU_GAP - WU_W; gx >= nbx - 26 && !wu; gx--) {
+      /* the footprint on lawn, and a clear row in front of the door */
+      var fits = true;
+      for (var yy = gy; yy < gy + WU_H && fits; yy++) for (var xx = gx; xx < gx + WU_W && fits; xx++) {
+        var tt = get(xx, yy);
+        if (dist[at(xx, yy)] !== R0.index || (tt !== T.GRASS && tt !== T.GROUND && tt !== T.TREE)) fits = false;
+      }
+      for (var fx = gx - 1; fx <= gx + WU_W && fits; fx++) {
+        var ft = get(fx, gy + WU_H);
+        if (ft === T.ROAD || ft === T.LANDMARK || ft === T.BUILDING || ft === T.DEEP || ft === T.SHALLOW || ft === T.STALL) fits = false;
+      }
+      if (fits && npcs.some(function (n) { return n.x >= gx - 1 && n.x <= gx + WU_W && n.y >= gy - 1 && n.y <= gy + WU_H; })) fits = false;
+      if (fits) wu = [gx, gy];
+    }
+    var wuInfo = root.MFShops && root.MFShops.HOMES.redrum;
+    if (wu) {
+      landmark(R0, 'walkup', wuInfo ? wuInfo.name : 'the walk-up', wu[0] - R0.cx, wu[1] - R0.cy, WU_W, WU_H,
+        (wuInfo ? wuInfo.name.toUpperCase() + '\n' + wuInfo.sign : 'THE WALK-UP') + '\nthe lobby is open. keys at the front desk.', true);
+      walkIn('walkup');
+    }
+    /* where the old walk-up stood behind the arcade: an empty lot, weeds through the gravel */
+    if (RSPOT.apt) for (var ly2 = 0; ly2 < 2; ly2++) for (var lx2 = 0; lx2 < 3; lx2++) {
+      var lk = at(R0.cx + RSPOT.apt[0] + lx2, R0.cy + RSPOT.apt[1] + ly2);
+      if (dist[lk] === R0.index && tile[lk] === T.GROUND && hash(lx2 * 7 + 1, ly2 * 3 + 5) < 0.45) tile[lk] = T.GRASS;
+    }
+
     /* apartments: one block per district, its door for sale (shops.js
-       HOMES). redrum's is the walk-up behind hex's arcade */
-    var HOME_AT = [{ d: R0, dx: -3, dy: -4 }, { d: W0, dx: -5, dy: -2 }, { d: Y0, dx: 7, dy: 2 },
+       HOMES). redrum's is the walk-up tower above (unless it found no
+       room, then the old block behind the arcade) */
+    var HOME_AT = [{ d: W0, dx: -5, dy: -2 }, { d: Y0, dx: 7, dy: 2 },
                    { d: N0, dx: -6, dy: 3 }, { d: H0, dx: -6, dy: 1 }, { d: M0, dx: -6, dy: 2 }];
+    if (!wu) HOME_AT.unshift({ d: R0, dx: -3, dy: -4 });
     HOME_AT.forEach(function (h) {
       var info = root.MFShops && root.MFShops.HOMES[h.d.id];
       var exact = h.d === R0 && !!RSPOT.apt;
@@ -1178,6 +1212,31 @@
      PLACEHOLDER lines, flavour only, in the crowd's voice: nothing in here
      is canon until it is written down */
   var ROOMS = {
+    /* the walk-up's lobby: shared, anyone can come in. the lift takes a key
+       holder up to their own flat; the desk sells the key */
+    walkup: { d: 'redrum', map: [
+      '################',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#..............#',
+      '#######==#######'],
+      things: [
+        { id: 'mailboxes', x: 1, y: 0, w: 3, h: 1, text: 'a wall of mailboxes.\nyours is the one with nothing in it. yet.' },
+        { id: 'lift', x: 7, y: 0, w: 2, h: 1, lift: 'redrum', text: 'the lift.' },
+        { id: 'window', x: 11, y: 0, w: 2, h: 1, text: 'the lighthouse, through the glass.\nits lamp never turns. it just watches.' },
+        { id: 'vending', x: 14, y: 1, w: 1, h: 1, vend: 'walkup-vending', text: 'a vending machine. it hums.' },
+        { id: 'sofa', x: 2, y: 4, w: 3, h: 1, text: 'a lobby sofa. the cushions have seen things.\nsit if you like. people wait here.' },
+        { id: 'plant', x: 1, y: 4, w: 1, h: 1, text: 'a plastic palm. somebody dusts it.' },
+        { id: 'bench', x: 2, y: 7, w: 2, h: 1, text: 'a bench by the door.\nsomeone carved HEX WAS HERE. then crossed it out. then wrote it again.' },
+        { id: 'desk', x: 10, y: 4, w: 3, h: 1, homeDesk: 'redrum', text: 'the front desk.' },
+        { id: 'plant', x: 14, y: 7, w: 1, h: 1, text: 'a real plant. it\'s doing better than the plastic one.' }
+      ],
+      people: [{ x: 11, y: 3, dir: 'down', look: 'clerk', name: 'FRONT DESK', still: true, lines: ['keys, mail, complaints. in that order.', 'the lift works. mostly.\nif it stops, wait. it always starts again.', 'everybody up there has a story.\nnobody tells it in the lobby.'] }] },
     arcade: { d: 'redrum', floor: T.CHECK, map: [
       '##############',
       '#::::::::::::#',
@@ -1457,7 +1516,7 @@
     def.things.forEach(function (f) {
       for (var y = f.y; y < f.y + f.h; y++) for (var x = f.x; x < f.x + f.w; x++) tile[y * w + x] = T.LANDMARK;
       marks.push({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, d: did, bed: !!(f.bed && !ROOMS.hasOwnProperty(id)), kitchen: !!(f.kitchen && !ROOMS.hasOwnProperty(id)), chest: !!(f.chest && !ROOMS.hasOwnProperty(id)), text: f.view ? (info ? info.view : 'the city.') : f.text,
-                   game: f.game, house: f.game ? f.house || def.house : undefined, vend: f.vend, cell: !!f.cell });
+                   game: f.game, house: f.game ? f.house || def.house : undefined, vend: f.vend, cell: !!f.cell, lift: f.lift, homeDesk: f.homeDesk });
     });
     (def.people || []).forEach(function (p, i) {
       npcs.push({ id: id + '-' + i, x: p.x, y: p.y, dir: p.dir || 'down', look: p.look, seed: p.seed, lines: p.lines, shop: p.shop, name: p.name, still: !!p.still, roam: 2 });
@@ -1596,5 +1655,7 @@
     return out;
   }
 
-  root.MFWorldMap = { V: VERSION, toMap: toMap, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, ORIGIN_TALK: ORIGIN_TALK, KOGA_ORIGIN: KOGA_ORIGIN, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, reachAll: reachAll, loose: loose };
+  /* a flat whose block has a shared lobby: you come down the lift into it */
+  var HOME_LOBBY = { redrum: 'walkup' };
+  root.MFWorldMap = { HOME_LOBBY: HOME_LOBBY, V: VERSION, toMap: toMap, CROWD: CROWD, TALK: TALK, KIND_TALK: KIND_TALK, HANDLES: HANDLES, KOGA: KOGA, ORIGIN_TALK: ORIGIN_TALK, KOGA_ORIGIN: KOGA_ORIGIN, W: W, H: H, T: T, DISTRICTS: DISTRICTS, ISLETS: ISLETS, LANDINGS: LANDINGS, build: build, room: room, ROOMS: ROOMS, solid: solid, nodes: nodes, water: water, fishZone: fishZone, reach: reach, reachAll: reachAll, loose: loose };
 })(typeof window !== 'undefined' ? window : globalThis);

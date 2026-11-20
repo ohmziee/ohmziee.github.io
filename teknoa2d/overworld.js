@@ -1302,6 +1302,9 @@
     if (m && m.store) return openCounter(m.store);
     if (m && (m.home || (m.room && !inside)) && !(me.dir === 'up' && atDoor(m, tx, ty))) return notTheDoor(m, tx, ty);
     if (m && m.home) return homeDoor(m.home);
+    /* the walk-up's lobby: the lift goes up to your flat with a key; the desk sells one */
+    if (m && m.lift && inside) return s.homes[m.lift] ? goIn(m.lift) : say(['residents only.\nthe lift wants a key. the front desk sells them.']);
+    if (m && m.homeDesk && inside) return homeDoor(m.homeDesk, true);
     if (m && m.room && !inside) {
       var need = M.ROOMS[m.room] && M.ROOMS[m.room].door;
       if (need && window.MF.joules(s) < need) return say(['high stakes only.\n' + window.MF.fmtJ(need) + ' in your pocket or keep walking.'], 'BOUNCER');
@@ -1457,9 +1460,9 @@
 
   /* ── apartments ──────────────────────────────────────────────
      a door you own lets you in; one you don't is for sale */
-  function homeDoor(id) {
+  function homeDoor(id, desk) {
     var h = H[id] || { name: 'apartments', where: '', price: 0 }, have = window.MF.joules(s), cost = window.MF.fmtJ(h.price);
-    if (s.homes[id]) return goIn(id);
+    if (s.homes[id]) return desk ? say(['you\'ve got a key already.\nthe lift\'s right there.'], 'FRONT DESK') : goIn(id);
     if (have < h.price) return say([h.name.toUpperCase() + '\nfor sale: ' + cost + '. you have ' + window.MF.fmtJ(have) + '.\nloose joules turn up all over the city, every day.']);
     ask([h.name.toUpperCase() + '\nfor sale: ' + cost + '. it comes with a key and a bed.', 'buy it for ' + cost + '?'], function () {
       if (!window.MF.spend(s, h.price)) return;
@@ -1470,6 +1473,8 @@
     });
   }
   function doorOf(id) {
+    /* a flat up a tower: its street door is the lobby's */
+    if (M.HOME_LOBBY && M.HOME_LOBBY[id]) id = M.HOME_LOBBY[id];
     for (var i = 0; i < city.marks.length; i++) {
       var m = city.marks[i];
       if (m.home !== id && m.room !== id) continue;
@@ -1539,6 +1544,12 @@
     if (charging() && s.body.food < 95 && !talkBox) say(['you find a socket and plug in.\ncharging, at your joules\' expense. stay a minute.']);
   }
   function goOut() {
+    /* out of a flat up a tower: down the lift, into the lobby */
+    var lob = M.HOME_LOBBY && M.HOME_LOBBY[inside.id];
+    if (lob) {
+      var lr = M.room(lob), lm = lr && lr.marks.filter(function (k) { return k.lift === inside.id; })[0];
+      if (lm) return goIn(lob, { x: lm.x, y: lm.y + lm.h, d: 'down' });
+    }
     startWipe();
     var d = doorOf(inside.id);
     inside = null;
